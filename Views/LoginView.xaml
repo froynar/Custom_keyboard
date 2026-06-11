@@ -1,0 +1,66 @@
+<UserControl x:Class="Custom_keyboard.Views.LoginView"
+             xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:behaviors="clr-namespace:Custom_keyboard.Behaviors">
+    <Grid>
+        <Border Width="420"
+                Padding="28"
+                Background="White"
+                BorderBrush="#DDE2E8"
+                BorderThickness="1"
+                HorizontalAlignment="Center"
+                VerticalAlignment="Center">
+            <StackPanel>
+                <TextBlock Text="Dang nhap"
+                           FontSize="26"
+                           FontWeight="SemiBold"
+                           Foreground="#20242B"/>
+                <TextBlock Text="Custom Keyboard Builder"
+                           Margin="0,4,0,24"
+                           FontSize="14"
+                           Foreground="#687381"/>
+
+                <TextBlock Text="Email hoac username"
+                           FontWeight="SemiBold"
+                           Foreground="#343A40"/>
+                <TextBox Text="{Binding EmailOrUsername, UpdateSourceTrigger=PropertyChanged}"
+                         Margin="0,6,0,14"
+                         Padding="10"
+                         FontSize="14"/>
+
+                <TextBlock Text="Mat khau"
+                           FontWeight="SemiBold"
+                           Foreground="#343A40"/>
+                <PasswordBox behaviors:PasswordBoxBinding.BoundPassword="{Binding Password, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"
+                             Margin="0,6,0,14"
+                             Padding="10"
+                             FontSize="14"/>
+
+                <TextBlock Text="{Binding ErrorMessage}"
+                           Foreground="#B42318"
+                           TextWrapping="Wrap"
+                           MinHeight="20"/>
+                <TextBlock Text="{Binding StatusMessage}"
+                           Foreground="#027A48"
+                           TextWrapping="Wrap"
+                           MinHeight="20"/>
+
+                <Button Content="Dang nhap"
+                        Command="{Binding LoginCommand}"
+                        Margin="0,8,0,10"
+                        Padding="12"
+                        Background="#20242B"
+                        Foreground="White"
+                        BorderThickness="0"
+                        FontWeight="SemiBold"/>
+
+                <Button Content="Tao tai khoan buyer"
+                        Command="{Binding ShowRegisterCommand}"
+                        Padding="10"
+                        Background="#EEF2F6"
+                        Foreground="#20242B"
+                        BorderBrush="#DDE2E8"/>
+            </StackPanel>
+        </Border>
+    </Grid>
+</UserControl>

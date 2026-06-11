@@ -1,0 +1,613 @@
+<UserControl x:Class="Custom_keyboard.Views.BuyerDashboardView"
+             xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             Loaded="OnLoaded">
+    <UserControl.Resources>
+        <Style x:Key="SectionBorderStyle" TargetType="Border">
+            <Setter Property="Background" Value="White"/>
+            <Setter Property="BorderBrush" Value="#DDE2E8"/>
+            <Setter Property="BorderThickness" Value="1"/>
+            <Setter Property="Padding" Value="14"/>
+        </Style>
+        <Style x:Key="ToolbarButtonStyle" TargetType="Button">
+            <Setter Property="Padding" Value="12,7"/>
+            <Setter Property="Margin" Value="0,0,8,8"/>
+            <Setter Property="Background" Value="#EEF2F6"/>
+            <Setter Property="BorderBrush" Value="#DDE2E8"/>
+        </Style>
+        <Style x:Key="PrimaryButtonStyle" TargetType="Button" BasedOn="{StaticResource ToolbarButtonStyle}">
+            <Setter Property="Background" Value="#143D4C"/>
+            <Setter Property="Foreground" Value="White"/>
+            <Setter Property="BorderBrush" Value="#143D4C"/>
+        </Style>
+        <Style TargetType="TextBox">
+            <Setter Property="Padding" Value="8,5"/>
+            <Setter Property="Margin" Value="0,4,10,10"/>
+        </Style>
+        <Style TargetType="ComboBox">
+            <Setter Property="Padding" Value="6,4"/>
+            <Setter Property="Margin" Value="0,4,10,10"/>
+            <Setter Property="MinWidth" Value="220"/>
+        </Style>
+        <Style TargetType="DataGrid">
+            <Setter Property="AutoGenerateColumns" Value="False"/>
+            <Setter Property="CanUserAddRows" Value="False"/>
+            <Setter Property="GridLinesVisibility" Value="Horizontal"/>
+            <Setter Property="HeadersVisibility" Value="Column"/>
+            <Setter Property="SelectionMode" Value="Single"/>
+            <Setter Property="Margin" Value="0,10,0,0"/>
+        </Style>
+        <Style x:Key="CardButtonStyle" TargetType="Button">
+            <Setter Property="Background" Value="White"/>
+            <Setter Property="BorderBrush" Value="#DDE2E8"/>
+            <Setter Property="BorderThickness" Value="1"/>
+            <Setter Property="Padding" Value="14"/>
+            <Setter Property="Margin" Value="0,0,12,12"/>
+            <Setter Property="HorizontalContentAlignment" Value="Stretch"/>
+            <Setter Property="VerticalContentAlignment" Value="Stretch"/>
+        </Style>
+    </UserControl.Resources>
+
+    <Grid Margin="24">
+        <Grid.RowDefinitions>
+            <RowDefinition Height="Auto"/>
+            <RowDefinition Height="*"/>
+            <RowDefinition Height="Auto"/>
+        </Grid.RowDefinitions>
+
+        <DockPanel Margin="0,0,0,16">
+            <Menu DockPanel.Dock="Right"
+                  Background="Transparent">
+                <MenuItem Header="{Binding UserMenuHeader}">
+                    <MenuItem Header="Xem thong tin tai khoan"
+                              Command="{Binding ShowAccountInfoCommand}"/>
+                    <Separator/>
+                    <MenuItem Header="Dang xuat"
+                              Command="{Binding LogoutCommand}"/>
+                </MenuItem>
+            </Menu>
+
+            <StackPanel>
+                <TextBlock Text="{Binding Title}"
+                           FontSize="26"
+                           FontWeight="SemiBold"
+                           Foreground="#20242B"/>
+                <TextBlock Text="{Binding Subtitle}"
+                           Margin="0,4,0,0"
+                           Foreground="#687381"/>
+            </StackPanel>
+        </DockPanel>
+
+        <Grid Grid.Row="1">
+            <Grid Visibility="{Binding HomeVisibility}">
+                <Grid.RowDefinitions>
+                    <RowDefinition Height="Auto"/>
+                    <RowDefinition Height="*"/>
+                </Grid.RowDefinitions>
+
+                <TextBlock Text="Ban muon lam gi tiep theo?"
+                           FontSize="20"
+                           FontWeight="SemiBold"
+                           Margin="0,0,0,14"/>
+
+                <Grid Grid.Row="1">
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="*"/>
+                        <ColumnDefinition Width="16"/>
+                        <ColumnDefinition Width="*"/>
+                    </Grid.ColumnDefinitions>
+
+                    <Button Style="{StaticResource CardButtonStyle}"
+                            Command="{Binding ShowBuildListCommand}">
+                        <StackPanel>
+                            <TextBlock Text="Xem build"
+                                       FontSize="28"
+                                       FontWeight="SemiBold"
+                                       Foreground="#143D4C"/>
+                            <TextBlock Text="Mo danh sach build da luu, xem chi tiet, tiep tuc chinh sua."
+                                       TextWrapping="Wrap"
+                                       Margin="0,10,0,0"
+                                       Foreground="#51606F"/>
+                            <TextBlock Text="{Binding Builds.Count, StringFormat={}{0} build da luu}"
+                                       Margin="0,18,0,0"
+                                       FontWeight="SemiBold"/>
+                        </StackPanel>
+                    </Button>
+
+                    <Button Grid.Column="2"
+                            Style="{StaticResource CardButtonStyle}"
+                            Command="{Binding NewBuildCommand}">
+                        <StackPanel>
+                            <TextBlock Text="Tao build moi"
+                                       FontSize="28"
+                                       FontWeight="SemiBold"
+                                       Foreground="#143D4C"/>
+                            <TextBlock Text="Bat dau cau hinh keyboard moi tu layout va danh muc linh kien."
+                                       TextWrapping="Wrap"
+                                       Margin="0,10,0,0"
+                                       Foreground="#51606F"/>
+                            <TextBlock Text="Mo configurator"
+                                       Margin="0,18,0,0"
+                                       FontWeight="SemiBold"/>
+                        </StackPanel>
+                    </Button>
+                </Grid>
+
+                <Button Grid.Row="1"
+                        Style="{StaticResource ToolbarButtonStyle}"
+                        HorizontalAlignment="Left"
+                        VerticalAlignment="Bottom"
+                        Content="Xem request da gui"
+                        Command="{Binding ShowSentRequestsCommand}"/>
+            </Grid>
+
+            <Grid Visibility="{Binding BuildListVisibility}">
+                <Grid.RowDefinitions>
+                    <RowDefinition Height="Auto"/>
+                    <RowDefinition Height="*"/>
+                </Grid.RowDefinitions>
+
+                <DockPanel>
+                    <StackPanel Orientation="Horizontal">
+                        <Button Style="{StaticResource ToolbarButtonStyle}" Content="Trang chu" Command="{Binding ShowHomeCommand}"/>
+                        <Button Style="{StaticResource ToolbarButtonStyle}" Content="Refresh" Command="{Binding RefreshAllCommand}"/>
+                        <Button Style="{StaticResource PrimaryButtonStyle}" Content="Tao build moi" Command="{Binding NewBuildCommand}"/>
+                    </StackPanel>
+                </DockPanel>
+
+                <ListBox Grid.Row="1"
+                         ItemsSource="{Binding Builds}"
+                         SelectedItem="{Binding SelectedBuild}"
+                         BorderThickness="0"
+                         Margin="0,12,0,0">
+                    <ListBox.ItemTemplate>
+                        <DataTemplate>
+                            <Button Style="{StaticResource CardButtonStyle}"
+                                    Command="{Binding DataContext.OpenBuildDetailCommand, RelativeSource={RelativeSource AncestorType=UserControl}}"
+                                    CommandParameter="{Binding}">
+                                <Grid>
+                                    <Grid.ColumnDefinitions>
+                                        <ColumnDefinition Width="2*"/>
+                                        <ColumnDefinition Width="*"/>
+                                        <ColumnDefinition Width="*"/>
+                                    </Grid.ColumnDefinitions>
+                                    <StackPanel>
+                                        <TextBlock Text="{Binding Name}" FontSize="17" FontWeight="SemiBold"/>
+                                        <TextBlock Text="{Binding BuildId}" Foreground="#687381"/>
+                                        <TextBlock Text="{Binding UpdatedAt, StringFormat=Cap nhat: {0:g}, TargetNullValue=Chua cap nhat}"
+                                                   Foreground="#687381"
+                                                   Margin="0,4,0,0"/>
+                                    </StackPanel>
+                                    <StackPanel Grid.Column="1">
+                                        <TextBlock Text="{Binding LayoutId, StringFormat=Layout: {0}}"/>
+                                        <TextBlock Text="{Binding CaseId, StringFormat=Case: {0}, TargetNullValue=Case: Chua chon}"/>
+                                        <TextBlock Text="{Binding PcbId, StringFormat=PCB: {0}, TargetNullValue=PCB: Chua chon}"/>
+                                        <TextBlock Text="{Binding PlateId, StringFormat=Plate: {0}, TargetNullValue=Plate: Chua chon}"/>
+                                    </StackPanel>
+                                    <StackPanel Grid.Column="2">
+                                        <TextBlock Text="{Binding SwitchId, StringFormat=Switch: {0}, TargetNullValue=Switch: Chua chon}"/>
+                                        <TextBlock Text="{Binding TotalCostSnapshot, StringFormat=Tong gia: {0:F2} USD}"/>
+                                        <TextBlock Text="{Binding Status, StringFormat=Trang thai: {0}}"/>
+                                    </StackPanel>
+                                </Grid>
+                            </Button>
+                        </DataTemplate>
+                    </ListBox.ItemTemplate>
+                </ListBox>
+            </Grid>
+
+            <Grid Visibility="{Binding BuildDetailVisibility}">
+                <Grid.RowDefinitions>
+                    <RowDefinition Height="Auto"/>
+                    <RowDefinition Height="*"/>
+                </Grid.RowDefinitions>
+
+                <StackPanel Orientation="Horizontal">
+                    <Button Style="{StaticResource ToolbarButtonStyle}" Content="Quay lai danh sach" Command="{Binding ShowBuildListCommand}"/>
+                    <Button Style="{StaticResource PrimaryButtonStyle}" Content="Tiep tuc chinh sua" Command="{Binding LoadSelectedBuildCommand}"/>
+                    <Button Style="{StaticResource ToolbarButtonStyle}" Content="Gui request" Command="{Binding SendRequestCommand}"/>
+                </StackPanel>
+
+                <Border Grid.Row="1"
+                        Style="{StaticResource SectionBorderStyle}"
+                        Margin="0,12,0,0">
+                    <Grid>
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="2*"/>
+                            <ColumnDefinition Width="*"/>
+                        </Grid.ColumnDefinitions>
+
+                        <StackPanel>
+                            <TextBlock Text="{Binding SelectedBuild.Name}"
+                                       FontSize="24"
+                                       FontWeight="SemiBold"/>
+                            <TextBlock Text="{Binding SelectedBuild.BuildId}"
+                                       Foreground="#687381"
+                                       Margin="0,4,0,16"/>
+                            <TextBlock Text="{Binding SelectedBuild.LayoutId, StringFormat=Layout: {0}}"/>
+                            <TextBlock Text="{Binding SelectedBuild.CaseId, StringFormat=Case: {0}, TargetNullValue=Case: Chua chon}"/>
+                            <TextBlock Text="{Binding SelectedBuild.PcbId, StringFormat=PCB: {0}, TargetNullValue=PCB: Chua chon}"/>
+                            <TextBlock Text="{Binding SelectedBuild.PlateId, StringFormat=Plate: {0}, TargetNullValue=Plate: Chua chon}"/>
+                            <TextBlock Text="{Binding SelectedBuild.SwitchId, StringFormat=Switch: {0}, TargetNullValue=Switch: Chua chon}"/>
+                            <TextBlock Text="{Binding SelectedBuild.KeycapId, StringFormat=Keycap: {0}, TargetNullValue=Keycap: Chua chon}"/>
+                            <TextBlock Text="{Binding SelectedBuild.StabilizerId, StringFormat=Stabilizer: {0}, TargetNullValue=Stabilizer: Chua chon}"/>
+                            <TextBlock Text="{Binding SelectedBuild.Notes, StringFormat=Ghi chu: {0}, TargetNullValue=Ghi chu: Khong co}"
+                                       TextWrapping="Wrap"
+                                       Margin="0,12,0,0"/>
+                        </StackPanel>
+
+                        <StackPanel Grid.Column="1">
+                            <TextBlock Text="Tong gia snapshot"
+                                       Foreground="#687381"/>
+                            <TextBlock Text="{Binding SelectedBuild.TotalCostSnapshot, StringFormat={}{0:F2} USD}"
+                                       FontSize="28"
+                                       FontWeight="SemiBold"/>
+                            <TextBlock Text="{Binding SelectedBuild.Status, StringFormat=Trang thai: {0}}"
+                                       Margin="0,10,0,0"/>
+                            <TextBlock Text="Mods"
+                                       Margin="0,18,0,6"
+                                       FontWeight="SemiBold"/>
+                            <ItemsControl ItemsSource="{Binding SelectedBuild.Mods}">
+                                <ItemsControl.ItemTemplate>
+                                    <DataTemplate>
+                                        <TextBlock Text="{Binding ModType, StringFormat=- {0}}"/>
+                                    </DataTemplate>
+                                </ItemsControl.ItemTemplate>
+                            </ItemsControl>
+
+                            <Separator Margin="0,18,0,14"/>
+
+                            <TextBlock Text="Gui request cho seller"
+                                       FontWeight="SemiBold"/>
+                            <TextBlock Text="{Binding SellerEmptyMessage}"
+                                       Foreground="#A33D2B"
+                                       TextWrapping="Wrap"
+                                       Margin="0,4,0,4"/>
+                            <TextBlock Text="Seller"
+                                       Margin="0,4,0,0"/>
+                            <ComboBox ItemsSource="{Binding AvailableSellers}"
+                                      SelectedItem="{Binding SelectedSeller}">
+                                <ComboBox.ItemTemplate>
+                                    <DataTemplate>
+                                        <StackPanel>
+                                            <TextBlock Text="{Binding ShopName}" FontWeight="SemiBold"/>
+                                            <TextBlock Foreground="#687381">
+                                                <Run Text="{Binding Phone}"/>
+                                                <Run Text=" - "/>
+                                                <Run Text="{Binding Address}"/>
+                                            </TextBlock>
+                                        </StackPanel>
+                                    </DataTemplate>
+                                </ComboBox.ItemTemplate>
+                            </ComboBox>
+                            <TextBlock Text="Note cho seller"/>
+                            <TextBox Text="{Binding RequestNote, UpdateSourceTrigger=PropertyChanged}"
+                                     MinHeight="68"
+                                     AcceptsReturn="True"
+                                     TextWrapping="Wrap"
+                                     VerticalScrollBarVisibility="Auto"/>
+                            <Button Style="{StaticResource PrimaryButtonStyle}"
+                                    Content="Gui request"
+                                    Command="{Binding SendRequestCommand}"
+                                    HorizontalAlignment="Left"/>
+                        </StackPanel>
+                    </Grid>
+                </Border>
+            </Grid>
+
+            <Grid Visibility="{Binding ConfiguratorVisibility}">
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="2*"/>
+                    <ColumnDefinition Width="18"/>
+                    <ColumnDefinition Width="380"/>
+                </Grid.ColumnDefinitions>
+
+                <Grid>
+                    <Grid.RowDefinitions>
+                        <RowDefinition Height="Auto"/>
+                        <RowDefinition Height="Auto"/>
+                        <RowDefinition Height="*"/>
+                    </Grid.RowDefinitions>
+
+                    <StackPanel Orientation="Horizontal">
+                        <Button Style="{StaticResource ToolbarButtonStyle}" Content="Trang chu" Command="{Binding ShowHomeCommand}"/>
+                        <Button Style="{StaticResource ToolbarButtonStyle}" Content="Xem build" Command="{Binding ShowBuildListCommand}"/>
+                    </StackPanel>
+
+                    <Border Grid.Row="1"
+                            Style="{StaticResource SectionBorderStyle}"
+                            Margin="0,4,0,12">
+                        <Grid>
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="2*"/>
+                                <ColumnDefinition Width="*"/>
+                            </Grid.ColumnDefinitions>
+
+                            <StackPanel>
+                                <TextBlock Text="Ten build"/>
+                                <TextBox Text="{Binding BuildName, UpdateSourceTrigger=PropertyChanged}"/>
+                            </StackPanel>
+
+                            <StackPanel Grid.Column="1">
+                                <TextBlock Text="Layout"/>
+                                <ComboBox ItemsSource="{Binding Layouts}"
+                                          SelectedItem="{Binding SelectedLayout}">
+                                    <ComboBox.ItemTemplate>
+                                        <DataTemplate>
+                                            <StackPanel Orientation="Horizontal">
+                                                <TextBlock Text="{Binding LayoutName}"/>
+                                                <TextBlock Text=" - "/>
+                                                <TextBlock Text="{Binding StandardKeyCount}"/>
+                                                <TextBlock Text=" phim"/>
+                                            </StackPanel>
+                                        </DataTemplate>
+                                    </ComboBox.ItemTemplate>
+                                </ComboBox>
+                            </StackPanel>
+                        </Grid>
+                    </Border>
+
+                    <Grid Grid.Row="2">
+                        <Grid.RowDefinitions>
+                            <RowDefinition Height="Auto"/>
+                            <RowDefinition Height="Auto"/>
+                            <RowDefinition Height="*"/>
+                        </Grid.RowDefinitions>
+
+                        <DockPanel Margin="0,0,0,8">
+                            <StackPanel Orientation="Horizontal">
+                                <ItemsControl ItemsSource="{Binding ComponentCategories}">
+                                    <ItemsControl.ItemsPanel>
+                                        <ItemsPanelTemplate>
+                                            <StackPanel Orientation="Horizontal"/>
+                                        </ItemsPanelTemplate>
+                                    </ItemsControl.ItemsPanel>
+                                    <ItemsControl.ItemTemplate>
+                                        <DataTemplate>
+                                            <Button Content="{Binding Label}"
+                                                    Command="{Binding DataContext.SelectCategoryCommand, RelativeSource={RelativeSource AncestorType=UserControl}}"
+                                                    CommandParameter="{Binding}">
+                                                <Button.Style>
+                                                    <Style TargetType="Button" BasedOn="{StaticResource ToolbarButtonStyle}">
+                                                        <Style.Triggers>
+                                                            <DataTrigger Binding="{Binding IsSelected}" Value="True">
+                                                                <Setter Property="Background" Value="#143D4C"/>
+                                                                <Setter Property="Foreground" Value="White"/>
+                                                                <Setter Property="BorderBrush" Value="#143D4C"/>
+                                                            </DataTrigger>
+                                                        </Style.Triggers>
+                                                    </Style>
+                                                </Button.Style>
+                                            </Button>
+                                        </DataTemplate>
+                                    </ItemsControl.ItemTemplate>
+                                </ItemsControl>
+                            </StackPanel>
+                        </DockPanel>
+
+                        <DockPanel Grid.Row="1">
+                            <Button DockPanel.Dock="Right"
+                                    Style="{StaticResource ToolbarButtonStyle}"
+                                    Content="Clear"
+                                    Command="{Binding ClearComponentSearchCommand}"/>
+                            <TextBox Text="{Binding ComponentSearchText, UpdateSourceTrigger=PropertyChanged}"
+                                     Margin="0,0,10,10"
+                                     MinWidth="260"/>
+                        </DockPanel>
+
+                        <ScrollViewer Grid.Row="2"
+                                      VerticalScrollBarVisibility="Auto">
+                            <StackPanel>
+                                <TextBlock Text="{Binding ComponentEmptyMessage}"
+                                           Foreground="#687381"
+                                           TextWrapping="Wrap"
+                                           Margin="0,0,0,8"/>
+                                <ItemsControl ItemsSource="{Binding VisibleComponents}">
+                                    <ItemsControl.ItemsPanel>
+                                        <ItemsPanelTemplate>
+                                            <WrapPanel/>
+                                        </ItemsPanelTemplate>
+                                    </ItemsControl.ItemsPanel>
+                                    <ItemsControl.ItemTemplate>
+                                        <DataTemplate>
+                                            <Button Width="245"
+                                                    MinHeight="126"
+                                                    Command="{Binding DataContext.SelectComponentCommand, RelativeSource={RelativeSource AncestorType=UserControl}}"
+                                                    CommandParameter="{Binding}">
+                                                <Button.Style>
+                                                    <Style TargetType="Button" BasedOn="{StaticResource CardButtonStyle}">
+                                                        <Style.Triggers>
+                                                            <DataTrigger Binding="{Binding IsSelected}" Value="True">
+                                                                <Setter Property="BorderBrush" Value="#143D4C"/>
+                                                                <Setter Property="BorderThickness" Value="2"/>
+                                                                <Setter Property="Background" Value="#F0F8FA"/>
+                                                            </DataTrigger>
+                                                        </Style.Triggers>
+                                                    </Style>
+                                                </Button.Style>
+                                                <StackPanel>
+                                                    <TextBlock Text="{Binding CategoryLabel}"
+                                                               Foreground="#687381"/>
+                                                    <TextBlock Text="{Binding Title}"
+                                                               FontWeight="SemiBold"
+                                                               TextWrapping="Wrap"
+                                                               Margin="0,4,0,0"/>
+                                                    <TextBlock Text="{Binding Subtitle}"
+                                                               TextWrapping="Wrap"
+                                                               Margin="0,4,0,0"/>
+                                                    <TextBlock Text="{Binding Details}"
+                                                               TextWrapping="Wrap"
+                                                               Foreground="#687381"
+                                                               Margin="0,4,0,0"/>
+                                                    <TextBlock Text="{Binding PriceText}"
+                                                               FontWeight="SemiBold"
+                                                               Margin="0,8,0,0"/>
+                                                </StackPanel>
+                                            </Button>
+                                        </DataTemplate>
+                                    </ItemsControl.ItemTemplate>
+                                </ItemsControl>
+                            </StackPanel>
+                        </ScrollViewer>
+                    </Grid>
+                </Grid>
+
+                <StackPanel Grid.Column="2">
+                    <Border Style="{StaticResource SectionBorderStyle}" Margin="0,0,0,14">
+                        <StackPanel>
+                            <TextBlock Text="Tong gia tam tinh" Foreground="#687381"/>
+                            <TextBlock Text="{Binding TotalPreview, StringFormat={}{0:F2} USD}"
+                                       FontSize="28"
+                                       FontWeight="SemiBold"/>
+                            <Button Content="Luu build"
+                                    Style="{StaticResource PrimaryButtonStyle}"
+                                    Margin="0,12,8,0"
+                                    Command="{Binding SaveBuildCommand}"
+                                    IsEnabled="{Binding CanSaveBuild}"/>
+                        </StackPanel>
+                    </Border>
+
+                    <Border Style="{StaticResource SectionBorderStyle}" Margin="0,0,0,14">
+                        <StackPanel>
+                            <TextBlock Text="Dang chon"
+                                       FontWeight="SemiBold"
+                                       FontSize="16"
+                                       Margin="0,0,0,10"/>
+                            <TextBlock Text="{Binding SelectedCase.CaseId, StringFormat=Case: {0}, TargetNullValue=Case: Chua chon}"/>
+                            <TextBlock Text="{Binding SelectedPcb.PcbId, StringFormat=PCB: {0}, TargetNullValue=PCB: Chua chon}"/>
+                            <TextBlock Text="{Binding SelectedPlate.PlateId, StringFormat=Plate: {0}, TargetNullValue=Plate: Chua chon}"/>
+                            <TextBlock Text="{Binding SelectedSwitch.SwitchId, StringFormat=Switch: {0}, TargetNullValue=Switch: Chua chon}"/>
+
+                            <TextBlock Text="Keycap" Margin="0,12,0,0"/>
+                            <ComboBox ItemsSource="{Binding Keycaps}"
+                                      SelectedItem="{Binding SelectedKeycap}">
+                                <ComboBox.ItemTemplate>
+                                    <DataTemplate>
+                                        <TextBlock>
+                                            <Run Text="{Binding KeycapId}"/>
+                                            <Run Text=" - "/>
+                                            <Run Text="{Binding Profile}"/>
+                                        </TextBlock>
+                                    </DataTemplate>
+                                </ComboBox.ItemTemplate>
+                            </ComboBox>
+
+                            <TextBlock Text="Stabilizer"/>
+                            <ComboBox ItemsSource="{Binding Stabilizers}"
+                                      SelectedItem="{Binding SelectedStabilizer}">
+                                <ComboBox.ItemTemplate>
+                                    <DataTemplate>
+                                        <TextBlock>
+                                            <Run Text="{Binding StabilizerId}"/>
+                                            <Run Text=" - "/>
+                                            <Run Text="{Binding StabilizerType}"/>
+                                        </TextBlock>
+                                    </DataTemplate>
+                                </ComboBox.ItemTemplate>
+                            </ComboBox>
+
+                            <TextBlock Text="Ghi chu build"/>
+                            <TextBox Text="{Binding BuildNotes, UpdateSourceTrigger=PropertyChanged}"
+                                     AcceptsReturn="True"
+                                     TextWrapping="Wrap"
+                                     Height="70"/>
+                        </StackPanel>
+                    </Border>
+
+                    <Border Style="{StaticResource SectionBorderStyle}" Margin="0,0,0,14">
+                        <StackPanel>
+                            <TextBlock Text="Compatibility"
+                                       FontWeight="SemiBold"
+                                       FontSize="16"
+                                       Margin="0,0,0,10"/>
+                            <ItemsControl ItemsSource="{Binding CompatibilityMessages}">
+                                <ItemsControl.ItemTemplate>
+                                    <DataTemplate>
+                                        <TextBlock Text="{Binding}"
+                                                   Foreground="#B42318"
+                                                   TextWrapping="Wrap"
+                                                   Margin="0,0,0,8"/>
+                                    </DataTemplate>
+                                </ItemsControl.ItemTemplate>
+                            </ItemsControl>
+                            <TextBlock Text="Hop le de luu build."
+                                       Foreground="#16703C">
+                                <TextBlock.Style>
+                                    <Style TargetType="TextBlock">
+                                        <Setter Property="Visibility" Value="Collapsed"/>
+                                        <Style.Triggers>
+                                            <DataTrigger Binding="{Binding CanSaveBuild}" Value="True">
+                                                <Setter Property="Visibility" Value="Visible"/>
+                                            </DataTrigger>
+                                        </Style.Triggers>
+                                    </Style>
+                                </TextBlock.Style>
+                            </TextBlock>
+                        </StackPanel>
+                    </Border>
+
+                    <Border Style="{StaticResource SectionBorderStyle}">
+                        <StackPanel>
+                            <TextBlock Text="Mod co ban"
+                                       FontWeight="SemiBold"
+                                       FontSize="16"
+                                       Margin="0,0,0,10"/>
+                            <StackPanel Orientation="Horizontal">
+                                <Button Content="Them mod" Style="{StaticResource ToolbarButtonStyle}" Command="{Binding AddModCommand}"/>
+                                <Button Content="Xoa mod" Style="{StaticResource ToolbarButtonStyle}" Command="{Binding RemoveModCommand}"/>
+                            </StackPanel>
+                            <DataGrid ItemsSource="{Binding Mods}"
+                                      SelectedItem="{Binding SelectedMod}"
+                                      IsReadOnly="False"
+                                      MinHeight="130">
+                                <DataGrid.Columns>
+                                    <DataGridTextColumn Header="Mod" Binding="{Binding ModType, UpdateSourceTrigger=PropertyChanged}" Width="*"/>
+                                    <DataGridTextColumn Header="Target" Binding="{Binding TargetComponent, UpdateSourceTrigger=PropertyChanged}" Width="*"/>
+                                    <DataGridTextColumn Header="Lube" Binding="{Binding LubeType, UpdateSourceTrigger=PropertyChanged}" Width="*"/>
+                                    <DataGridCheckBoxColumn Header="Film" Binding="{Binding IsFilmed, UpdateSourceTrigger=PropertyChanged}" Width="Auto"/>
+                                    <DataGridTextColumn Header="Spring" Binding="{Binding SpringWeightG, UpdateSourceTrigger=PropertyChanged}" Width="Auto"/>
+                                </DataGrid.Columns>
+                            </DataGrid>
+                        </StackPanel>
+                    </Border>
+                </StackPanel>
+            </Grid>
+
+            <Grid Visibility="{Binding SentRequestsVisibility}">
+                <Grid.RowDefinitions>
+                    <RowDefinition Height="Auto"/>
+                    <RowDefinition Height="*"/>
+                </Grid.RowDefinitions>
+
+                <StackPanel Orientation="Horizontal">
+                    <Button Style="{StaticResource ToolbarButtonStyle}" Content="Trang chu" Command="{Binding ShowHomeCommand}"/>
+                    <Button Style="{StaticResource ToolbarButtonStyle}" Content="Refresh" Command="{Binding RefreshAllCommand}"/>
+                </StackPanel>
+
+                <DataGrid Grid.Row="1"
+                          IsReadOnly="True"
+                          ItemsSource="{Binding Requests}">
+                    <DataGrid.Columns>
+                        <DataGridTextColumn Header="Request" Binding="{Binding RequestId}" Width="*"/>
+                        <DataGridTextColumn Header="Build" Binding="{Binding BuildId}" Width="*"/>
+                        <DataGridTextColumn Header="Seller" Binding="{Binding SellerUserId}" Width="*"/>
+                        <DataGridTextColumn Header="Status" Binding="{Binding Status}" Width="*"/>
+                        <DataGridTextColumn Header="Requested" Binding="{Binding RequestedAt, StringFormat={}{0:g}}" Width="*"/>
+                        <DataGridTextColumn Header="Note" Binding="{Binding Note}" Width="2*"/>
+                    </DataGrid.Columns>
+                </DataGrid>
+            </Grid>
+        </Grid>
+
+        <Border Grid.Row="2"
+                Background="#F7F9FC"
+                BorderBrush="#DDE2E8"
+                BorderThickness="1"
+                Padding="10"
+                Margin="0,14,0,0">
+            <TextBlock Text="{Binding StatusMessage}"
+                       Foreground="#394150"
+                       TextWrapping="Wrap"/>
+        </Border>
+    </Grid>
+</UserControl>

@@ -1,0 +1,188 @@
+// Custom Keyboard Builder - ERD de xuat theo huong shop linh kien thuc te
+// Muc tieu: buyer chon keyboard kit, sau do mix switch/keycap/stabilizer/lube/spring/accessory.
+// File nay la ban thu nghiem/tham khao, KHONG thay the ERD hien tai.
+
+Table roles {
+  role_id int [pk, increment]
+  role_name varchar [unique, not null]
+  permissions varchar
+}
+
+Table users {
+  user_id int [pk, increment]
+  role_id int [not null, ref: > roles.role_id]
+  username varchar [unique, not null]
+  email varchar [unique, not null]
+  phone varchar [unique, not null]
+  password_hash varchar [not null]
+  is_active boolean [not null]
+}
+
+Table seller_profiles {
+  seller_profile_id int [pk, increment]
+  user_id int [not null, unique, ref: > users.user_id]
+  shop_name varchar [not null]
+  phone varchar [not null]
+  address varchar [not null]
+  is_verified boolean [not null]
+  verified_at datetime
+}
+
+Table brands {
+  brand_id int [pk, increment]
+  brand_name varchar [unique, not null]
+  country varchar
+}
+
+Table layouts {
+  layout_id varchar [pk]
+  layout_name varchar [not null]
+  form_factor varchar [not null]
+  default_key_count int [not null]
+}
+
+Table keyboard_kits {
+  kit_id varchar [pk]
+  brand_id int [not null, ref: > brands.brand_id]
+  layout_id varchar [not null, ref: > layouts.layout_id]
+  kit_name varchar [not null]
+  pcb_technology varchar [not null] // Mechanical, HE, Topre, Optical...
+  switch_mount varchar [not null] // MX 3-pin, MX 5-pin, HE, Topre...
+  stabilizer_type varchar [not null] // PCB screw-in, plate mount...
+  hotswap boolean [not null]
+  wireless boolean [not null]
+  rgb boolean [not null]
+  included_parts_json text // case, PCB, plate, foam, daughterboard, cable...
+  price_usd float [not null]
+  is_available boolean [not null]
+}
+
+Table switches {
+  switch_id varchar [pk]
+  brand_id int [not null, ref: > brands.brand_id]
+  switch_name varchar [not null]
+  switch_technology varchar [not null] // Mechanical, HE, Topre, Optical...
+  mount_type varchar [not null] // MX 3-pin, MX 5-pin, HE, Topre...
+  switch_type varchar
+  actuation_force_g int
+  sound_profile varchar
+  price_usd float [not null] // unit price per switch
+  is_available boolean [not null]
+}
+
+Table keycap_sets {
+  keycap_id varchar [pk]
+  brand_id int [not null, ref: > brands.brand_id]
+  keycap_name varchar [not null]
+  supported_form_factor varchar [not null] // 60/65/75/TKL/100 or universal
+  profile varchar
+  material varchar
+  color_primary varchar
+  legend_type varchar
+  price_usd float [not null]
+  is_available boolean [not null]
+}
+
+Table stabilizers {
+  stab_id varchar [pk]
+  brand_id int [not null, ref: > brands.brand_id]
+  stab_name varchar [not null]
+  stabilizer_type varchar [not null] // PCB screw-in, plate mount...
+  supported_layouts varchar // 60/65/75/TKL/100 or kit-specific notes
+  sizes_included varchar
+  price_usd float [not null]
+  is_available boolean [not null]
+}
+
+Table accessories {
+  accessory_id varchar [pk]
+  brand_id int [ref: > brands.brand_id]
+  accessory_type varchar [not null] // Lube, Spring, Film, Foam, Cable, Tool...
+  accessory_name varchar [not null]
+  target_component varchar // Switch, Stabilizer, Kit, General...
+  spec varchar // e.g. Krytox 205g0, 63.5g spring, poron foam...
+  price_usd float [not null]
+  is_available boolean [not null]
+}
+
+Table seller_inventory {
+  inventory_id int [pk, increment]
+  seller_user_id int [not null, ref: > users.user_id]
+  item_type varchar [not null] // Kit, Switch, Keycap, Stabilizer, Accessory
+  item_id varchar [not null]
+  stock_quantity int [not null]
+  seller_price_usd float
+  is_active boolean [not null]
+
+  Note: 'item_id points to one of keyboard_kits/switches/keycap_sets/stabilizers/accessories based on item_type. DBML cannot enforce this polymorphic FK directly.'
+}
+
+Table builds {
+  build_id varchar [pk]
+  buyer_id int [not null, ref: > users.user_id]
+  kit_id varchar [not null, ref: > keyboard_kits.kit_id]
+  name varchar [not null]
+  notes varchar
+  switch_quantity int [not null]
+  status varchar [not null]
+  total_cost_snapshot float [not null]
+  created_at datetime [not null]
+  updated_at datetime
+}
+
+Table build_items {
+  build_item_id int [pk, increment]
+  build_id varchar [not null, ref: > builds.build_id]
+  item_type varchar [not null] // Switch, Keycap, Stabilizer, Accessory
+  item_id varchar [not null]
+  quantity int [not null]
+  unit_price_snapshot float [not null]
+  notes varchar
+
+  Note: 'Build items are the optional mix-ins after choosing the keyboard kit. item_id is polymorphic by item_type.'
+}
+
+Table build_requests {
+  request_id varchar [pk]
+  build_id varchar [not null, ref: > builds.build_id]
+  buyer_id int [not null, ref: > users.user_id]
+  seller_user_id int [not null, ref: > users.user_id]
+  request_payload_json text [not null]
+  status varchar [not null] // Pending, Accepted, In_progress, Completed, Cancelled
+  note varchar
+  requested_at datetime [not null]
+  accepted_at datetime
+  completed_at datetime
+  updated_at datetime
+}
+
+Table audit_log {
+  log_id int [pk, increment]
+  user_id int [not null, ref: > users.user_id]
+  table_name varchar [not null]
+  record_id varchar [not null]
+  action varchar [not null]
+  old_value_json text
+  new_value_json text
+  changed_at datetime [not null]
+}
+
+Table chat_conversations {
+  conversation_id varchar [pk]
+  seller_user_id int [not null, ref: > users.user_id]
+  buyer_id int [ref: > users.user_id]
+  admin_user_id int [ref: > users.user_id]
+  build_request_id varchar [ref: > build_requests.request_id]
+  created_at datetime [not null]
+  updated_at datetime
+
+  Note: 'Exactly one of buyer_id or admin_user_id must be set. Buyer-admin direct chat is not allowed.'
+}
+
+Table chat_messages {
+  message_id varchar [pk]
+  conversation_id varchar [not null, ref: > chat_conversations.conversation_id]
+  sender_user_id int [not null, ref: > users.user_id]
+  message_text text [not null]
+  sent_at datetime [not null]
+}

@@ -1,0 +1,45 @@
+// Custom Keyboard Builder - ERD con: Build Request Flow
+// Lat cat nay dung de trinh bay buyer gui build request cho seller va seller xu ly status.
+// ERD full van la Documents/Custom_Keyboard_ERD.dbml.
+
+Table users {
+  user_id int [pk, increment]
+  username varchar [unique]
+  is_active boolean
+}
+
+Table seller_profiles {
+  seller_profile_id int [pk, increment]
+  user_id int [not null, ref: > users.user_id, unique]
+  shop_name varchar
+  phone varchar
+  address varchar
+  is_verified boolean
+}
+
+Table builds {
+  build_id varchar [pk]
+  user_id int [not null, ref: > users.user_id]
+  layout_id varchar
+  name varchar
+  status varchar
+  total_cost_snapshot float
+  created_at datetime
+  updated_at datetime
+}
+
+Table build_requests {
+  request_id varchar [pk]
+  build_id varchar [not null, ref: > builds.build_id]
+  buyer_id int [not null, ref: > users.user_id]
+  seller_user_id int [not null, ref: > users.user_id]
+  request_payload_json text
+  status varchar
+  note varchar
+  requested_at datetime
+  accepted_at datetime
+  completed_at datetime
+  updated_at datetime
+
+  Note: 'seller_user_id must point to a Seller user with an active/verified seller profile by service rule.'
+}

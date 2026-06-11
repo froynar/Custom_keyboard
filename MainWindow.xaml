@@ -1,0 +1,63 @@
+<Window x:Class="Custom_keyboard.MainWindow"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+        xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+        xmlns:viewModels="clr-namespace:Custom_keyboard.ViewModels"
+        xmlns:views="clr-namespace:Custom_keyboard.Views"
+        mc:Ignorable="d"
+        Title="Custom Keyboard Builder"
+        Height="720"
+        Width="1120"
+        MinHeight="620"
+        MinWidth="980"
+        WindowStartupLocation="CenterScreen">
+    <Window.Resources>
+        <DataTemplate DataType="{x:Type viewModels:LoginViewModel}">
+            <views:LoginView/>
+        </DataTemplate>
+        <DataTemplate DataType="{x:Type viewModels:RegisterViewModel}">
+            <views:RegisterView/>
+        </DataTemplate>
+        <DataTemplate DataType="{x:Type viewModels:BuyerDashboardViewModel}">
+            <views:BuyerDashboardView/>
+        </DataTemplate>
+        <DataTemplate DataType="{x:Type viewModels:SellerDashboardViewModel}">
+            <views:SellerDashboardView/>
+        </DataTemplate>
+        <DataTemplate DataType="{x:Type viewModels:AdminDashboardViewModel}">
+            <views:AdminDashboardView/>
+        </DataTemplate>
+    </Window.Resources>
+
+    <Grid Background="#F6F7F9">
+        <Grid.RowDefinitions>
+            <RowDefinition Height="64"/>
+            <RowDefinition Height="*"/>
+        </Grid.RowDefinitions>
+
+        <Border Grid.Row="0" Background="#20242B" Padding="24,0">
+            <DockPanel LastChildFill="True">
+                <TextBlock Text="Custom Keyboard Builder"
+                           Foreground="White"
+                           FontSize="20"
+                           FontWeight="SemiBold"
+                           VerticalAlignment="Center"/>
+                <StackPanel DockPanel.Dock="Right"
+                            Orientation="Horizontal"
+                            VerticalAlignment="Center">
+                    <TextBlock Text="{Binding CurrentEnvironmentLabel}"
+                               Foreground="#CED4DA"
+                               FontSize="13"
+                               Margin="0,0,18,0"/>
+                    <TextBlock Text="{Binding CurrentUserLabel}"
+                               Foreground="#FFFFFF"
+                               FontSize="13"/>
+                </StackPanel>
+            </DockPanel>
+        </Border>
+
+        <ContentControl Grid.Row="1"
+                        Content="{Binding CurrentViewModel}"/>
+    </Grid>
+</Window>
