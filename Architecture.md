@@ -39,6 +39,15 @@ dotnet run --project Phase6Verification\Phase6Verification.csproj
 
 No DI container is required for the current scope. Keeping composition explicit makes the refactor easier to inspect for coursework/demo purposes.
 
+## Realtime (Optional, MQTT)
+
+The `Realtime/` layer (Phase 8) adds optional MQTT notifications without changing the DB-as-source-of-truth rule:
+
+- `IRealtimeNotifier` (publish) is injected into `RequestService`, which **saves to the DB first and publishes after**, wrapped so a publish failure never affects the persisted result.
+- `IRealtimeSubscriber` (subscribe) is driven by `MainShellViewModel`: it connects on login and subscribes to the role's topics, then reloads the dashboard from the DB when an event arrives.
+- `MqttRealtimeService` (MQTTnet) implements both; all network work is best-effort and runs in the background, so a missing broker leaves the app fully usable in DB-only mode.
+- Topics: `keyboard/seller/{sellerUserId}/build-request/new` (seller listens) and `keyboard/build-request/{requestId}/status/update` (buyer listens).
+
 ## Main Flows
 
 ### Account

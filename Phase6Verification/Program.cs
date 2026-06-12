@@ -5,6 +5,7 @@ using Custom_keyboard.Models.Builds;
 using Custom_keyboard.Models.Chat;
 using Custom_keyboard.Models.Components;
 using Custom_keyboard.Models.Enums;
+using Custom_keyboard.Realtime;
 using Custom_keyboard.Repositories;
 using Custom_keyboard.Repositories.SqlServer;
 using Custom_keyboard.Services;
@@ -27,6 +28,7 @@ internal sealed class Phase6Runner
         await Run("BuildService rejects incompatible switch technology", UnitBuildServiceRejectsIncompatibleSwitchAsync);
         await Run("RequestService enforces request status state machine", UnitRequestServiceStateMachineAsync);
         await Run("RequestService rejects requests to unverified sellers", UnitRequestServiceRejectsUnverifiedSellerAsync);
+        await Run("RequestService publishes realtime after DB write (best-effort)", UnitRequestServiceRealtimeBestEffortAsync);
         await Run("ChatService enforces participants and verified sellers", UnitChatServiceParticipantsAsync);
         await Run("AccountService validates email/phone on register", UnitAccountServiceRegisterValidationAsync);
         await Run("AdminService writes audit entries for admin actions", UnitAdminServiceAuditActionsAsync);
@@ -110,7 +112,8 @@ internal sealed class Phase6Runner
             FakeSellerRepository.Standard(),
             requestRepository,
             new AlwaysValidBuildService(217.30m),
-            FakeCatalog.Standard());
+            FakeCatalog.Standard(),
+            NullRealtimeNotifier.Instance);
 
         var request = await service.SendRequestAsync(build.BuildId, build.BuyerId, 20, "phase 6 snapshot");
         AssertEqual(RequestStatus.Pending, request.Status, "initial status");
@@ -162,7 +165,8 @@ internal sealed class Phase6Runner
             FakeSellerRepository.Standard(),
             new FakeRequestRepository(),
             new AlwaysValidBuildService(217.30m),
-            FakeCatalog.Standard());
+            FakeCatalog.Standard(),
+            NullRealtimeNotifier.Instance);
 
         // Seller 21 has a profile but is_verified = false -> request must be rejected.
         await AssertThrowsAsync<InvalidOperationException>(
@@ -173,6 +177,47 @@ internal sealed class Phase6Runner
         var ok = await service.SendRequestAsync(build.BuildId, build.BuyerId, 20, "to verified seller");
         AssertEqual(RequestStatus.Pending, ok.Status, "verified seller request created");
         AssertEqual(20, ok.SellerUserId, "request targets verified seller");
+    }
+
+    private static async Task UnitRequestServiceRealtimeBestEffortAsync()
+    {
+        var build = StandardBuild();
+        var buildRepository = new FakeBuildRepository();
+        await buildRepository.SaveAsync(build);
+
+        var notifier = new FakeRealtimeNotifier();
+        var service = new RequestService(
+            buildRepository,
+            FakeSellerRepository.Standard(),
+            new FakeRequestRepository(),
+            new AlwaysValidBuildService(217.30m),
+            FakeCatalog.Standard(),
+            notifier);
+
+        // Publish happens after the DB write, with the right identifiers.
+        var saved = await service.SendRequestAsync(build.BuildId, build.BuyerId, 20, "realtime");
+        AssertEqual(20, notifier.LastCreatedSeller ?? -1, "notifier received seller id");
+        AssertEqual(saved.RequestId, notifier.LastCreatedRequestId ?? "", "notifier received request id");
+
+        await service.UpdateStatusAsync(saved.RequestId, 20, RequestStatus.Accepted);
+        AssertEqual(saved.RequestId, notifier.LastStatusRequestId ?? "", "notifier received status request id");
+        AssertEqual(RequestStatus.Accepted, notifier.LastStatus ?? RequestStatus.Pending, "notifier received status");
+
+        // A failing notifier (broker down) must NOT break the committed DB write.
+        var build2 = StandardBuild();
+        build2.BuildId = "BUILD_UNIT_PHASE8";
+        var buildRepository2 = new FakeBuildRepository();
+        await buildRepository2.SaveAsync(build2);
+        var service2 = new RequestService(
+            buildRepository2,
+            FakeSellerRepository.Standard(),
+            new FakeRequestRepository(),
+            new AlwaysValidBuildService(217.30m),
+            FakeCatalog.Standard(),
+            new FakeRealtimeNotifier { Throw = true });
+
+        var saved2 = await service2.SendRequestAsync(build2.BuildId, build2.BuyerId, 20, "should still save");
+        AssertEqual(RequestStatus.Pending, saved2.Status, "request persisted despite notifier failure");
     }
 
     private static async Task UnitAccountServiceRegisterValidationAsync()
@@ -247,7 +292,7 @@ internal sealed class Phase6Runner
             var chatRepository = new SqlChatRepository(factory);
             var catalog = new ComponentCatalogService(componentRepository);
             var buildService = new BuildService(buildRepository, catalog);
-            var requestService = new RequestService(buildRepository, sellerRepository, requestRepository, buildService, catalog);
+            var requestService = new RequestService(buildRepository, sellerRepository, requestRepository, buildService, catalog, NullRealtimeNotifier.Instance);
             var chatService = new ChatService(chatRepository, userRepository, sellerRepository);
 
             var buyer = await userRepository.FindByUsernameAsync("buyer_refactor")
@@ -1131,6 +1176,39 @@ internal sealed class FakeComponentRepository : IComponentRepository
     public Task<int> GetComponentCountAsync(CancellationToken cancellationToken = default) => Task.FromResult(0);
     public Task<AdminComponentRecord> SaveAdminComponentAsync(AdminComponentRecord component, CancellationToken cancellationToken = default) => Task.FromResult(component);
     public Task SetComponentAvailabilityAsync(AdminComponentType componentType, string componentId, bool isAvailable, CancellationToken cancellationToken = default) => Task.CompletedTask;
+}
+
+internal sealed class FakeRealtimeNotifier : IRealtimeNotifier
+{
+    public bool Throw { get; set; }
+    public int? LastCreatedSeller { get; private set; }
+    public string? LastCreatedRequestId { get; private set; }
+    public string? LastStatusRequestId { get; private set; }
+    public RequestStatus? LastStatus { get; private set; }
+
+    public Task RequestCreatedAsync(int sellerUserId, string requestId, CancellationToken cancellationToken = default)
+    {
+        if (Throw)
+        {
+            throw new InvalidOperationException("simulated broker failure");
+        }
+
+        LastCreatedSeller = sellerUserId;
+        LastCreatedRequestId = requestId;
+        return Task.CompletedTask;
+    }
+
+    public Task RequestStatusChangedAsync(string requestId, RequestStatus status, CancellationToken cancellationToken = default)
+    {
+        if (Throw)
+        {
+            throw new InvalidOperationException("simulated broker failure");
+        }
+
+        LastStatusRequestId = requestId;
+        LastStatus = status;
+        return Task.CompletedTask;
+    }
 }
 
 internal static class KeyboardSwitchTestExtensions

@@ -105,6 +105,10 @@ public sealed class SellerDashboardViewModel : RoleDashboardViewModel
         await Chat.InitializeAsync();
     }
 
+    /// <summary>Reload requests in response to a realtime "new request" event.</summary>
+    public Task ReloadRequestsAsync()
+        => ExecuteSafeAsync(RefreshRequestsAsync, "Co request moi (realtime).");
+
     private async Task RefreshRequestsAsync()
     {
         var previousId = SelectedRequest?.RequestId;

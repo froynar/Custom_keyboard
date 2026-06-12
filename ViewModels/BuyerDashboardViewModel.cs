@@ -382,6 +382,10 @@ public sealed class BuyerDashboardViewModel : RoleDashboardViewModel
         }
     }
 
+    /// <summary>Reload requests in response to a realtime "status update" event.</summary>
+    public Task ReloadRequestsAsync()
+        => ExecuteSafeAsync(RefreshRequestsAsync, "Co cap nhat trang thai request (realtime).");
+
     private async Task RefreshSellersAsync()
     {
         var previousSellerId = SelectedSeller?.UserId;

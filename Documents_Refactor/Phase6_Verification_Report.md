@@ -23,7 +23,7 @@ dotnet run --project Phase6Verification\Phase6Verification.csproj
 
 ```text
 dotnet build: pass, 0 warnings, 0 errors
-Phase6Verification: pass, 9/9 checks
+Phase6Verification: pass, 10/10 checks
 UI smoke: pass for buyer_refactor, seller_soigear, admin_refactor
 ```
 
@@ -36,6 +36,7 @@ UI smoke: pass for buyer_refactor, seller_soigear, admin_refactor
 - `BuildService` rejects incompatible switch technology/mount combinations.
 - `RequestService` creates snapshot payload JSON and enforces valid state transitions.
 - `RequestService` rejects a build request sent to an unverified/inactive seller (verified seller still succeeds).
+- `RequestService` publishes realtime after the DB write (correct seller/request/status) and a failing notifier never breaks the persisted result.
 - `ChatService` blocks unverified sellers and non-participant reads/sends.
 - `AccountService` rejects malformed email/phone on register and normalizes phone separators.
 - `AdminService` writes an audit entry for ban, seller verify, and catalog (brand) changes, and blocks non-admin actors.

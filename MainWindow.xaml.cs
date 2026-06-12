@@ -1,5 +1,6 @@
 using System.Windows;
 using Custom_keyboard.Data.SqlServer;
+using Custom_keyboard.Realtime;
 using Custom_keyboard.Repositories.SqlServer;
 using Custom_keyboard.Services;
 using Custom_keyboard.Services.Security;
@@ -22,6 +23,7 @@ namespace Custom_keyboard
             var auditLogRepository = new SqlAuditLogRepository(connectionFactory);
             var chatRepository = new SqlChatRepository(connectionFactory);
             var passwordHasher = new Pbkdf2PasswordHasher();
+            var realtimeService = new MqttRealtimeService();
             var accountService = new AccountService(userRepository, passwordHasher);
             var componentCatalogService = new ComponentCatalogService(componentRepository);
             var buildService = new BuildService(buildRepository, componentCatalogService);
@@ -30,7 +32,8 @@ namespace Custom_keyboard
                 sellerRepository,
                 requestRepository,
                 buildService,
-                componentCatalogService);
+                componentCatalogService,
+                realtimeService);
             var adminService = new AdminService(
                 userRepository,
                 sellerRepository,
@@ -45,7 +48,11 @@ namespace Custom_keyboard
                 componentCatalogService,
                 buildService,
                 requestService,
-                chatService);
+                chatService,
+                realtimeService);
+
+            // Tear the realtime client down when the shell closes (best-effort).
+            Closed += async (_, _) => await realtimeService.DisposeAsync();
         }
     }
 }

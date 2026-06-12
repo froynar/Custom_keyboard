@@ -1,8 +1,10 @@
 using System.Text.Json;
+using Custom_keyboard.Diagnostics;
 using Custom_keyboard.Models.Accounts;
 using Custom_keyboard.Models.Builds;
 using Custom_keyboard.Models.Components;
 using Custom_keyboard.Models.Enums;
+using Custom_keyboard.Realtime;
 using Custom_keyboard.Repositories;
 
 namespace Custom_keyboard.Services;
@@ -26,19 +28,22 @@ public sealed class RequestService : IRequestService
     private readonly IRequestRepository _requestRepository;
     private readonly IBuildService _buildService;
     private readonly IComponentCatalogService _catalogService;
+    private readonly IRealtimeNotifier _realtimeNotifier;
 
     public RequestService(
         IBuildRepository buildRepository,
         ISellerRepository sellerRepository,
         IRequestRepository requestRepository,
         IBuildService buildService,
-        IComponentCatalogService catalogService)
+        IComponentCatalogService catalogService,
+        IRealtimeNotifier realtimeNotifier)
     {
         _buildRepository = buildRepository;
         _sellerRepository = sellerRepository;
         _requestRepository = requestRepository;
         _buildService = buildService;
         _catalogService = catalogService;
+        _realtimeNotifier = realtimeNotifier;
     }
 
     public Task<IReadOnlyList<SellerProfile>> GetAvailableSellersAsync(
@@ -102,7 +107,11 @@ public sealed class RequestService : IRequestService
             Note = NormalizeNullable(note)
         };
 
-        return await _requestRepository.SaveAsync(request, cancellationToken);
+        // DB is the source of truth: save first, then publish realtime as a best-effort bonus.
+        var saved = await _requestRepository.SaveAsync(request, cancellationToken);
+        await PublishSafelyAsync(() =>
+            _realtimeNotifier.RequestCreatedAsync(saved.SellerUserId, saved.RequestId, cancellationToken));
+        return saved;
     }
 
     public Task<IReadOnlyList<BuildRequest>> GetBuyerRequestsAsync(
@@ -145,7 +154,24 @@ public sealed class RequestService : IRequestService
             request.CompletedAt = DateTime.UtcNow;
         }
 
-        return await _requestRepository.SaveAsync(request, cancellationToken);
+        var saved = await _requestRepository.SaveAsync(request, cancellationToken);
+        await PublishSafelyAsync(() =>
+            _realtimeNotifier.RequestStatusChangedAsync(saved.RequestId, saved.Status, cancellationToken));
+        return saved;
+    }
+
+    // Realtime is a bonus layer: a publish failure must never surface to the caller or
+    // undo the committed DB change.
+    private static async Task PublishSafelyAsync(Func<Task> publish)
+    {
+        try
+        {
+            await publish();
+        }
+        catch (Exception ex)
+        {
+            AppLog.Error("RequestService.Realtime", ex);
+        }
     }
 
     private static bool CanTransition(RequestStatus currentStatus, RequestStatus nextStatus)

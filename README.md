@@ -307,11 +307,11 @@ Vi du:
 - Kiem tra admin action quan trong co audit log.
 - Chuan hoa thong bao loi va refresh UI sau thao tac.
 
-### Phase 8: MQTT/Realtime Notification Neu Con Thoi Gian
+### Phase 8: MQTT/Realtime Notification (Da Trien Khai)
 
-- Phase phu, co the de sau MVP.
-- Dung cho notification request/status neu can demo realtime rieng.
-- Database van la source of truth.
+- Lop `Realtime/` (`MqttRealtimeService`, MQTTnet v4): buyer publish "request moi" -> seller reload; seller publish "status update" -> buyer reload.
+- Database van la source of truth: luu DB truoc, publish sau, best-effort. Khong co broker thi app van chay DB-only (loi publish chi ghi log).
+- Topic: `keyboard/seller/{sellerUserId}/build-request/new`, `keyboard/build-request/{requestId}/status/update`.
 - Khong thay the Phase 8A chat SignalR.
 
 ### Phase 8A: Phase Phu Chat Realtime SignalR
@@ -348,6 +348,8 @@ Chay ung dung WPF:
 dotnet run
 ```
 
+Realtime MQTT (tuy chon): de bat realtime, chay mot broker MQTT o `localhost:1883` (vi du Mosquitto). Khong co broker thi app van chay binh thuong (DB-only); doi host/port qua `MqttSettings` trong `MainWindow.xaml.cs`.
+
 Build project:
 
 ```powershell
@@ -362,7 +364,7 @@ dotnet run --project Phase6Verification\Phase6Verification.csproj
 
 Verification bao gom:
 
-- Unit-style checks cho `BuildService`, `RequestService`, `ChatService`.
+- Unit-style checks cho `BuildService`, `RequestService` (state machine, chan seller unverified, realtime best-effort), `ChatService`, `AccountService` (validate email/phone) va `AdminService` (audit log).
 - SQL integration flow tao build tam, gui request, tao chat, sau do cleanup.
 - DB invariant checks tu `VerifyRefactor.sql`: total snapshot, switch quantity, exactly-one-FK, seller verified, conversation XOR, FK orphan, requested build/request, chat sender participant.
 - UI smoke manual/automation da kiem buyer/seller/admin login khong con popup `Loi (UI thread)`.

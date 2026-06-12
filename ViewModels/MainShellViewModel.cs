@@ -2,6 +2,7 @@ using System.Windows.Input;
 using Custom_keyboard.Commands;
 using Custom_keyboard.Models.Accounts;
 using Custom_keyboard.Models.Enums;
+using Custom_keyboard.Realtime;
 using Custom_keyboard.Services;
 
 namespace Custom_keyboard.ViewModels;
@@ -14,8 +15,10 @@ public sealed class MainShellViewModel : ViewModelBase
     private readonly IBuildService _buildService;
     private readonly IRequestService _requestService;
     private readonly IChatService _chatService;
+    private readonly IRealtimeSubscriber _realtime;
     private ViewModelBase _currentViewModel = null!;
     private User? _currentUser;
+    private Func<Task>? _realtimeReload;
 
     public MainShellViewModel(
         IAccountService accountService,
@@ -23,7 +26,8 @@ public sealed class MainShellViewModel : ViewModelBase
         IComponentCatalogService componentCatalogService,
         IBuildService buildService,
         IRequestService requestService,
-        IChatService chatService)
+        IChatService chatService,
+        IRealtimeSubscriber realtime)
     {
         _accountService = accountService;
         _adminService = adminService;
@@ -31,6 +35,9 @@ public sealed class MainShellViewModel : ViewModelBase
         _buildService = buildService;
         _requestService = requestService;
         _chatService = chatService;
+        _realtime = realtime;
+        _realtime.SellerRequestsChanged += OnRealtimeReloadAsync;
+        _realtime.BuyerRequestsChanged += OnRealtimeReloadAsync;
         LogoutCommand = new RelayCommand(_ => Logout(), _ => CurrentUser is not null);
         ShowLogin();
     }
@@ -85,24 +92,60 @@ public sealed class MainShellViewModel : ViewModelBase
     {
         CurrentUser = user;
         var chat = new ChatViewModel(_chatService, _requestService, user);
-        CurrentViewModel = user.Role switch
+        switch (user.Role)
         {
-            UserRole.Seller => new SellerDashboardViewModel(user, LogoutCommand, _requestService, chat),
-            UserRole.Admin => new AdminDashboardViewModel(user, LogoutCommand, _adminService, chat),
-            _ => new BuyerDashboardViewModel(
-                user,
-                LogoutCommand,
-                _componentCatalogService,
-                _buildService,
-                _requestService,
-                chat)
-        };
+            case UserRole.Seller:
+                var seller = new SellerDashboardViewModel(user, LogoutCommand, _requestService, chat);
+                _realtimeReload = seller.ReloadRequestsAsync;
+                CurrentViewModel = seller;
+                break;
+            case UserRole.Admin:
+                _realtimeReload = null;
+                CurrentViewModel = new AdminDashboardViewModel(user, LogoutCommand, _adminService, chat);
+                break;
+            default:
+                var buyer = new BuyerDashboardViewModel(
+                    user,
+                    LogoutCommand,
+                    _componentCatalogService,
+                    _buildService,
+                    _requestService,
+                    chat);
+                _realtimeReload = buyer.ReloadRequestsAsync;
+                CurrentViewModel = buyer;
+                break;
+        }
+
+        // Best-effort: connect + subscribe to this user's realtime topics.
+        _ = _realtime.StartAsync(user);
     }
 
     private void Logout()
     {
         _accountService.Logout();
+        _realtimeReload = null;
+        _ = _realtime.StopAsync();
         CurrentUser = null;
         ShowLogin("Da dang xuat.");
+    }
+
+    // Realtime events arrive on a background thread; marshal the dashboard reload to the UI.
+    private async Task OnRealtimeReloadAsync()
+    {
+        var reload = _realtimeReload;
+        if (reload is null)
+        {
+            return;
+        }
+
+        var dispatcher = System.Windows.Application.Current?.Dispatcher;
+        if (dispatcher is null || dispatcher.CheckAccess())
+        {
+            await reload();
+        }
+        else
+        {
+            await dispatcher.InvokeAsync(reload).Task.Unwrap();
+        }
     }
 }

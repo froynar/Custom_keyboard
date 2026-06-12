@@ -35,7 +35,7 @@ Kế hoạch gốc mô tả Buyer chọn **layout → case → PCB → plate →
 | **5** Buyer send request | request + snapshot | ✅ Done | `RequestService.SendRequestAsync`, snapshot kit+items, không lặp `buyer_id`, chặn request trùng active |
 | **6** Seller process request | seller status flow | ✅ Done *(mới đạt sau refactor)* | `SellerDashboard` + `UpdateStatusAsync` state machine + quyền seller |
 | **7** Audit/validation/hardening | làm chắc hệ thống | ✅ Done | Đã: audit log, role/active/verified checks, validate **format email/phone** khi đăng ký, **global handler UX-friendly + ghi log file** (`%LOCALAPPDATA%/CustomKeyboard/log.txt`, `Diagnostics/AppLog` + `ErrorReporter`), phân biệt **lỗi DB vs nghiệp vụ** trong `ExecuteSafeAsync`, invariant catalog (giá ≥ 0, kit switch qty) trong `Phase6Verification`. Còn lại (nice-to-have): polish thêm message admin |
-| **8** MQTT realtime | optional | ❌ Chưa | Ngoài scope refactor; DB vẫn là source of truth |
+| **8** MQTT realtime | optional | ✅ Done | `Realtime/` (`IRealtimeNotifier`/`IRealtimeSubscriber` + `MqttRealtimeService`, MQTTnet v4). Buyer publish "request mới" → seller reload; seller publish "status update" → buyer reload. DB-first, publish-after, best-effort (broker tắt → app vẫn chạy DB-only). Round-trip đã verify trên broker thật |
 | **8A** SignalR chat realtime | chat realtime | 🟡 DB-only | Đã: `chat_conversations/messages`, `ChatService` (buyer-seller & admin-seller, chặn buyer-admin, participant check), `ChatView` nhúng 3 dashboard. **Thiếu: tầng SignalR realtime** (hiện phải refresh thủ công) |
 | **9** Testing & demo | test matrix + UI polish | 🟡 Một phần | Đã: `Phase6Verification` 9/9 (unit + SQL integration + DB invariants), gồm register validation, RequestService chặn seller unverified, AdminService audit. Thiếu: bảng test matrix T01–T16 chính thức, unit login, UI polish (DataGrid/screenshot), kịch bản demo |
 | **10** Packaging & handover | bàn giao | 🟡 Một phần | Đã: README/Architecture có lệnh chạy; `Phase6_Verification_Report` ghi tài khoản smoke test `Password123`. Thiếu: đưa tài khoản seed chính thức vào README/setup handover, checklist clean-machine, gói bàn giao hoàn chỉnh |
@@ -88,6 +88,18 @@ Kế hoạch gốc mô tả Buyer chọn **layout → case → PCB → plate →
 **Done khi:** MQTT tắt thì request vẫn lưu DB; seller offline không mất request; realtime chỉ là lớp bổ sung.
 
 **Rủi ro:** thêm dependency hạ tầng; cắt scope này trước nếu thiếu thời gian.
+
+**Trạng thái (13/06/2026): ✅ đã triển khai** — build 0 lỗi, `Phase6Verification` 10/10, round-trip live PASS trên `broker.hivemq.com`:
+- `Realtime/IRealtimeNotifier` (publish) + `Realtime/IRealtimeSubscriber` (subscribe) + `Realtime/NullRealtimeNotifier` (mặc định/test) + `Realtime/MqttSettings` (host/port/enabled/topic root).
+- `Realtime/MqttRealtimeService` (MQTTnet v4.3.7): publish/subscribe đều **best-effort, chạy nền** (không block UI), lazy-connect + backoff 30s khi không có broker + auto-reconnect 5s khi rớt; publish topic đúng `keyboard/seller/{id}/build-request/new` và `keyboard/build-request/{id}/status/update`.
+- `RequestService`: **lưu DB trước → publish sau** trong `SendRequestAsync` + `UpdateStatusAsync`; publish bọc `PublishSafelyAsync` (lỗi publish chỉ log, không ảnh hưởng kết quả DB).
+- `MainShellViewModel`: `StartAsync` khi login (subscribe theo role), `StopAsync` khi logout; event realtime → reload dashboard qua Dispatcher (`SellerDashboardViewModel.ReloadRequestsAsync` / `BuyerDashboardViewModel.ReloadRequestsAsync`).
+- `MainWindow`: 1 `MqttRealtimeService` dùng chung cho notifier + subscriber; dispose khi đóng cửa sổ.
+- Test: `Phase6Verification` "RequestService publishes realtime after DB write (best-effort)" — publish đúng id/status sau khi lưu, và **notifier lỗi không phá DB write**.
+- **Bật realtime:** chạy broker MQTT ở `localhost:1883` (vd Mosquitto) — không có broker thì app vẫn chạy DB-only. Đổi host/port qua `MqttSettings` trong `MainWindow`.
+- **Còn lại (tùy chọn):** đưa `MqttSettings` ra file config ngoài thay vì hard-code default.
+
+**File ảnh hưởng:** mới `Realtime/*`; sửa `Services/RequestService.cs`, `ViewModels/MainShellViewModel.cs`, `ViewModels/SellerDashboardViewModel.cs`, `ViewModels/BuyerDashboardViewModel.cs`, `MainWindow.xaml.cs`, `Custom_keyboard.csproj` (PackageReference MQTTnet), `Phase6Verification/Program.cs`.
 
 ---
 
@@ -142,7 +154,7 @@ Hiện đã có sẵn (không phải làm lại): bảng `chat_conversations/mes
 2. **Phase 9** — test matrix + UI polish + demo script. *(bắt buộc để bảo vệ)*
 3. **Phase 10** — đóng gói/bàn giao. *(bắt buộc để chấm điểm máy khác)*
 4. **Phase 8A realtime (SignalR)** — nâng chat lên realtime. *(tùy chọn)*
-5. **Phase 8 (MQTT)** — realtime notification. *(tùy chọn, cắt trước tiên)*
+5. ~~**Phase 8 (MQTT)** — realtime notification.~~ ✅ **Done (13/06/2026).**
 
 > Không cắt: DB/auth/build/request/seller-status/chat-DB/audit — đây là lõi nghiệp vụ đã đạt.
 
@@ -162,7 +174,7 @@ MVP lõi xem là hoàn thành khi (đã đạt ✅ trừ mục Phase 7 còn lạ
 - 🟡 (Phase 9) Test matrix + demo.
 - 🟡 (Phase 10) Hướng dẫn bàn giao.
 
-Tùy chọn: MQTT (Phase 8), SignalR realtime (Phase 8A) — không bắt buộc cho MVP lõi.
+Tùy chọn: ✅ MQTT (Phase 8) đã xong; SignalR realtime (Phase 8A) còn lại — không bắt buộc cho MVP lõi.
 
 ---
 
