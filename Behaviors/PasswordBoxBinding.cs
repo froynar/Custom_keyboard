@@ -3,6 +3,11 @@ using System.Windows.Controls;
 
 namespace Custom_keyboard.Behaviors;
 
+// Lets a PasswordBox.Password participate in MVVM bindings (it is not a DependencyProperty).
+// Usage: behaviors:PasswordBoxBinding.Attach="True"
+//        behaviors:PasswordBoxBinding.BoundPassword="{Binding Password, Mode=TwoWay}"
+// The Attach flag guarantees the PasswordChanged handler is wired up; relying on the
+// BoundPassword callback alone fails when the initial bound value equals the default ("").
 public static class PasswordBoxBinding
 {
     public static readonly DependencyProperty BoundPasswordProperty =
@@ -15,6 +20,13 @@ public static class PasswordBoxBinding
                 FrameworkPropertyMetadataOptions.BindsTwoWayByDefault,
                 OnBoundPasswordChanged));
 
+    public static readonly DependencyProperty AttachProperty =
+        DependencyProperty.RegisterAttached(
+            "Attach",
+            typeof(bool),
+            typeof(PasswordBoxBinding),
+            new PropertyMetadata(false, OnAttachChanged));
+
     private static readonly DependencyProperty IsUpdatingProperty =
         DependencyProperty.RegisterAttached(
             "IsUpdating",
@@ -23,46 +35,53 @@ public static class PasswordBoxBinding
             new PropertyMetadata(false));
 
     public static string GetBoundPassword(DependencyObject dependencyObject)
-    {
-        return (string)dependencyObject.GetValue(BoundPasswordProperty);
-    }
+        => (string)dependencyObject.GetValue(BoundPasswordProperty);
 
     public static void SetBoundPassword(DependencyObject dependencyObject, string value)
-    {
-        dependencyObject.SetValue(BoundPasswordProperty, value);
-    }
+        => dependencyObject.SetValue(BoundPasswordProperty, value);
+
+    public static bool GetAttach(DependencyObject dependencyObject)
+        => (bool)dependencyObject.GetValue(AttachProperty);
+
+    public static void SetAttach(DependencyObject dependencyObject, bool value)
+        => dependencyObject.SetValue(AttachProperty, value);
 
     private static bool GetIsUpdating(DependencyObject dependencyObject)
-    {
-        return (bool)dependencyObject.GetValue(IsUpdatingProperty);
-    }
+        => (bool)dependencyObject.GetValue(IsUpdatingProperty);
 
     private static void SetIsUpdating(DependencyObject dependencyObject, bool value)
-    {
-        dependencyObject.SetValue(IsUpdatingProperty, value);
-    }
+        => dependencyObject.SetValue(IsUpdatingProperty, value);
 
-    private static void OnBoundPasswordChanged(
-        DependencyObject dependencyObject,
-        DependencyPropertyChangedEventArgs eventArgs)
+    private static void OnAttachChanged(DependencyObject dependencyObject, DependencyPropertyChangedEventArgs eventArgs)
     {
         if (dependencyObject is not PasswordBox passwordBox)
         {
             return;
         }
 
-        passwordBox.PasswordChanged -= OnPasswordChanged;
-
-        if (!GetIsUpdating(passwordBox))
+        if ((bool)eventArgs.OldValue)
         {
-            var newPassword = eventArgs.NewValue as string ?? string.Empty;
-            if (!string.Equals(passwordBox.Password, newPassword, StringComparison.Ordinal))
-            {
-                passwordBox.Password = newPassword;
-            }
+            passwordBox.PasswordChanged -= OnPasswordChanged;
         }
 
-        passwordBox.PasswordChanged += OnPasswordChanged;
+        if ((bool)eventArgs.NewValue)
+        {
+            passwordBox.PasswordChanged += OnPasswordChanged;
+        }
+    }
+
+    private static void OnBoundPasswordChanged(DependencyObject dependencyObject, DependencyPropertyChangedEventArgs eventArgs)
+    {
+        if (dependencyObject is not PasswordBox passwordBox || GetIsUpdating(passwordBox))
+        {
+            return;
+        }
+
+        var newPassword = eventArgs.NewValue as string ?? string.Empty;
+        if (!string.Equals(passwordBox.Password, newPassword, StringComparison.Ordinal))
+        {
+            passwordBox.Password = newPassword;
+        }
     }
 
     private static void OnPasswordChanged(object sender, RoutedEventArgs eventArgs)

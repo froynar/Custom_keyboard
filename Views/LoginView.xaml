@@ -31,7 +31,8 @@
                 <TextBlock Text="Mat khau"
                            FontWeight="SemiBold"
                            Foreground="#343A40"/>
-                <PasswordBox behaviors:PasswordBoxBinding.BoundPassword="{Binding Password, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"
+                <PasswordBox behaviors:PasswordBoxBinding.Attach="True"
+                             behaviors:PasswordBoxBinding.BoundPassword="{Binding Password, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"
                              Margin="0,6,0,14"
                              Padding="10"
                              FontSize="14"/>
