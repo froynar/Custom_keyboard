@@ -1,5 +1,6 @@
 using Custom_keyboard.Data.SqlServer;
 using Custom_keyboard.Models.Accounts;
+using Custom_keyboard.Models.Admin;
 using Custom_keyboard.Models.Builds;
 using Custom_keyboard.Models.Chat;
 using Custom_keyboard.Models.Components;
@@ -7,6 +8,7 @@ using Custom_keyboard.Models.Enums;
 using Custom_keyboard.Repositories;
 using Custom_keyboard.Repositories.SqlServer;
 using Custom_keyboard.Services;
+using Custom_keyboard.Services.Security;
 using Microsoft.Data.SqlClient;
 
 var runner = new Phase6Runner();
@@ -24,7 +26,10 @@ internal sealed class Phase6Runner
         await Run("BuildService validates totals and applies snapshots", UnitBuildServiceValidTotalAsync);
         await Run("BuildService rejects incompatible switch technology", UnitBuildServiceRejectsIncompatibleSwitchAsync);
         await Run("RequestService enforces request status state machine", UnitRequestServiceStateMachineAsync);
+        await Run("RequestService rejects requests to unverified sellers", UnitRequestServiceRejectsUnverifiedSellerAsync);
         await Run("ChatService enforces participants and verified sellers", UnitChatServiceParticipantsAsync);
+        await Run("AccountService validates email/phone on register", UnitAccountServiceRegisterValidationAsync);
+        await Run("AdminService writes audit entries for admin actions", UnitAdminServiceAuditActionsAsync);
         await Run("SQL integration covers build/request/chat CRUD", IntegrationSqlBuildRequestChatAsync);
         await Run("VerifyRefactor invariant queries return clean results", IntegrationSqlVerifyRefactorAsync);
 
@@ -144,6 +149,81 @@ internal sealed class Phase6Runner
         await AssertThrowsAsync<InvalidOperationException>(
             () => service.StartBuyerConversationAsync(21, 10, null),
             "unverified seller cannot start chat");
+    }
+
+    private static async Task UnitRequestServiceRejectsUnverifiedSellerAsync()
+    {
+        var build = StandardBuild();
+        var buildRepository = new FakeBuildRepository();
+        await buildRepository.SaveAsync(build);
+
+        var service = new RequestService(
+            buildRepository,
+            FakeSellerRepository.Standard(),
+            new FakeRequestRepository(),
+            new AlwaysValidBuildService(217.30m),
+            FakeCatalog.Standard());
+
+        // Seller 21 has a profile but is_verified = false -> request must be rejected.
+        await AssertThrowsAsync<InvalidOperationException>(
+            () => service.SendRequestAsync(build.BuildId, build.BuyerId, 21, "to unverified seller"),
+            "request to unverified seller rejected");
+
+        // Sanity: the verified seller (20) still succeeds against the same build.
+        var ok = await service.SendRequestAsync(build.BuildId, build.BuyerId, 20, "to verified seller");
+        AssertEqual(RequestStatus.Pending, ok.Status, "verified seller request created");
+        AssertEqual(20, ok.SellerUserId, "request targets verified seller");
+    }
+
+    private static async Task UnitAccountServiceRegisterValidationAsync()
+    {
+        var service = new AccountService(FakeUserRepository.Standard(), new Pbkdf2PasswordHasher());
+
+        var badEmail = await service.RegisterBuyerAsync("newbuyer", "not-an-email", "0901234567", "Password123");
+        AssertFalse(badEmail.Succeeded, "invalid email rejected");
+        AssertEqual(AccountOperationStatus.ValidationError, badEmail.Status, "invalid email status");
+        AssertContains(badEmail.Message, "Email", "invalid email message");
+
+        var badPhone = await service.RegisterBuyerAsync("newbuyer", "new@test.local", "12", "Password123");
+        AssertFalse(badPhone.Succeeded, "invalid phone rejected");
+        AssertEqual(AccountOperationStatus.ValidationError, badPhone.Status, "invalid phone status");
+        AssertContains(badPhone.Message, "dien thoai", "invalid phone message");
+
+        // Separators are stripped before validation/storage.
+        var ok = await service.RegisterBuyerAsync("newbuyer", "new@test.local", "090-123 4567", "Password123");
+        AssertTrue(ok.Succeeded, "valid registration succeeds");
+        AssertEqual(UserRole.Buyer, ok.User!.Role, "registered as buyer");
+        AssertEqual("0901234567", ok.User!.Phone, "phone normalized");
+    }
+
+    private static async Task UnitAdminServiceAuditActionsAsync()
+    {
+        var audit = new FakeAuditLogRepository();
+        var service = new AdminService(
+            FakeUserRepository.Standard(),
+            FakeSellerRepository.Standard(),
+            new FakeComponentRepository(),
+            new FakeRequestRepository(),
+            audit);
+
+        const int adminId = 30;
+
+        await service.SetUserActiveAsync(10, false, adminId);          // ban buyer
+        await service.SetSellerVerifiedAsync(21, true, adminId);       // verify seller
+        var brand = await service.SaveBrandAsync(new Brand { BrandName = "Phase 9 Brand" }, adminId); // catalog CRUD
+        AssertTrue(brand.BrandId > 0, "brand saved with id");
+
+        AssertEqual(3, audit.Entries.Count, "three audit entries written");
+        AssertContains(audit.Entries.Select(entry => entry.Action), "UserBan", "ban audit action");
+        AssertContains(audit.Entries.Select(entry => entry.Action), "SellerVerify", "verify audit action");
+        AssertContains(audit.Entries.Select(entry => entry.Action), "BrandCreate", "brand audit action");
+        AssertTrue(audit.Entries.All(entry => entry.UserId == adminId), "audit attributed to acting admin");
+
+        // A non-admin actor cannot perform an admin action (and writes no audit).
+        await AssertThrowsAsync<InvalidOperationException>(
+            () => service.SetUserActiveAsync(20, false, 10),
+            "non-admin cannot ban");
+        AssertEqual(3, audit.Entries.Count, "rejected action writes no audit");
     }
 
     private static async Task IntegrationSqlBuildRequestChatAsync()
@@ -993,6 +1073,64 @@ internal sealed class AlwaysValidBuildService : IBuildService
     public Task<decimal> CalculateTotalAsync(KeyboardBuild build, CancellationToken cancellationToken = default) => Task.FromResult(_total);
     public Task<BuildValidationResult> ValidateBuildAsync(KeyboardBuild build, CancellationToken cancellationToken = default)
         => Task.FromResult(new BuildValidationResult { TotalCost = _total });
+}
+
+internal sealed class FakeAuditLogRepository : IAuditLogRepository
+{
+    public List<AuditLogEntry> Entries { get; } = [];
+
+    public Task<IReadOnlyList<AuditLogEntry>> GetRecentAsync(int take = 100, CancellationToken cancellationToken = default)
+        => Task.FromResult<IReadOnlyList<AuditLogEntry>>(Entries.AsEnumerable().Reverse().Take(take).ToList());
+
+    public Task<AuditLogEntry> AddAsync(AuditLogEntry entry, CancellationToken cancellationToken = default)
+    {
+        entry.LogId = Entries.Count + 1;
+        entry.ChangedAt = entry.ChangedAt == default ? DateTime.UtcNow : entry.ChangedAt;
+        Entries.Add(entry);
+        return Task.FromResult(entry);
+    }
+}
+
+internal sealed class FakeComponentRepository : IComponentRepository
+{
+    private readonly Dictionary<int, Brand> _brands = new();
+    private int _nextBrandId = 1;
+
+    public Task<IReadOnlyList<Brand>> GetBrandsAsync(CancellationToken cancellationToken = default)
+        => Task.FromResult<IReadOnlyList<Brand>>(_brands.Values.ToList());
+    public Task<Brand?> GetBrandByIdAsync(int brandId, CancellationToken cancellationToken = default)
+        => Task.FromResult(_brands.GetValueOrDefault(brandId));
+    public Task<Brand> SaveBrandAsync(Brand brand, CancellationToken cancellationToken = default)
+    {
+        if (brand.BrandId <= 0)
+        {
+            brand.BrandId = _nextBrandId++;
+        }
+
+        _brands[brand.BrandId] = brand;
+        return Task.FromResult(brand);
+    }
+
+    public Task<IReadOnlyList<Layout>> GetLayoutsAsync(CancellationToken cancellationToken = default) => Task.FromResult<IReadOnlyList<Layout>>([]);
+    public Task<Layout?> GetLayoutByIdAsync(string layoutId, CancellationToken cancellationToken = default) => Task.FromResult<Layout?>(null);
+    public Task<Layout> SaveLayoutAsync(Layout layout, CancellationToken cancellationToken = default) => Task.FromResult(layout);
+
+    public Task<IReadOnlyList<KeyboardKit>> GetAvailableKitsAsync(CancellationToken cancellationToken = default) => Task.FromResult<IReadOnlyList<KeyboardKit>>([]);
+    public Task<KeyboardKit?> GetKitByIdAsync(string kitId, CancellationToken cancellationToken = default) => Task.FromResult<KeyboardKit?>(null);
+    public Task<IReadOnlyList<KeyboardSwitch>> GetAvailableSwitchesAsync(CancellationToken cancellationToken = default) => Task.FromResult<IReadOnlyList<KeyboardSwitch>>([]);
+    public Task<KeyboardSwitch?> GetSwitchByIdAsync(string switchId, CancellationToken cancellationToken = default) => Task.FromResult<KeyboardSwitch?>(null);
+    public Task<IReadOnlyList<KeycapSet>> GetAvailableKeycapSetsAsync(CancellationToken cancellationToken = default) => Task.FromResult<IReadOnlyList<KeycapSet>>([]);
+    public Task<KeycapSet?> GetKeycapSetByIdAsync(string keycapId, CancellationToken cancellationToken = default) => Task.FromResult<KeycapSet?>(null);
+    public Task<IReadOnlyList<Stabilizer>> GetAvailableStabilizersAsync(CancellationToken cancellationToken = default) => Task.FromResult<IReadOnlyList<Stabilizer>>([]);
+    public Task<Stabilizer?> GetStabilizerByIdAsync(string stabilizerId, CancellationToken cancellationToken = default) => Task.FromResult<Stabilizer?>(null);
+    public Task<IReadOnlyList<Accessory>> GetAvailableAccessoriesAsync(CancellationToken cancellationToken = default) => Task.FromResult<IReadOnlyList<Accessory>>([]);
+    public Task<Accessory?> GetAccessoryByIdAsync(string accessoryId, CancellationToken cancellationToken = default) => Task.FromResult<Accessory?>(null);
+
+    public Task<IReadOnlyList<AdminComponentRecord>> GetAdminComponentsAsync(AdminComponentType componentType, CancellationToken cancellationToken = default) => Task.FromResult<IReadOnlyList<AdminComponentRecord>>([]);
+    public Task<AdminComponentRecord?> GetAdminComponentByIdAsync(AdminComponentType componentType, string componentId, CancellationToken cancellationToken = default) => Task.FromResult<AdminComponentRecord?>(null);
+    public Task<int> GetComponentCountAsync(CancellationToken cancellationToken = default) => Task.FromResult(0);
+    public Task<AdminComponentRecord> SaveAdminComponentAsync(AdminComponentRecord component, CancellationToken cancellationToken = default) => Task.FromResult(component);
+    public Task SetComponentAvailabilityAsync(AdminComponentType componentType, string componentId, bool isAvailable, CancellationToken cancellationToken = default) => Task.CompletedTask;
 }
 
 internal static class KeyboardSwitchTestExtensions

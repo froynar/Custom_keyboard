@@ -23,7 +23,7 @@ dotnet run --project Phase6Verification\Phase6Verification.csproj
 
 ```text
 dotnet build: pass, 0 warnings, 0 errors
-Phase6Verification: pass, 6/6 checks
+Phase6Verification: pass, 9/9 checks
 UI smoke: pass for buyer_refactor, seller_soigear, admin_refactor
 ```
 
@@ -35,7 +35,10 @@ UI smoke: pass for buyer_refactor, seller_soigear, admin_refactor
 - `BuildService` applies `UnitPriceSnapshot` and `TotalCostSnapshot`.
 - `BuildService` rejects incompatible switch technology/mount combinations.
 - `RequestService` creates snapshot payload JSON and enforces valid state transitions.
+- `RequestService` rejects a build request sent to an unverified/inactive seller (verified seller still succeeds).
 - `ChatService` blocks unverified sellers and non-participant reads/sends.
+- `AccountService` rejects malformed email/phone on register and normalizes phone separators.
+- `AdminService` writes an audit entry for ban, seller verify, and catalog (brand) changes, and blocks non-admin actors.
 
 It also contains SQL integration checks using real SQL repositories:
 
@@ -54,6 +57,8 @@ The verification runner checks:
 - users have required fields, unique username/email/phone, and active users use PBKDF2 hash format
 - build total snapshots match the formula
 - Saved/Requested builds have the required switch quantity
+- catalog prices are non-negative across all five catalog tables
+- kits require a positive switch quantity
 - each `build_items` row has exactly one product FK
 - build requests target active, verified sellers
 - chat conversations have exactly one of buyer/admin

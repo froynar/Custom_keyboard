@@ -37,7 +37,7 @@ Kế hoạch gốc mô tả Buyer chọn **layout → case → PCB → plate →
 | **7** Audit/validation/hardening | làm chắc hệ thống | ✅ Done | Đã: audit log, role/active/verified checks, validate **format email/phone** khi đăng ký, **global handler UX-friendly + ghi log file** (`%LOCALAPPDATA%/CustomKeyboard/log.txt`, `Diagnostics/AppLog` + `ErrorReporter`), phân biệt **lỗi DB vs nghiệp vụ** trong `ExecuteSafeAsync`, invariant catalog (giá ≥ 0, kit switch qty) trong `Phase6Verification`. Còn lại (nice-to-have): polish thêm message admin |
 | **8** MQTT realtime | optional | ❌ Chưa | Ngoài scope refactor; DB vẫn là source of truth |
 | **8A** SignalR chat realtime | chat realtime | 🟡 DB-only | Đã: `chat_conversations/messages`, `ChatService` (buyer-seller & admin-seller, chặn buyer-admin, participant check), `ChatView` nhúng 3 dashboard. **Thiếu: tầng SignalR realtime** (hiện phải refresh thủ công) |
-| **9** Testing & demo | test matrix + UI polish | 🟡 Một phần | Đã: `Phase6Verification` (unit + SQL integration + DB invariants). Thiếu: ánh xạ chính thức test matrix T01–T16, UI polish (DataGrid/screenshot), kịch bản demo |
+| **9** Testing & demo | test matrix + UI polish | 🟡 Một phần | Đã: `Phase6Verification` 9/9 (unit + SQL integration + DB invariants), gồm register validation, RequestService chặn seller unverified, AdminService audit. Thiếu: bảng test matrix T01–T16 chính thức, unit login, UI polish (DataGrid/screenshot), kịch bản demo |
 | **10** Packaging & handover | bàn giao | 🟡 Một phần | Đã: README/Architecture có lệnh chạy; `Phase6_Verification_Report` ghi tài khoản smoke test `Password123`. Thiếu: đưa tài khoản seed chính thức vào README/setup handover, checklist clean-machine, gói bàn giao hoàn chỉnh |
 
 **Tóm tắt:** Lõi nghiệp vụ MVP (Phase 0–6) **đã hoàn thành** trên mô hình kit-based. Phần còn lại là **hardening + realtime (tùy chọn) + hoàn thiện test/demo/bàn giao**.
@@ -113,9 +113,8 @@ Hiện đã có sẵn (không phải làm lại): bảng `chat_conversations/mes
 **Mục tiêu:** chứng minh các luồng chính chạy được + sẵn sàng bảo vệ/demo.
 
 - **Ánh xạ test matrix T01–T16** (mục §14 kế hoạch gốc) vào trạng thái hiện tại:
-  - Đã phủ tự động qua `Phase6Verification`: T04/T05 (build hợp lệ/sai compat), T06 (request tới seller verified — qua SQL integration), T08–T11 (seller status), T13–T14 (chat lưu DB), T15 (chặn buyer-admin).
-  - Mới phủ một phần: T07 (seller unverified — hiện chỉ có coverage cho `ChatService` chặn unverified; **chưa** có test riêng `RequestService.SendRequestAsync` với seller unverified); T12 (audit — mới phủ invariant DB/`audit_log` tồn tại + FK; **chưa** có unit/integration test riêng cho `AdminService` audit actions: ban user / sửa catalog / verify seller).
-  - Cần phủ thêm: T01/T02 (đăng ký/đăng nhập, ban) — thêm check; T16 (realtime SignalR) — chỉ khi làm 8A.
+  - Đã phủ tự động qua `Phase6Verification` (9/9): T01 đăng ký (validate email/phone + normalize) và ban (AdminService ban user + chặn non-admin), T04/T05 (build hợp lệ/sai compat), T06 (request tới seller verified — SQL integration), **T07 (`RequestService` chặn seller unverified — unit test riêng; verified vẫn pass)**, T08–T11 (seller status), **T12 (`AdminService` ghi audit khi ban / verify seller / sửa catalog)**, T13–T14 (chat lưu DB), T15 (chặn buyer-admin).
+  - Cần phủ thêm: T02 đăng nhập (login đúng/sai mật khẩu) hiện mới có UI smoke, chưa có unit riêng; T16 (realtime SignalR) — chỉ khi làm 8A.
   - Lập bảng test matrix có cột Pass/Defer + cách chạy.
 - **UI polish:** cân nhắc đổi các danh sách (user/component/build/request) sang `DataGrid` để dễ đọc; chuẩn hóa title/tab; thông báo thành công/thất bại đồng nhất.
 - **Demo script:** kịch bản 3 role + screenshot.
