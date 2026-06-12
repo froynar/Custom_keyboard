@@ -1,0 +1,371 @@
+-- Custom Keyboard Builder - Refactor schema (kit-based ERD)
+-- Source of truth: Documents_Refactor/Custom_Keyboard_ERD_Realistic_Kit_Shop_Proposal.dbml
+-- Scope: 17 tables / 24 relationships. No cases/pcbs/plates, no compatibility_rules,
+--        no seller_inventory, no legacy switch-mod columns (lube_type/is_filmed/spring_weight_g).
+-- Target: dedicated refactor test database (CustomKeyboard_Refactor). Does NOT touch the legacy runtime DB.
+-- Order: roles -> users -> seller_profiles -> brands -> layouts -> keyboard_kits -> switches
+--        -> keycap_sets -> stabilizers -> accessories -> builds -> build_items -> build_mods
+--        -> build_requests -> audit_log -> chat_conversations -> chat_messages
+-- This script is idempotent: it drops the 17 tables (reverse FK order) and recreates them.
+
+IF DB_ID(N'CustomKeyboard_Refactor') IS NULL
+BEGIN
+    CREATE DATABASE CustomKeyboard_Refactor;
+END
+GO
+
+USE CustomKeyboard_Refactor;
+GO
+
+SET XACT_ABORT ON;
+GO
+
+-- ---------------------------------------------------------------------------
+-- Drop in reverse FK-dependency order so a re-run starts from a clean slate.
+-- ---------------------------------------------------------------------------
+DROP TABLE IF EXISTS chat_messages;
+DROP TABLE IF EXISTS chat_conversations;
+DROP TABLE IF EXISTS audit_log;
+DROP TABLE IF EXISTS build_requests;
+DROP TABLE IF EXISTS build_mods;
+DROP TABLE IF EXISTS build_items;
+DROP TABLE IF EXISTS builds;
+DROP TABLE IF EXISTS accessories;
+DROP TABLE IF EXISTS stabilizers;
+DROP TABLE IF EXISTS keycap_sets;
+DROP TABLE IF EXISTS switches;
+DROP TABLE IF EXISTS keyboard_kits;
+DROP TABLE IF EXISTS layouts;
+DROP TABLE IF EXISTS brands;
+DROP TABLE IF EXISTS seller_profiles;
+DROP TABLE IF EXISTS users;
+DROP TABLE IF EXISTS roles;
+GO
+
+-- ===========================================================================
+-- 1. roles
+-- ===========================================================================
+CREATE TABLE roles (
+    role_id INT IDENTITY(1,1) PRIMARY KEY,
+    role_name VARCHAR(50) NOT NULL UNIQUE,           -- Buyer, Seller, Admin
+    permissions VARCHAR(MAX) NULL
+);
+GO
+
+-- ===========================================================================
+-- 2. users
+-- ===========================================================================
+CREATE TABLE users (
+    user_id INT IDENTITY(1,1) PRIMARY KEY,
+    role_id INT NOT NULL,
+    username VARCHAR(100) NOT NULL UNIQUE,
+    email VARCHAR(255) NOT NULL UNIQUE,
+    phone VARCHAR(30) NOT NULL UNIQUE,
+    password_hash VARCHAR(255) NOT NULL,
+    is_active BIT NOT NULL DEFAULT 1,
+    CONSTRAINT FK_users_roles FOREIGN KEY (role_id) REFERENCES roles(role_id)
+);
+GO
+
+-- ===========================================================================
+-- 3. seller_profiles
+-- ===========================================================================
+CREATE TABLE seller_profiles (
+    seller_profile_id INT IDENTITY(1,1) PRIMARY KEY,
+    user_id INT NOT NULL UNIQUE,
+    shop_name VARCHAR(255) NOT NULL,
+    phone VARCHAR(30) NOT NULL,
+    address VARCHAR(500) NOT NULL,
+    is_verified BIT NOT NULL DEFAULT 0,
+    verified_at DATETIME2 NULL,
+    CONSTRAINT FK_seller_profiles_user FOREIGN KEY (user_id) REFERENCES users(user_id)
+);
+GO
+
+-- ===========================================================================
+-- 4. brands
+-- ===========================================================================
+CREATE TABLE brands (
+    brand_id INT IDENTITY(1,1) PRIMARY KEY,
+    brand_name VARCHAR(255) NOT NULL UNIQUE,
+    country VARCHAR(100) NULL
+);
+GO
+
+-- ===========================================================================
+-- 5. layouts
+-- ===========================================================================
+CREATE TABLE layouts (
+    layout_id VARCHAR(50) PRIMARY KEY,
+    layout_name VARCHAR(100) NOT NULL,
+    form_factor VARCHAR(100) NOT NULL,               -- 60, 65, 75, TKL, 100, Alice...
+    key_count INT NOT NULL
+);
+GO
+
+-- ===========================================================================
+-- 6. keyboard_kits  (gop case/PCB/plate/foam/cable qua included_parts)
+-- ===========================================================================
+CREATE TABLE keyboard_kits (
+    kit_id VARCHAR(50) PRIMARY KEY,
+    brand_id INT NOT NULL,
+    layout_id VARCHAR(50) NOT NULL,
+    kit_name VARCHAR(255) NOT NULL,
+    pcb_technology VARCHAR(50) NOT NULL,             -- Mechanical, HE, Topre, Optical
+    switch_mount VARCHAR(100) NOT NULL,              -- MX 3-pin, MX 5-pin, HE, Topre, Optical
+    required_switch_quantity INT NOT NULL,
+    included_parts VARCHAR(500) NULL,                -- case, PCB, plate, foam, cable...
+    price_usd DECIMAL(10,2) NOT NULL,
+    is_available BIT NOT NULL DEFAULT 1,
+    CONSTRAINT FK_keyboard_kits_brands FOREIGN KEY (brand_id) REFERENCES brands(brand_id),
+    CONSTRAINT FK_keyboard_kits_layouts FOREIGN KEY (layout_id) REFERENCES layouts(layout_id),
+    CONSTRAINT CK_keyboard_kits_price CHECK (price_usd >= 0),
+    CONSTRAINT CK_keyboard_kits_switch_qty CHECK (required_switch_quantity > 0)
+);
+GO
+
+-- ===========================================================================
+-- 7. switches  (unit price per switch)
+-- ===========================================================================
+CREATE TABLE switches (
+    switch_id VARCHAR(50) PRIMARY KEY,
+    brand_id INT NOT NULL,
+    switch_name VARCHAR(255) NOT NULL,
+    switch_technology VARCHAR(50) NOT NULL,          -- Mechanical, HE, Topre, Optical
+    mount_type VARCHAR(100) NOT NULL,                -- MX 3-pin, MX 5-pin, HE, Topre, Optical
+    switch_type VARCHAR(100) NULL,
+    actuation_force_g INT NULL,
+    price_usd DECIMAL(10,2) NOT NULL,
+    is_available BIT NOT NULL DEFAULT 1,
+    CONSTRAINT FK_switches_brands FOREIGN KEY (brand_id) REFERENCES brands(brand_id),
+    CONSTRAINT CK_switches_price CHECK (price_usd >= 0)
+);
+GO
+
+-- ===========================================================================
+-- 8. keycap_sets
+-- ===========================================================================
+CREATE TABLE keycap_sets (
+    keycap_id VARCHAR(50) PRIMARY KEY,
+    brand_id INT NOT NULL,
+    keycap_name VARCHAR(255) NOT NULL,
+    supported_form_factor VARCHAR(255) NOT NULL,     -- 60/65/75/TKL/100/universal notes
+    profile VARCHAR(100) NULL,
+    material VARCHAR(100) NULL,
+    price_usd DECIMAL(10,2) NOT NULL,
+    is_available BIT NOT NULL DEFAULT 1,
+    CONSTRAINT FK_keycap_sets_brands FOREIGN KEY (brand_id) REFERENCES brands(brand_id),
+    CONSTRAINT CK_keycap_sets_price CHECK (price_usd >= 0)
+);
+GO
+
+-- ===========================================================================
+-- 9. stabilizers  (goi stabilizer co ban theo layout)
+-- ===========================================================================
+CREATE TABLE stabilizers (
+    stab_id VARCHAR(50) PRIMARY KEY,
+    brand_id INT NOT NULL,
+    stab_name VARCHAR(255) NOT NULL,
+    supported_layouts VARCHAR(255) NOT NULL,         -- 60/65/75/TKL/100 or universal
+    price_usd DECIMAL(10,2) NOT NULL,
+    is_available BIT NOT NULL DEFAULT 1,
+    CONSTRAINT FK_stabilizers_brands FOREIGN KEY (brand_id) REFERENCES brands(brand_id),
+    CONSTRAINT CK_stabilizers_price CHECK (price_usd >= 0)
+);
+GO
+
+-- ===========================================================================
+-- 10. accessories  (lube, film, cable, foam, tool...)
+-- ===========================================================================
+CREATE TABLE accessories (
+    accessory_id VARCHAR(50) PRIMARY KEY,
+    accessory_type VARCHAR(100) NOT NULL,            -- Lube, Spring, Film, Foam, Cable, Tool
+    accessory_name VARCHAR(255) NOT NULL,
+    target_component VARCHAR(100) NULL,              -- Switch, Stabilizer, Kit, General
+    price_usd DECIMAL(10,2) NOT NULL,
+    is_available BIT NOT NULL DEFAULT 1,
+    CONSTRAINT CK_accessories_price CHECK (price_usd >= 0)
+);
+GO
+
+-- ===========================================================================
+-- 11. builds  (chi giu kit, buyer, status, tong snapshot)
+-- ===========================================================================
+CREATE TABLE builds (
+    build_id VARCHAR(50) PRIMARY KEY,
+    buyer_id INT NOT NULL,
+    kit_id VARCHAR(50) NOT NULL,
+    name VARCHAR(255) NOT NULL,
+    notes VARCHAR(500) NULL,
+    status VARCHAR(50) NOT NULL,                     -- Draft, Saved, Requested, Archived
+    total_cost_snapshot DECIMAL(10,2) NOT NULL,
+    created_at DATETIME2 NOT NULL DEFAULT SYSUTCDATETIME(),
+    updated_at DATETIME2 NULL,
+    CONSTRAINT FK_builds_buyer FOREIGN KEY (buyer_id) REFERENCES users(user_id),
+    CONSTRAINT FK_builds_kit FOREIGN KEY (kit_id) REFERENCES keyboard_kits(kit_id),
+    CONSTRAINT CK_builds_status CHECK (status IN ('Draft', 'Saved', 'Requested', 'Archived')),
+    CONSTRAINT CK_builds_total CHECK (total_cost_snapshot >= 0)
+);
+GO
+
+-- ===========================================================================
+-- 12. build_items  (moi dong dung 1 FK san pham: switch/keycap/stab/accessory)
+-- ===========================================================================
+CREATE TABLE build_items (
+    build_item_id INT IDENTITY(1,1) PRIMARY KEY,
+    build_id VARCHAR(50) NOT NULL,
+    switch_id VARCHAR(50) NULL,
+    keycap_id VARCHAR(50) NULL,
+    stab_id VARCHAR(50) NULL,
+    accessory_id VARCHAR(50) NULL,
+    quantity INT NOT NULL,
+    unit_price_snapshot DECIMAL(10,2) NOT NULL,
+    notes VARCHAR(500) NULL,
+    CONSTRAINT FK_build_items_build FOREIGN KEY (build_id) REFERENCES builds(build_id),
+    CONSTRAINT FK_build_items_switch FOREIGN KEY (switch_id) REFERENCES switches(switch_id),
+    CONSTRAINT FK_build_items_keycap FOREIGN KEY (keycap_id) REFERENCES keycap_sets(keycap_id),
+    CONSTRAINT FK_build_items_stab FOREIGN KEY (stab_id) REFERENCES stabilizers(stab_id),
+    CONSTRAINT FK_build_items_accessory FOREIGN KEY (accessory_id) REFERENCES accessories(accessory_id),
+    CONSTRAINT CK_build_items_quantity CHECK (quantity > 0),
+    CONSTRAINT CK_build_items_unit_price CHECK (unit_price_snapshot >= 0),
+    -- Exactly one product FK must be set.
+    CONSTRAINT CK_build_items_exactly_one_fk CHECK (
+        (CASE WHEN switch_id    IS NULL THEN 0 ELSE 1 END) +
+        (CASE WHEN keycap_id    IS NULL THEN 0 ELSE 1 END) +
+        (CASE WHEN stab_id      IS NULL THEN 0 ELSE 1 END) +
+        (CASE WHEN accessory_id IS NULL THEN 0 ELSE 1 END) = 1
+    )
+);
+GO
+
+-- ===========================================================================
+-- 13. build_mods  (Lube, Film, Spring_swap, Tape_mod, Foam_mod...)
+-- ===========================================================================
+CREATE TABLE build_mods (
+    mod_id INT IDENTITY(1,1) PRIMARY KEY,
+    build_id VARCHAR(50) NOT NULL,
+    mod_type VARCHAR(100) NOT NULL,                  -- Lube, Film, Spring_swap, Tape_mod, Foam_mod
+    target_component VARCHAR(100) NOT NULL,          -- Switch, Stabilizer, Kit, Build
+    notes VARCHAR(500) NULL,
+    CONSTRAINT FK_build_mods_build FOREIGN KEY (build_id) REFERENCES builds(build_id)
+);
+GO
+
+-- ===========================================================================
+-- 14. build_requests  (buyer gui cho seller; snapshot payload JSON)
+-- ===========================================================================
+CREATE TABLE build_requests (
+    request_id VARCHAR(50) PRIMARY KEY,
+    build_id VARCHAR(50) NOT NULL,
+    seller_user_id INT NOT NULL,
+    request_payload_json NVARCHAR(MAX) NOT NULL,
+    status VARCHAR(50) NOT NULL,                     -- Pending, Accepted, In_progress, Completed, Cancelled
+    note VARCHAR(500) NULL,
+    requested_at DATETIME2 NOT NULL DEFAULT SYSUTCDATETIME(),
+    accepted_at DATETIME2 NULL,
+    completed_at DATETIME2 NULL,
+    updated_at DATETIME2 NULL,
+    CONSTRAINT FK_build_requests_build FOREIGN KEY (build_id) REFERENCES builds(build_id),
+    CONSTRAINT FK_build_requests_seller FOREIGN KEY (seller_user_id) REFERENCES users(user_id),
+    CONSTRAINT CK_build_requests_status CHECK (status IN ('Pending', 'Accepted', 'In_progress', 'Completed', 'Cancelled'))
+);
+GO
+
+-- ===========================================================================
+-- 15. audit_log
+-- ===========================================================================
+CREATE TABLE audit_log (
+    log_id INT IDENTITY(1,1) PRIMARY KEY,
+    user_id INT NOT NULL,
+    table_name VARCHAR(100) NOT NULL,
+    record_id VARCHAR(100) NOT NULL,
+    action VARCHAR(100) NOT NULL,
+    old_value_json NVARCHAR(MAX) NULL,
+    new_value_json NVARCHAR(MAX) NULL,
+    changed_at DATETIME2 NOT NULL DEFAULT SYSUTCDATETIME(),
+    CONSTRAINT FK_audit_log_user FOREIGN KEY (user_id) REFERENCES users(user_id)
+);
+GO
+
+-- ===========================================================================
+-- 16. chat_conversations  (seller-buyer hoac seller-admin)
+-- ===========================================================================
+CREATE TABLE chat_conversations (
+    conversation_id VARCHAR(50) PRIMARY KEY,
+    seller_user_id INT NOT NULL,
+    buyer_id INT NULL,
+    admin_user_id INT NULL,
+    build_request_id VARCHAR(50) NULL,
+    created_at DATETIME2 NOT NULL DEFAULT SYSUTCDATETIME(),
+    updated_at DATETIME2 NULL,
+    CONSTRAINT FK_chat_conversations_seller FOREIGN KEY (seller_user_id) REFERENCES users(user_id),
+    CONSTRAINT FK_chat_conversations_buyer FOREIGN KEY (buyer_id) REFERENCES users(user_id),
+    CONSTRAINT FK_chat_conversations_admin FOREIGN KEY (admin_user_id) REFERENCES users(user_id),
+    CONSTRAINT FK_chat_conversations_request FOREIGN KEY (build_request_id) REFERENCES build_requests(request_id),
+    -- Exactly one of buyer_id or admin_user_id must be set (buyer-admin direct chat not allowed).
+    CONSTRAINT CK_chat_conversations_participant CHECK (
+        (CASE WHEN buyer_id      IS NULL THEN 0 ELSE 1 END) +
+        (CASE WHEN admin_user_id IS NULL THEN 0 ELSE 1 END) = 1
+    )
+);
+GO
+
+-- ===========================================================================
+-- 17. chat_messages
+-- ===========================================================================
+CREATE TABLE chat_messages (
+    message_id VARCHAR(50) PRIMARY KEY,
+    conversation_id VARCHAR(50) NOT NULL,
+    sender_user_id INT NOT NULL,
+    message_text NVARCHAR(MAX) NOT NULL,
+    sent_at DATETIME2 NOT NULL DEFAULT SYSUTCDATETIME(),
+    CONSTRAINT FK_chat_messages_conversation FOREIGN KEY (conversation_id) REFERENCES chat_conversations(conversation_id),
+    CONSTRAINT FK_chat_messages_sender FOREIGN KEY (sender_user_id) REFERENCES users(user_id)
+);
+GO
+
+-- ===========================================================================
+-- Indexes (FK lookups, availability filters, status filters)
+-- ===========================================================================
+CREATE INDEX IX_users_role_id ON users(role_id);
+CREATE INDEX IX_users_is_active ON users(is_active);
+CREATE INDEX IX_seller_profiles_is_verified ON seller_profiles(is_verified);
+
+CREATE INDEX IX_keyboard_kits_brand_id ON keyboard_kits(brand_id);
+CREATE INDEX IX_keyboard_kits_layout_id ON keyboard_kits(layout_id);
+CREATE INDEX IX_keyboard_kits_is_available ON keyboard_kits(is_available);
+
+CREATE INDEX IX_switches_brand_id ON switches(brand_id);
+CREATE INDEX IX_switches_is_available ON switches(is_available);
+CREATE INDEX IX_keycap_sets_brand_id ON keycap_sets(brand_id);
+CREATE INDEX IX_keycap_sets_is_available ON keycap_sets(is_available);
+CREATE INDEX IX_stabilizers_brand_id ON stabilizers(brand_id);
+CREATE INDEX IX_stabilizers_is_available ON stabilizers(is_available);
+CREATE INDEX IX_accessories_is_available ON accessories(is_available);
+
+CREATE INDEX IX_builds_buyer_id ON builds(buyer_id);
+CREATE INDEX IX_builds_kit_id ON builds(kit_id);
+CREATE INDEX IX_builds_status ON builds(status);
+
+CREATE INDEX IX_build_items_build_id ON build_items(build_id);
+CREATE INDEX IX_build_items_switch_id ON build_items(switch_id);
+CREATE INDEX IX_build_items_keycap_id ON build_items(keycap_id);
+CREATE INDEX IX_build_items_stab_id ON build_items(stab_id);
+CREATE INDEX IX_build_items_accessory_id ON build_items(accessory_id);
+
+CREATE INDEX IX_build_mods_build_id ON build_mods(build_id);
+
+CREATE INDEX IX_build_requests_build_id ON build_requests(build_id);
+CREATE INDEX IX_build_requests_seller_status ON build_requests(seller_user_id, status);
+CREATE INDEX IX_build_requests_status ON build_requests(status);
+
+CREATE INDEX IX_audit_log_user_changed_at ON audit_log(user_id, changed_at DESC);
+
+CREATE INDEX IX_chat_conversations_seller ON chat_conversations(seller_user_id);
+CREATE INDEX IX_chat_conversations_buyer ON chat_conversations(buyer_id);
+CREATE INDEX IX_chat_conversations_admin ON chat_conversations(admin_user_id);
+CREATE INDEX IX_chat_conversations_request ON chat_conversations(build_request_id);
+
+CREATE INDEX IX_chat_messages_conversation ON chat_messages(conversation_id);
+CREATE INDEX IX_chat_messages_sender ON chat_messages(sender_user_id);
+GO
