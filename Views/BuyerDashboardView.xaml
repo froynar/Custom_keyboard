@@ -141,14 +141,7 @@
                                 <ItemsControl ItemsSource="{Binding Accessories}" Margin="0,0,0,10">
                                     <ItemsControl.ItemTemplate>
                                         <DataTemplate>
-                                            <CheckBox IsChecked="{Binding IsSelected}" Margin="0,2">
-                                                <TextBlock>
-                                                    <Run Text="{Binding DisplayName}"/>
-                                                    <Run Text=" - "/>
-                                                    <Run Text="{Binding PriceText}"/>
-                                                    <Run Text=" ("/><Run Text="{Binding Target}"/><Run Text=")"/>
-                                                </TextBlock>
-                                            </CheckBox>
+                                            <CheckBox IsChecked="{Binding IsSelected}" Content="{Binding Label}" Margin="0,2"/>
                                         </DataTemplate>
                                     </ItemsControl.ItemTemplate>
                                 </ItemsControl>

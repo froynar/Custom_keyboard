@@ -5,6 +5,8 @@ namespace Custom_keyboard
 {
     public partial class App : Application
     {
+        private bool _isShowingError;
+
         protected override void OnStartup(StartupEventArgs e)
         {
             // Surface unhandled exceptions instead of letting the process die silently.
@@ -35,13 +37,28 @@ namespace Custom_keyboard
             e.SetObserved();
         }
 
-        private static void ShowError(string source, Exception ex)
+        private void ShowError(string source, Exception ex)
         {
-            MessageBox.Show(
-                ex.ToString(),
-                $"Loi ({source})",
-                MessageBoxButton.OK,
-                MessageBoxImage.Error);
+            // Guard against a layout-triggered exception that recurs every render pass
+            // stacking dozens of dialogs on top of each other.
+            if (_isShowingError)
+            {
+                return;
+            }
+
+            try
+            {
+                _isShowingError = true;
+                MessageBox.Show(
+                    ex.ToString(),
+                    $"Loi ({source})",
+                    MessageBoxButton.OK,
+                    MessageBoxImage.Error);
+            }
+            finally
+            {
+                _isShowingError = false;
+            }
         }
     }
 }

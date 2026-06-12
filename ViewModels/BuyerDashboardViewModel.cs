@@ -753,6 +753,7 @@ public sealed class AccessoryOptionViewModel : ViewModelBase
     public string DisplayName => $"{Accessory.AccessoryName} ({Accessory.AccessoryType})";
     public string PriceText => $"{Accessory.PriceUsd:F2} USD";
     public string Target => Accessory.TargetComponent ?? "General";
+    public string Label => $"{DisplayName} - {PriceText} ({Target})";
 
     public bool IsSelected
     {
