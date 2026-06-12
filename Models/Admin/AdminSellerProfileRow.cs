@@ -12,8 +12,5 @@ public sealed class AdminSellerProfileRow
     public string ProfilePhone { get; set; } = string.Empty;
     public string Address { get; set; } = string.Empty;
     public bool IsVerified { get; set; }
-    public int? AssignedByAdminId { get; set; }
-    public int? VerifiedByAdminId { get; set; }
-    public DateTime? AssignedAt { get; set; }
     public DateTime? VerifiedAt { get; set; }
 }

@@ -4,10 +4,7 @@ public sealed class BuildMod
 {
     public int ModId { get; set; }
     public string BuildId { get; set; } = string.Empty;
-    public string ModType { get; set; } = string.Empty;
-    public string TargetComponent { get; set; } = string.Empty;
-    public string? LubeType { get; set; }
-    public bool IsFilmed { get; set; }
-    public int? SpringWeightG { get; set; }
+    public string ModType { get; set; } = string.Empty;          // Lube, Film, Spring_swap, Tape_mod, Foam_mod
+    public string TargetComponent { get; set; } = string.Empty;  // Switch, Stabilizer, Kit, Build
     public string? Notes { get; set; }
 }

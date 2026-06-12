@@ -2,10 +2,9 @@ namespace Custom_keyboard.Models.Admin;
 
 public enum AdminComponentType
 {
-    Case,
-    Pcb,
-    Plate,
+    Kit,
     Switch,
     KeycapSet,
-    Stabilizer
+    Stabilizer,
+    Accessory
 }

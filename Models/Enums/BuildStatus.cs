@@ -4,5 +4,6 @@ public enum BuildStatus
 {
     Draft,
     Saved,
-    Requested
+    Requested,
+    Archived
 }
