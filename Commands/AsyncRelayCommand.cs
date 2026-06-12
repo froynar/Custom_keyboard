@@ -34,6 +34,16 @@ public sealed class AsyncRelayCommand : ICommand
             RaiseCanExecuteChanged();
             await _execute(parameter);
         }
+        catch (Exception ex)
+        {
+            // An async void command must never tear down the process; surface it instead.
+            System.Windows.Application.Current?.Dispatcher.Invoke(() =>
+                System.Windows.MessageBox.Show(
+                    ex.ToString(),
+                    "Loi thao tac",
+                    System.Windows.MessageBoxButton.OK,
+                    System.Windows.MessageBoxImage.Error));
+        }
         finally
         {
             _isExecuting = false;
