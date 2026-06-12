@@ -46,31 +46,21 @@ public sealed class AdminService : IAdminService
     }
 
     public Task<IReadOnlyList<User>> GetUsersAsync(CancellationToken cancellationToken = default)
-    {
-        return _userRepository.GetAllAsync(cancellationToken);
-    }
+        => _userRepository.GetAllAsync(cancellationToken);
 
     public Task<IReadOnlyList<AdminSellerProfileRow>> GetSellerProfilesAsync(CancellationToken cancellationToken = default)
-    {
-        return _sellerRepository.GetAdminSellerProfilesAsync(cancellationToken);
-    }
+        => _sellerRepository.GetAdminSellerProfilesAsync(cancellationToken);
 
     public Task<IReadOnlyList<Brand>> GetBrandsAsync(CancellationToken cancellationToken = default)
-    {
-        return _componentRepository.GetBrandsAsync(cancellationToken);
-    }
+        => _componentRepository.GetBrandsAsync(cancellationToken);
 
     public Task<IReadOnlyList<Layout>> GetLayoutsAsync(CancellationToken cancellationToken = default)
-    {
-        return _componentRepository.GetLayoutsAsync(cancellationToken);
-    }
+        => _componentRepository.GetLayoutsAsync(cancellationToken);
 
     public Task<IReadOnlyList<AdminComponentRecord>> GetComponentsAsync(
         AdminComponentType componentType,
         CancellationToken cancellationToken = default)
-    {
-        return _componentRepository.GetAdminComponentsAsync(componentType, cancellationToken);
-    }
+        => _componentRepository.GetAdminComponentsAsync(componentType, cancellationToken);
 
     public async Task SetUserActiveAsync(
         int userId,
@@ -145,18 +135,16 @@ public sealed class AdminService : IAdminService
         sellerProfile.Address = sellerProfile.Address.Trim();
         ValidateSellerProfile(sellerProfile);
 
+        // Verification state is owned by SetSellerVerifiedAsync; preserve it across profile edits.
         if (oldProfile is null)
         {
-            sellerProfile.AssignedByAdminId = adminUserId;
-            sellerProfile.AssignedAt = DateTime.UtcNow;
+            sellerProfile.IsVerified = false;
+            sellerProfile.VerifiedAt = null;
         }
         else
         {
             sellerProfile.SellerProfileId = oldProfile.SellerProfileId;
-            sellerProfile.AssignedByAdminId = oldProfile.AssignedByAdminId;
-            sellerProfile.AssignedAt = oldProfile.AssignedAt;
             sellerProfile.IsVerified = oldProfile.IsVerified;
-            sellerProfile.VerifiedByAdminId = oldProfile.VerifiedByAdminId;
             sellerProfile.VerifiedAt = oldProfile.VerifiedAt;
         }
 
@@ -290,23 +278,6 @@ public sealed class AdminService : IAdminService
             saved,
             cancellationToken);
 
-        if (ComponentHasLayoutMapping(component.ComponentType) && LayoutMappingChanged(oldComponent, saved))
-        {
-            await AddAuditAsync(
-                adminUserId,
-                GetComponentMappingTableName(component.ComponentType),
-                saved.ComponentId,
-                "ComponentLayoutMappingUpdate",
-                oldComponent?.SupportedLayoutIds,
-                new
-                {
-                    saved.SupportedLayoutIds,
-                    saved.PrimaryLayoutId,
-                    saved.PcbVariantName
-                },
-                cancellationToken);
-        }
-
         return saved;
     }
 
@@ -321,13 +292,6 @@ public sealed class AdminService : IAdminService
         componentId = componentId.Trim();
         var oldComponent = await _componentRepository.GetAdminComponentByIdAsync(componentType, componentId, cancellationToken)
             ?? throw new InvalidOperationException("Khong tim thay linh kien.");
-
-        if (isAvailable
-            && ComponentHasLayoutMapping(componentType)
-            && !oldComponent.SupportedLayoutIds.Any(layoutId => !string.IsNullOrWhiteSpace(layoutId)))
-        {
-            throw new InvalidOperationException("Khong the khoi phuc linh kien khi chua co layout mapping.");
-        }
 
         await _componentRepository.SetComponentAvailabilityAsync(componentType, componentId, isAvailable, cancellationToken);
         var newComponent = await _componentRepository.GetAdminComponentByIdAsync(componentType, componentId, cancellationToken)
@@ -344,9 +308,7 @@ public sealed class AdminService : IAdminService
     }
 
     public Task<IReadOnlyList<AuditLogEntry>> GetAuditLogsAsync(CancellationToken cancellationToken = default)
-    {
-        return _auditLogRepository.GetRecentAsync(100, cancellationToken);
-    }
+        => _auditLogRepository.GetRecentAsync(100, cancellationToken);
 
     private async Task EnsureAdminAsync(int adminUserId, CancellationToken cancellationToken)
     {
@@ -390,9 +352,9 @@ public sealed class AdminService : IAdminService
             throw new InvalidOperationException("Nhap day du layout id, name va form factor.");
         }
 
-        if (layout.StandardKeyCount <= 0)
+        if (layout.KeyCount <= 0)
         {
-            throw new InvalidOperationException("Standard key count phai lon hon 0.");
+            throw new InvalidOperationException("Key count phai lon hon 0.");
         }
     }
 
@@ -403,9 +365,9 @@ public sealed class AdminService : IAdminService
             throw new InvalidOperationException("Nhap component id.");
         }
 
-        if (component.BrandId <= 0)
+        if (string.IsNullOrWhiteSpace(component.Name))
         {
-            throw new InvalidOperationException("BrandId phai lon hon 0.");
+            throw new InvalidOperationException("Nhap ten linh kien.");
         }
 
         if (component.PriceUsd < 0)
@@ -413,43 +375,47 @@ public sealed class AdminService : IAdminService
             throw new InvalidOperationException("Gia linh kien khong duoc am.");
         }
 
+        // Accessories have no brand in the refactor ERD; all other catalog types require one.
+        if (component.ComponentType != AdminComponentType.Accessory && component.BrandId <= 0)
+        {
+            throw new InvalidOperationException("BrandId phai lon hon 0.");
+        }
+
         switch (component.ComponentType)
         {
-            case AdminComponentType.Case:
-                RequireText(component.Material, "Material");
-                RequireText(component.MountType, "Mount type");
-                RequireText(component.Color, "Color");
-                RequireNonNegative(component.WeightG, "Weight");
-                RequireLayoutMappingWhenAvailable(component);
-                break;
-            case AdminComponentType.Pcb:
-                RequireText(component.Technology, "PCB technology");
-                RequireText(component.MountType, "Mount type");
+            case AdminComponentType.Kit:
+                RequireText(component.LayoutId, "Layout");
+                RequireText(component.PcbTechnology, "PCB technology");
                 RequireText(component.SwitchMount, "Switch mount");
-                RequireLayoutMappingWhenAvailable(component);
-                break;
-            case AdminComponentType.Plate:
-                RequireText(component.Material, "Material");
-                RequireText(component.MountType, "Mount type");
-                RequireText(component.FlexCut, "Flex cut");
-                RequireLayoutMappingWhenAvailable(component);
+                if (component.RequiredSwitchQuantity <= 0)
+                {
+                    throw new InvalidOperationException("Required switch quantity phai lon hon 0.");
+                }
+
                 break;
             case AdminComponentType.Switch:
-                RequireText(component.Technology, "Switch technology");
-                RequireText(component.SwitchType, "Switch type");
+                RequireText(component.SwitchTechnology, "Switch technology");
                 RequireText(component.MountType, "Mount type");
-                RequireText(component.SoundProfile, "Sound profile");
-                RequireNonNegative(component.ActuationForceG, "Actuation force");
+                if (component.ActuationForceG is <= 0)
+                {
+                    throw new InvalidOperationException("Actuation force phai lon hon 0.");
+                }
+
                 break;
             case AdminComponentType.KeycapSet:
-                RequireText(component.Profile, "Profile");
-                RequireText(component.Material, "Material");
-                RequireText(component.ColorPrimary, "Color primary");
-                RequireText(component.LegendType, "Legend type");
+                RequireText(component.SupportedFormFactor, "Supported form factor");
                 break;
             case AdminComponentType.Stabilizer:
-                RequireText(component.StabilizerType, "Stabilizer type");
-                RequireText(component.SizesIncluded, "Sizes included");
+                RequireText(component.SupportedLayouts, "Supported layouts");
+                break;
+            case AdminComponentType.Accessory:
+                RequireText(component.AccessoryType, "Accessory type");
+                RequireText(component.TargetComponent, "Target component");
+                if (!IsValidAccessoryTarget(component.TargetComponent))
+                {
+                    throw new InvalidOperationException("Target component phai la Switch, Stabilizer, Kit hoac General.");
+                }
+
                 break;
             default:
                 throw new ArgumentOutOfRangeException(nameof(component.ComponentType), component.ComponentType, null);
@@ -460,33 +426,22 @@ public sealed class AdminService : IAdminService
         AdminComponentRecord component,
         CancellationToken cancellationToken)
     {
-        if (await _componentRepository.GetBrandByIdAsync(component.BrandId, cancellationToken) is null)
+        if (component.ComponentType != AdminComponentType.Accessory
+            && await _componentRepository.GetBrandByIdAsync(component.BrandId, cancellationToken) is null)
         {
             throw new InvalidOperationException("Brand khong ton tai.");
         }
 
-        if (!ComponentHasLayoutMapping(component.ComponentType))
+        if (component.ComponentType == AdminComponentType.Kit
+            && await _componentRepository.GetLayoutByIdAsync(component.LayoutId.Trim(), cancellationToken) is null)
         {
-            return;
-        }
-
-        var layouts = await _componentRepository.GetLayoutsAsync(cancellationToken);
-        var existingLayoutIds = layouts.Select(layout => layout.LayoutId).ToHashSet(StringComparer.OrdinalIgnoreCase);
-        foreach (var layoutId in component.SupportedLayoutIds.Where(layoutId => !string.IsNullOrWhiteSpace(layoutId)))
-        {
-            if (!existingLayoutIds.Contains(layoutId.Trim()))
-            {
-                throw new InvalidOperationException($"Layout khong ton tai: {layoutId}");
-            }
+            throw new InvalidOperationException($"Layout khong ton tai: {component.LayoutId}");
         }
     }
 
-    private static void RequireLayoutMappingWhenAvailable(AdminComponentRecord component)
+    private static bool IsValidAccessoryTarget(string targetComponent)
     {
-        if (component.IsAvailable && !component.SupportedLayoutIds.Any(layoutId => !string.IsNullOrWhiteSpace(layoutId)))
-        {
-            throw new InvalidOperationException("Linh kien available can it nhat mot layout ho tro.");
-        }
+        return targetComponent.Trim() is "Switch" or "Stabilizer" or "Kit" or "General";
     }
 
     private static void RequireText(string value, string fieldName)
@@ -494,14 +449,6 @@ public sealed class AdminService : IAdminService
         if (string.IsNullOrWhiteSpace(value))
         {
             throw new InvalidOperationException($"{fieldName} khong duoc rong.");
-        }
-    }
-
-    private static void RequireNonNegative(int value, string fieldName)
-    {
-        if (value < 0)
-        {
-            throw new InvalidOperationException($"{fieldName} khong duoc am.");
         }
     }
 
@@ -545,42 +492,12 @@ public sealed class AdminService : IAdminService
     {
         return componentType switch
         {
-            AdminComponentType.Case => "cases",
-            AdminComponentType.Pcb => "pcbs",
-            AdminComponentType.Plate => "plates",
+            AdminComponentType.Kit => "keyboard_kits",
             AdminComponentType.Switch => "switches",
             AdminComponentType.KeycapSet => "keycap_sets",
             AdminComponentType.Stabilizer => "stabilizers",
+            AdminComponentType.Accessory => "accessories",
             _ => throw new ArgumentOutOfRangeException(nameof(componentType), componentType, null)
         };
-    }
-
-    private static string GetComponentMappingTableName(AdminComponentType componentType)
-    {
-        return componentType switch
-        {
-            AdminComponentType.Case => "case_layouts",
-            AdminComponentType.Pcb => "pcb_layouts",
-            AdminComponentType.Plate => "plate_layouts",
-            _ => throw new ArgumentOutOfRangeException(nameof(componentType), componentType, null)
-        };
-    }
-
-    private static bool ComponentHasLayoutMapping(AdminComponentType componentType)
-    {
-        return componentType is AdminComponentType.Case or AdminComponentType.Pcb or AdminComponentType.Plate;
-    }
-
-    private static bool LayoutMappingChanged(AdminComponentRecord? oldComponent, AdminComponentRecord newComponent)
-    {
-        if (oldComponent is null)
-        {
-            return newComponent.SupportedLayoutIds.Count > 0;
-        }
-
-        return !oldComponent.SupportedLayoutIds.Order(StringComparer.OrdinalIgnoreCase)
-                   .SequenceEqual(newComponent.SupportedLayoutIds.Order(StringComparer.OrdinalIgnoreCase), StringComparer.OrdinalIgnoreCase)
-            || !string.Equals(oldComponent.PrimaryLayoutId, newComponent.PrimaryLayoutId, StringComparison.OrdinalIgnoreCase)
-            || !string.Equals(oldComponent.PcbVariantName, newComponent.PcbVariantName, StringComparison.Ordinal);
     }
 }

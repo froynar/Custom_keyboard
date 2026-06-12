@@ -5,8 +5,13 @@ using Custom_keyboard.Repositories;
 
 namespace Custom_keyboard.Services;
 
+// Kit-based build logic. A build is a kit (builds.kit_id) plus add-on lines (build_items),
+// each line carrying exactly one product FK. Total = kit price + Σ(item.qty × unit price).
+// Validation follows Documents_Refactor/Keyboard_Build_Validation_Logic.md.
 public sealed class BuildService : IBuildService
 {
+    private const int NotesMaxLength = 500;
+
     private readonly IBuildRepository _buildRepository;
     private readonly IComponentCatalogService _catalogService;
 
@@ -17,291 +22,321 @@ public sealed class BuildService : IBuildService
     }
 
     public Task<IReadOnlyList<KeyboardBuild>> GetBuyerBuildsAsync(int buyerId, CancellationToken cancellationToken = default)
-    {
-        return _buildRepository.GetByBuyerAsync(buyerId, cancellationToken);
-    }
+        => _buildRepository.GetByBuyerAsync(buyerId, cancellationToken);
+
+    public Task<KeyboardBuild?> GetBuildByIdAsync(string buildId, CancellationToken cancellationToken = default)
+        => _buildRepository.GetByIdAsync(buildId, cancellationToken);
 
     public async Task<KeyboardBuild> SaveBuildAsync(KeyboardBuild build, CancellationToken cancellationToken = default)
     {
-        var validation = await ValidateBuildAsync(build, cancellationToken);
-        if (!validation.IsValid)
+        var resolution = await ResolveAsync(build, new BuildValidationResult(), cancellationToken);
+        if (!resolution.Result.IsValid)
         {
-            throw new InvalidOperationException(string.Join(Environment.NewLine, validation.Messages));
+            throw new InvalidOperationException(string.Join(Environment.NewLine, resolution.Result.Errors));
         }
 
         build.Name = build.Name.Trim();
         build.Notes = NormalizeNullable(build.Notes);
-        build.Status = BuildStatus.Saved;
-        build.TotalCostSnapshot = validation.TotalCost;
+        build.KitId = build.KitId.Trim();
         build.Mods = NormalizeMods(build.Mods);
+        ApplySnapshots(build, resolution);
+
+        // A build that the buyer is saving is no longer a transient draft once it is complete.
+        if (build.Status == BuildStatus.Draft && resolution.Result.Warnings.Count == 0)
+        {
+            build.Status = BuildStatus.Saved;
+        }
 
         return await _buildRepository.SaveAsync(build, cancellationToken);
     }
 
+    public async Task ArchiveBuildAsync(string buildId, int buyerId, CancellationToken cancellationToken = default)
+    {
+        var build = await _buildRepository.GetByIdAsync(buildId, cancellationToken)
+            ?? throw new InvalidOperationException("Build khong ton tai.");
+
+        if (build.BuyerId != buyerId)
+        {
+            throw new InvalidOperationException("Build khong thuoc buyer hien tai.");
+        }
+
+        await _buildRepository.ArchiveAsync(buildId, cancellationToken);
+    }
+
     public async Task<decimal> CalculateTotalAsync(KeyboardBuild build, CancellationToken cancellationToken = default)
     {
-        var validation = await ValidateBuildAsync(build, cancellationToken);
-        return validation.TotalCost;
+        var resolution = await ResolveAsync(build, new BuildValidationResult(), cancellationToken);
+        return resolution.Result.TotalCost;
     }
 
     public async Task<BuildValidationResult> ValidateBuildAsync(KeyboardBuild build, CancellationToken cancellationToken = default)
     {
-        var result = new BuildValidationResult();
+        var resolution = await ResolveAsync(build, new BuildValidationResult(), cancellationToken);
+        return resolution.Result;
+    }
 
-        if (build.UserId <= 0)
+    // ------------------------------------------------------------------ Resolution
+    // Loads the kit + every referenced product from the catalog, validates the build,
+    // computes the total and the per-item unit price snapshot in one pass.
+    private async Task<BuildResolution> ResolveAsync(
+        KeyboardBuild build,
+        BuildValidationResult result,
+        CancellationToken cancellationToken)
+    {
+        // 1. Metadata
+        if (build.BuyerId <= 0)
         {
-            result.Messages.Add("Buyer khong hop le.");
+            result.AddError("Buyer khong hop le.");
         }
 
         if (string.IsNullOrWhiteSpace(build.Name))
         {
-            result.Messages.Add("Nhap ten build truoc khi luu.");
+            result.AddError("Nhap ten build truoc khi luu.");
         }
 
-        var layout = await FindLayoutAsync(build.LayoutId, result, cancellationToken);
-        if (layout is null)
+        if (build.Notes is { Length: > NotesMaxLength })
         {
-            return result;
+            result.AddError($"Ghi chu khong duoc vuot qua {NotesMaxLength} ky tu.");
         }
 
-        var selectedCase = await FindCaseAsync(build, result, cancellationToken);
-        var selectedPcb = await FindPcbAsync(build, result, cancellationToken);
-        var selectedPlate = await FindPlateAsync(build, result, cancellationToken);
-        var selectedSwitch = await FindSwitchAsync(build, result, cancellationToken);
-        var selectedKeycap = await FindKeycapAsync(build, result, cancellationToken);
-        var selectedStabilizer = await FindStabilizerAsync(build, result, cancellationToken);
-
-        if (selectedCase is not null
-            && selectedPcb is not null
-            && selectedPlate is not null)
+        // 2. Kit
+        var kit = await ResolveKitAsync(build.KitId, result, cancellationToken);
+        var layout = kit is null
+            ? null
+            : await _catalogService.GetLayoutByIdAsync(kit.LayoutId, cancellationToken);
+        if (kit is not null && layout is null)
         {
-            await ValidateMainComponentRuleAsync(selectedCase, selectedPcb, selectedPlate, result, cancellationToken);
+            result.AddWarning("Khong tim thay layout cua kit; bo qua kiem tra form factor.");
         }
 
-        if (selectedPcb is not null && selectedSwitch is not null)
+        var requiredSwitchQuantity = kit?.RequiredSwitchQuantity ?? 0;
+        result.RequiredSwitchQuantity = requiredSwitchQuantity;
+
+        // 3-6. Build items
+        var resolvedItems = new List<ResolvedItem>(build.Items.Count);
+        var total = kit?.PriceUsd ?? 0m;
+        var switchQuantityTotal = 0;
+        var hasKeycap = false;
+        var hasStabilizer = false;
+
+        foreach (var item in build.Items)
         {
-            if (!Same(selectedPcb.PcbTechnology, selectedSwitch.SwitchTechnology))
+            if (!item.HasExactlyOneProduct())
             {
-                result.Messages.Add(
-                    $"PCB technology '{selectedPcb.PcbTechnology}' khong phu hop voi switch technology '{selectedSwitch.SwitchTechnology}'.");
+                result.AddError("Moi build item phai chon dung mot san pham (switch/keycap/stab/accessory).");
+                resolvedItems.Add(new ResolvedItem(item, 0m));
+                continue;
             }
 
-            if (!Same(selectedPcb.SwitchMount, selectedSwitch.MountType))
+            if (item.Quantity <= 0)
             {
-                result.Messages.Add(
-                    $"Switch mount khong phu hop: PCB can '{selectedPcb.SwitchMount}' nhung switch la '{selectedSwitch.MountType}'.");
+                result.AddError("So luong build item phai lon hon 0.");
+            }
+
+            var unitPrice = await ResolveItemAsync(
+                item,
+                kit,
+                layout,
+                result,
+                quantity => switchQuantityTotal += quantity,
+                () => hasKeycap = true,
+                () => hasStabilizer = true,
+                cancellationToken);
+
+            resolvedItems.Add(new ResolvedItem(item, unitPrice));
+            total += item.Quantity * unitPrice;
+        }
+
+        // 3. Switch quantity
+        if (kit is not null && requiredSwitchQuantity > 0 && switchQuantityTotal < requiredSwitchQuantity)
+        {
+            result.AddError(
+                $"Kit can it nhat {requiredSwitchQuantity} switch, hien chi co {switchQuantityTotal}.");
+        }
+
+        // 4-5. Completeness advisories
+        if (kit is not null && !hasKeycap)
+        {
+            result.AddWarning("Build chua co keycap set.");
+        }
+
+        if (kit is not null && !hasStabilizer)
+        {
+            result.AddWarning("Build chua co stabilizer.");
+        }
+
+        // 8. Price snapshot
+        total = Math.Round(total, 2, MidpointRounding.AwayFromZero);
+        result.TotalCost = total;
+        if (kit is not null)
+        {
+            result.AddInfo($"Tong tien: {total:0.00} USD.");
+            result.AddInfo($"So switch can mua: {requiredSwitchQuantity}.");
+            if (!string.IsNullOrWhiteSpace(kit.IncludedParts))
+            {
+                result.AddInfo($"Kit da gom: {kit.IncludedParts}.");
             }
         }
 
-        result.TotalCost = CalculateTotal(
-            layout,
-            selectedCase,
-            selectedPcb,
-            selectedPlate,
-            selectedSwitch,
-            selectedKeycap,
-            selectedStabilizer);
-
-        return result;
+        return new BuildResolution(result, kit, total, resolvedItems);
     }
 
-    private async Task<Layout?> FindLayoutAsync(
-        string layoutId,
+    private async Task<KeyboardKit?> ResolveKitAsync(
+        string kitId,
         BuildValidationResult result,
         CancellationToken cancellationToken)
     {
-        if (string.IsNullOrWhiteSpace(layoutId))
+        if (string.IsNullOrWhiteSpace(kitId))
         {
-            result.Messages.Add("Chon layout truoc.");
+            result.AddError("Chon kit truoc khi luu build.");
             return null;
         }
 
-        var layouts = await _catalogService.GetLayoutsAsync(cancellationToken);
-        var layout = layouts.FirstOrDefault(item => Same(item.LayoutId, layoutId));
-        if (layout is null)
+        var kit = await _catalogService.GetKitByIdAsync(kitId.Trim(), cancellationToken);
+        if (kit is null)
         {
-            result.Messages.Add("Layout da chon khong ton tai.");
-        }
-
-        return layout;
-    }
-
-    private async Task<KeyboardCase?> FindCaseAsync(
-        KeyboardBuild build,
-        BuildValidationResult result,
-        CancellationToken cancellationToken)
-    {
-        if (string.IsNullOrWhiteSpace(build.CaseId))
-        {
-            result.Messages.Add("Chon case truoc.");
+            result.AddError("Kit da chon khong ton tai.");
             return null;
         }
 
-        var cases = await _catalogService.GetCasesForLayoutAsync(build.LayoutId, cancellationToken);
-        var selectedCase = cases.FirstOrDefault(item => Same(item.CaseId, build.CaseId));
-        if (selectedCase is null)
+        if (!kit.IsAvailable)
         {
-            result.Messages.Add("Case da chon khong kha dung cho layout nay.");
+            result.AddError("Kit da chon khong con kha dung.");
         }
 
-        return selectedCase;
+        if (string.IsNullOrWhiteSpace(kit.PcbTechnology) || string.IsNullOrWhiteSpace(kit.SwitchMount))
+        {
+            result.AddError("Kit thieu thong tin pcb technology / switch mount.");
+        }
+
+        if (kit.PriceUsd < 0)
+        {
+            result.AddError("Gia kit khong hop le.");
+        }
+
+        return kit;
     }
 
-    private async Task<Pcb?> FindPcbAsync(
-        KeyboardBuild build,
+    private async Task<decimal> ResolveItemAsync(
+        BuildItem item,
+        KeyboardKit? kit,
+        Layout? layout,
         BuildValidationResult result,
+        Action<int> recordSwitchQuantity,
+        Action recordKeycap,
+        Action recordStabilizer,
         CancellationToken cancellationToken)
     {
-        if (string.IsNullOrWhiteSpace(build.PcbId))
+        if (item.SwitchId is not null)
         {
-            result.Messages.Add("Chon PCB truoc.");
-            return null;
+            var selectedSwitch = await _catalogService.GetSwitchByIdAsync(item.SwitchId, cancellationToken);
+            if (selectedSwitch is null)
+            {
+                result.AddError($"Switch '{item.SwitchId}' khong ton tai.");
+                return 0m;
+            }
+
+            if (!selectedSwitch.IsAvailable)
+            {
+                result.AddError($"Switch '{selectedSwitch.SwitchName}' khong con kha dung.");
+            }
+
+            if (kit is not null)
+            {
+                if (!Same(selectedSwitch.SwitchTechnology, kit.PcbTechnology))
+                {
+                    result.AddError(
+                        $"Switch technology '{selectedSwitch.SwitchTechnology}' khong khop kit '{kit.PcbTechnology}'.");
+                }
+
+                if (!Same(selectedSwitch.MountType, kit.SwitchMount))
+                {
+                    result.AddError(
+                        $"Switch mount '{selectedSwitch.MountType}' khong khop kit '{kit.SwitchMount}'.");
+                }
+            }
+
+            recordSwitchQuantity(item.Quantity);
+            return selectedSwitch.PriceUsd;
         }
 
-        var pcbs = await _catalogService.GetPcbsForLayoutAsync(build.LayoutId, cancellationToken);
-        var selectedPcb = pcbs.FirstOrDefault(item => Same(item.PcbId, build.PcbId));
-        if (selectedPcb is null)
+        if (item.KeycapId is not null)
         {
-            result.Messages.Add("PCB da chon khong kha dung cho layout nay.");
+            var keycap = await _catalogService.GetKeycapSetByIdAsync(item.KeycapId, cancellationToken);
+            if (keycap is null)
+            {
+                result.AddError($"Keycap '{item.KeycapId}' khong ton tai.");
+                return 0m;
+            }
+
+            if (!keycap.IsAvailable)
+            {
+                result.AddError($"Keycap '{keycap.KeycapName}' khong con kha dung.");
+            }
+
+            if (layout is not null && !SupportsFormFactor(keycap.SupportedFormFactor, layout.FormFactor))
+            {
+                result.AddWarning(
+                    $"Keycap '{keycap.KeycapName}' co the khong phu hop form factor '{layout.FormFactor}'.");
+            }
+
+            recordKeycap();
+            return keycap.PriceUsd;
         }
 
-        return selectedPcb;
+        if (item.StabilizerId is not null)
+        {
+            var stabilizer = await _catalogService.GetStabilizerByIdAsync(item.StabilizerId, cancellationToken);
+            if (stabilizer is null)
+            {
+                result.AddError($"Stabilizer '{item.StabilizerId}' khong ton tai.");
+                return 0m;
+            }
+
+            if (!stabilizer.IsAvailable)
+            {
+                result.AddError($"Stabilizer '{stabilizer.StabilizerName}' khong con kha dung.");
+            }
+
+            if (layout is not null && !SupportsFormFactor(stabilizer.SupportedLayouts, layout.FormFactor))
+            {
+                result.AddWarning(
+                    $"Stabilizer '{stabilizer.StabilizerName}' co the khong phu hop layout '{layout.FormFactor}'.");
+            }
+
+            recordStabilizer();
+            return stabilizer.PriceUsd;
+        }
+
+        // accessory
+        var accessory = await _catalogService.GetAccessoryByIdAsync(item.AccessoryId!, cancellationToken);
+        if (accessory is null)
+        {
+            result.AddError($"Accessory '{item.AccessoryId}' khong ton tai.");
+            return 0m;
+        }
+
+        if (!accessory.IsAvailable)
+        {
+            result.AddError($"Accessory '{accessory.AccessoryName}' khong con kha dung.");
+        }
+
+        if (!IsValidAccessoryTarget(accessory.TargetComponent))
+        {
+            result.AddWarning($"Accessory '{accessory.AccessoryName}' co target component khong xac dinh.");
+        }
+
+        return accessory.PriceUsd;
     }
 
-    private async Task<Plate?> FindPlateAsync(
-        KeyboardBuild build,
-        BuildValidationResult result,
-        CancellationToken cancellationToken)
+    private static void ApplySnapshots(KeyboardBuild build, BuildResolution resolution)
     {
-        if (string.IsNullOrWhiteSpace(build.PlateId))
+        foreach (var resolved in resolution.Items)
         {
-            result.Messages.Add("Chon plate truoc.");
-            return null;
+            resolved.Item.UnitPriceSnapshot = resolved.UnitPrice;
         }
 
-        var plates = await _catalogService.GetPlatesForLayoutAsync(build.LayoutId, cancellationToken);
-        var selectedPlate = plates.FirstOrDefault(item => Same(item.PlateId, build.PlateId));
-        if (selectedPlate is null)
-        {
-            result.Messages.Add("Plate da chon khong kha dung cho layout nay.");
-        }
-
-        return selectedPlate;
-    }
-
-    private async Task<KeyboardSwitch?> FindSwitchAsync(
-        KeyboardBuild build,
-        BuildValidationResult result,
-        CancellationToken cancellationToken)
-    {
-        if (string.IsNullOrWhiteSpace(build.SwitchId))
-        {
-            result.Messages.Add("Chon switch truoc.");
-            return null;
-        }
-
-        var switches = await _catalogService.GetAvailableSwitchesAsync(cancellationToken);
-        var selectedSwitch = switches.FirstOrDefault(item => Same(item.SwitchId, build.SwitchId));
-        if (selectedSwitch is null)
-        {
-            result.Messages.Add("Switch da chon khong kha dung.");
-        }
-
-        return selectedSwitch;
-    }
-
-    private async Task<KeycapSet?> FindKeycapAsync(
-        KeyboardBuild build,
-        BuildValidationResult result,
-        CancellationToken cancellationToken)
-    {
-        if (string.IsNullOrWhiteSpace(build.KeycapId))
-        {
-            result.Messages.Add("Chon keycap truoc.");
-            return null;
-        }
-
-        var keycaps = await _catalogService.GetAvailableKeycapSetsAsync(cancellationToken);
-        var selectedKeycap = keycaps.FirstOrDefault(item => Same(item.KeycapId, build.KeycapId));
-        if (selectedKeycap is null)
-        {
-            result.Messages.Add("Keycap da chon khong kha dung.");
-        }
-
-        return selectedKeycap;
-    }
-
-    private async Task<Stabilizer?> FindStabilizerAsync(
-        KeyboardBuild build,
-        BuildValidationResult result,
-        CancellationToken cancellationToken)
-    {
-        if (string.IsNullOrWhiteSpace(build.StabilizerId))
-        {
-            result.Messages.Add("Chon stabilizer truoc.");
-            return null;
-        }
-
-        var stabilizers = await _catalogService.GetAvailableStabilizersAsync(cancellationToken);
-        var selectedStabilizer = stabilizers.FirstOrDefault(item => Same(item.StabilizerId, build.StabilizerId));
-        if (selectedStabilizer is null)
-        {
-            result.Messages.Add("Stabilizer da chon khong kha dung.");
-        }
-
-        return selectedStabilizer;
-    }
-
-    private async Task ValidateMainComponentRuleAsync(
-        KeyboardCase selectedCase,
-        Pcb selectedPcb,
-        Plate selectedPlate,
-        BuildValidationResult result,
-        CancellationToken cancellationToken)
-    {
-        var rules = await _catalogService.GetCompatibilityRulesAsync(cancellationToken);
-        var rule = rules
-            .Where(item =>
-                MatchesRuleComponent(item.CaseId, selectedCase.CaseId)
-                && MatchesRuleComponent(item.PcbId, selectedPcb.PcbId)
-                && MatchesRuleComponent(item.PlateId, selectedPlate.PlateId))
-            .OrderByDescending(RuleSpecificity)
-            .FirstOrDefault();
-
-        if (rule is null)
-        {
-            result.Messages.Add("Bo case/PCB/plate chua co rule tuong thich.");
-            return;
-        }
-
-        if (!rule.IsCompatible)
-        {
-            result.Messages.Add(string.IsNullOrWhiteSpace(rule.Notes)
-                ? "Bo case/PCB/plate khong tuong thich."
-                : rule.Notes);
-        }
-    }
-
-    private static decimal CalculateTotal(
-        Layout layout,
-        KeyboardCase? selectedCase,
-        Pcb? selectedPcb,
-        Plate? selectedPlate,
-        KeyboardSwitch? selectedSwitch,
-        KeycapSet? selectedKeycap,
-        Stabilizer? selectedStabilizer)
-    {
-        var switchQuantity = Math.Max(layout.StandardKeyCount, 1);
-        var total = 0m;
-
-        total += selectedCase?.PriceUsd ?? 0m;
-        total += selectedPcb?.PriceUsd ?? 0m;
-        total += selectedPlate?.PriceUsd ?? 0m;
-        total += selectedSwitch?.PriceUsd * switchQuantity ?? 0m;
-        total += selectedKeycap?.PriceUsd ?? 0m;
-        total += selectedStabilizer?.PriceUsd ?? 0m;
-
-        return Math.Round(total, 2, MidpointRounding.AwayFromZero);
+        build.TotalCostSnapshot = resolution.Total;
     }
 
     private static List<BuildMod> NormalizeMods(IEnumerable<BuildMod> mods)
@@ -310,9 +345,6 @@ public sealed class BuildService : IBuildService
             .Where(mod =>
                 !string.IsNullOrWhiteSpace(mod.ModType)
                 || !string.IsNullOrWhiteSpace(mod.TargetComponent)
-                || !string.IsNullOrWhiteSpace(mod.LubeType)
-                || mod.IsFilmed
-                || mod.SpringWeightG.HasValue
                 || !string.IsNullOrWhiteSpace(mod.Notes))
             .Select(mod => new BuildMod
             {
@@ -320,48 +352,61 @@ public sealed class BuildService : IBuildService
                 BuildId = mod.BuildId,
                 ModType = string.IsNullOrWhiteSpace(mod.ModType) ? "General" : mod.ModType.Trim(),
                 TargetComponent = string.IsNullOrWhiteSpace(mod.TargetComponent) ? "Build" : mod.TargetComponent.Trim(),
-                LubeType = NormalizeNullable(mod.LubeType),
-                IsFilmed = mod.IsFilmed,
-                SpringWeightG = mod.SpringWeightG,
                 Notes = NormalizeNullable(mod.Notes)
             })
             .ToList();
     }
 
-    private static bool MatchesRuleComponent(string? ruleComponentId, string selectedComponentId)
+    private static bool IsValidAccessoryTarget(string? targetComponent)
     {
-        return string.IsNullOrWhiteSpace(ruleComponentId) || Same(ruleComponentId, selectedComponentId);
+        return targetComponent is not null
+            && (Same(targetComponent, "Switch")
+                || Same(targetComponent, "Stabilizer")
+                || Same(targetComponent, "Kit")
+                || Same(targetComponent, "General"));
     }
 
-    private static int RuleSpecificity(CompatibilityRule rule)
+    // Keycap/stab compatibility is text-based in the refactor ERD. The supported field lists
+    // form-factor tokens like "60/65/75/TKL/100"; a kit's layout form factor is "65%", "TKL"...
+    private static bool SupportsFormFactor(string? supported, string layoutFormFactor)
     {
-        var specificity = 0;
-
-        if (!string.IsNullOrWhiteSpace(rule.CaseId))
+        if (string.IsNullOrWhiteSpace(supported))
         {
-            specificity++;
+            return false;
         }
 
-        if (!string.IsNullOrWhiteSpace(rule.PcbId))
+        var target = NormalizeFormFactor(layoutFormFactor);
+        if (target.Length == 0)
         {
-            specificity++;
+            return true;
         }
 
-        if (!string.IsNullOrWhiteSpace(rule.PlateId))
+        foreach (var token in supported.Split(['/', ',', ' '], StringSplitOptions.RemoveEmptyEntries))
         {
-            specificity++;
+            var normalized = NormalizeFormFactor(token);
+            if (normalized == "UNIVERSAL" || normalized == target)
+            {
+                return true;
+            }
         }
 
-        return specificity;
+        return false;
     }
+
+    private static string NormalizeFormFactor(string value)
+        => value.Trim().Trim('%').ToUpperInvariant();
 
     private static string? NormalizeNullable(string? value)
-    {
-        return string.IsNullOrWhiteSpace(value) ? null : value.Trim();
-    }
+        => string.IsNullOrWhiteSpace(value) ? null : value.Trim();
 
     private static bool Same(string? left, string? right)
-    {
-        return string.Equals(left?.Trim(), right?.Trim(), StringComparison.OrdinalIgnoreCase);
-    }
+        => string.Equals(left?.Trim(), right?.Trim(), StringComparison.OrdinalIgnoreCase);
+
+    private sealed record BuildResolution(
+        BuildValidationResult Result,
+        KeyboardKit? Kit,
+        decimal Total,
+        IReadOnlyList<ResolvedItem> Items);
+
+    private sealed record ResolvedItem(BuildItem Item, decimal UnitPrice);
 }

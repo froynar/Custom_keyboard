@@ -13,47 +13,41 @@ public sealed class ComponentCatalogService : IComponentCatalogService
     }
 
     public Task<IReadOnlyList<Brand>> GetBrandsAsync(CancellationToken cancellationToken = default)
-    {
-        return _componentRepository.GetBrandsAsync(cancellationToken);
-    }
+        => _componentRepository.GetBrandsAsync(cancellationToken);
 
     public Task<IReadOnlyList<Layout>> GetLayoutsAsync(CancellationToken cancellationToken = default)
-    {
-        return _componentRepository.GetLayoutsAsync(cancellationToken);
-    }
+        => _componentRepository.GetLayoutsAsync(cancellationToken);
 
-    public Task<IReadOnlyList<KeyboardCase>> GetCasesForLayoutAsync(string layoutId, CancellationToken cancellationToken = default)
-    {
-        return _componentRepository.GetCasesForLayoutAsync(layoutId, cancellationToken);
-    }
+    public Task<Layout?> GetLayoutByIdAsync(string layoutId, CancellationToken cancellationToken = default)
+        => _componentRepository.GetLayoutByIdAsync(layoutId, cancellationToken);
 
-    public Task<IReadOnlyList<Pcb>> GetPcbsForLayoutAsync(string layoutId, CancellationToken cancellationToken = default)
-    {
-        return _componentRepository.GetPcbsForLayoutAsync(layoutId, cancellationToken);
-    }
+    public Task<IReadOnlyList<KeyboardKit>> GetAvailableKitsAsync(CancellationToken cancellationToken = default)
+        => _componentRepository.GetAvailableKitsAsync(cancellationToken);
 
-    public Task<IReadOnlyList<Plate>> GetPlatesForLayoutAsync(string layoutId, CancellationToken cancellationToken = default)
-    {
-        return _componentRepository.GetPlatesForLayoutAsync(layoutId, cancellationToken);
-    }
+    public Task<KeyboardKit?> GetKitByIdAsync(string kitId, CancellationToken cancellationToken = default)
+        => _componentRepository.GetKitByIdAsync(kitId, cancellationToken);
 
     public Task<IReadOnlyList<KeyboardSwitch>> GetAvailableSwitchesAsync(CancellationToken cancellationToken = default)
-    {
-        return _componentRepository.GetAvailableSwitchesAsync(cancellationToken);
-    }
+        => _componentRepository.GetAvailableSwitchesAsync(cancellationToken);
+
+    public Task<KeyboardSwitch?> GetSwitchByIdAsync(string switchId, CancellationToken cancellationToken = default)
+        => _componentRepository.GetSwitchByIdAsync(switchId, cancellationToken);
 
     public Task<IReadOnlyList<KeycapSet>> GetAvailableKeycapSetsAsync(CancellationToken cancellationToken = default)
-    {
-        return _componentRepository.GetAvailableKeycapSetsAsync(cancellationToken);
-    }
+        => _componentRepository.GetAvailableKeycapSetsAsync(cancellationToken);
+
+    public Task<KeycapSet?> GetKeycapSetByIdAsync(string keycapId, CancellationToken cancellationToken = default)
+        => _componentRepository.GetKeycapSetByIdAsync(keycapId, cancellationToken);
 
     public Task<IReadOnlyList<Stabilizer>> GetAvailableStabilizersAsync(CancellationToken cancellationToken = default)
-    {
-        return _componentRepository.GetAvailableStabilizersAsync(cancellationToken);
-    }
+        => _componentRepository.GetAvailableStabilizersAsync(cancellationToken);
 
-    public Task<IReadOnlyList<CompatibilityRule>> GetCompatibilityRulesAsync(CancellationToken cancellationToken = default)
-    {
-        return _componentRepository.GetCompatibilityRulesAsync(cancellationToken);
-    }
+    public Task<Stabilizer?> GetStabilizerByIdAsync(string stabilizerId, CancellationToken cancellationToken = default)
+        => _componentRepository.GetStabilizerByIdAsync(stabilizerId, cancellationToken);
+
+    public Task<IReadOnlyList<Accessory>> GetAvailableAccessoriesAsync(CancellationToken cancellationToken = default)
+        => _componentRepository.GetAvailableAccessoriesAsync(cancellationToken);
+
+    public Task<Accessory?> GetAccessoryByIdAsync(string accessoryId, CancellationToken cancellationToken = default)
+        => _componentRepository.GetAccessoryByIdAsync(accessoryId, cancellationToken);
 }

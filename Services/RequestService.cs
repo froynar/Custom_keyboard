@@ -14,6 +14,13 @@ public sealed class RequestService : IRequestService
         PropertyNamingPolicy = JsonNamingPolicy.CamelCase
     };
 
+    private static readonly RequestStatus[] ActiveStatuses =
+    [
+        RequestStatus.Pending,
+        RequestStatus.Accepted,
+        RequestStatus.In_progress
+    ];
+
     private readonly IBuildRepository _buildRepository;
     private readonly ISellerRepository _sellerRepository;
     private readonly IRequestRepository _requestRepository;
@@ -66,7 +73,7 @@ public sealed class RequestService : IRequestService
         var build = await _buildRepository.GetByIdAsync(buildId, cancellationToken)
             ?? throw new InvalidOperationException("Build khong ton tai.");
 
-        if (build.UserId != buyerId)
+        if (build.BuyerId != buyerId)
         {
             throw new InvalidOperationException("Build khong thuoc buyer hien tai.");
         }
@@ -75,17 +82,20 @@ public sealed class RequestService : IRequestService
         if (!validation.IsValid)
         {
             throw new InvalidOperationException(
-                "Build chua du cau hinh de gui request." + Environment.NewLine + string.Join(Environment.NewLine, validation.Messages));
+                "Build chua du cau hinh de gui request." + Environment.NewLine + string.Join(Environment.NewLine, validation.Errors));
         }
 
-        var availableSeller = await GetAvailableSellerAsync(sellerUserId, cancellationToken)
+        await EnsureNoActiveRequestAsync(build, buyerId, cancellationToken);
+
+        var seller = await GetAvailableSellerAsync(sellerUserId, cancellationToken)
             ?? throw new InvalidOperationException("Seller chua verified hoac bi inactive.");
 
-        var payloadJson = await CreateSnapshotJsonAsync(build, availableSeller, cancellationToken);
+        build.TotalCostSnapshot = validation.TotalCost;
+        var payloadJson = await CreateSnapshotJsonAsync(build, seller, validation.TotalCost, cancellationToken);
+
         var request = new BuildRequest
         {
             BuildId = build.BuildId,
-            BuyerId = buyerId,
             SellerUserId = sellerUserId,
             RequestPayloadJson = payloadJson,
             Status = RequestStatus.Pending,
@@ -98,16 +108,12 @@ public sealed class RequestService : IRequestService
     public Task<IReadOnlyList<BuildRequest>> GetBuyerRequestsAsync(
         int buyerId,
         CancellationToken cancellationToken = default)
-    {
-        return _requestRepository.GetByBuyerAsync(buyerId, cancellationToken);
-    }
+        => _requestRepository.GetByBuyerAsync(buyerId, cancellationToken);
 
     public Task<IReadOnlyList<BuildRequest>> GetSellerRequestsAsync(
         int sellerUserId,
         CancellationToken cancellationToken = default)
-    {
-        return _requestRepository.GetBySellerAsync(sellerUserId, cancellationToken);
-    }
+        => _requestRepository.GetBySellerAsync(sellerUserId, cancellationToken);
 
     public async Task<BuildRequest> UpdateStatusAsync(
         string requestId,
@@ -159,9 +165,20 @@ public sealed class RequestService : IRequestService
         };
     }
 
-    private async Task<SellerProfile?> GetAvailableSellerAsync(
-        int sellerUserId,
-        CancellationToken cancellationToken)
+    private async Task EnsureNoActiveRequestAsync(KeyboardBuild build, int buyerId, CancellationToken cancellationToken)
+    {
+        var buyerRequests = await _requestRepository.GetByBuyerAsync(buyerId, cancellationToken);
+        var hasActive = buyerRequests.Any(request =>
+            string.Equals(request.BuildId, build.BuildId, StringComparison.OrdinalIgnoreCase)
+            && ActiveStatuses.Contains(request.Status));
+
+        if (hasActive)
+        {
+            throw new InvalidOperationException("Build nay dang co request active; khong the gui them.");
+        }
+    }
+
+    private async Task<SellerProfile?> GetAvailableSellerAsync(int sellerUserId, CancellationToken cancellationToken)
     {
         var sellers = await _sellerRepository.GetVerifiedSellersAsync(cancellationToken);
         return sellers.FirstOrDefault(item => item.UserId == sellerUserId);
@@ -170,22 +187,18 @@ public sealed class RequestService : IRequestService
     private async Task<string> CreateSnapshotJsonAsync(
         KeyboardBuild build,
         SellerProfile seller,
+        decimal totalCost,
         CancellationToken cancellationToken)
     {
-        var layout = (await _catalogService.GetLayoutsAsync(cancellationToken))
-            .FirstOrDefault(item => Same(item.LayoutId, build.LayoutId));
-        var selectedCase = (await _catalogService.GetCasesForLayoutAsync(build.LayoutId, cancellationToken))
-            .FirstOrDefault(item => Same(item.CaseId, build.CaseId));
-        var selectedPcb = (await _catalogService.GetPcbsForLayoutAsync(build.LayoutId, cancellationToken))
-            .FirstOrDefault(item => Same(item.PcbId, build.PcbId));
-        var selectedPlate = (await _catalogService.GetPlatesForLayoutAsync(build.LayoutId, cancellationToken))
-            .FirstOrDefault(item => Same(item.PlateId, build.PlateId));
-        var selectedSwitch = (await _catalogService.GetAvailableSwitchesAsync(cancellationToken))
-            .FirstOrDefault(item => Same(item.SwitchId, build.SwitchId));
-        var selectedKeycap = (await _catalogService.GetAvailableKeycapSetsAsync(cancellationToken))
-            .FirstOrDefault(item => Same(item.KeycapId, build.KeycapId));
-        var selectedStabilizer = (await _catalogService.GetAvailableStabilizersAsync(cancellationToken))
-            .FirstOrDefault(item => Same(item.StabilizerId, build.StabilizerId));
+        var kit = string.IsNullOrWhiteSpace(build.KitId)
+            ? null
+            : await _catalogService.GetKitByIdAsync(build.KitId, cancellationToken);
+
+        var items = new List<ItemSnapshot>(build.Items.Count);
+        foreach (var item in build.Items)
+        {
+            items.Add(await CreateItemSnapshotAsync(item, cancellationToken));
+        }
 
         var snapshot = new BuildRequestSnapshot(
             Build: new BuildSnapshot(
@@ -193,104 +206,80 @@ public sealed class RequestService : IRequestService
                 build.Name,
                 build.Notes,
                 build.Status.ToString(),
-                build.TotalCostSnapshot,
+                totalCost,
                 build.CreatedAt,
                 build.UpdatedAt),
             Seller: new SellerSnapshot(seller.UserId, seller.ShopName, seller.Phone, seller.Address),
-            Layout: layout is null
+            Kit: kit is null
                 ? null
-                : new LayoutSnapshot(layout.LayoutId, layout.LayoutName, layout.FormFactor, layout.StandardKeyCount),
-            Case: selectedCase is null
-                ? null
-                : new CaseSnapshot(
-                    selectedCase.CaseId,
-                    selectedCase.BrandId,
-                    selectedCase.Material,
-                    selectedCase.MountType,
-                    selectedCase.Color,
-                    selectedCase.WeightG,
-                    selectedCase.PriceUsd),
-            Pcb: selectedPcb is null
-                ? null
-                : new PcbSnapshot(
-                    selectedPcb.PcbId,
-                    selectedPcb.BrandId,
-                    selectedPcb.PcbTechnology,
-                    selectedPcb.MountType,
-                    selectedPcb.SwitchMount,
-                    selectedPcb.Hotswap,
-                    selectedPcb.Wireless,
-                    selectedPcb.Rgb,
-                    selectedPcb.PriceUsd),
-            Plate: selectedPlate is null
-                ? null
-                : new PlateSnapshot(
-                    selectedPlate.PlateId,
-                    selectedPlate.BrandId,
-                    selectedPlate.Material,
-                    selectedPlate.MountType,
-                    selectedPlate.FlexCut,
-                    selectedPlate.PriceUsd),
-            Switch: selectedSwitch is null
-                ? null
-                : new SwitchSnapshot(
-                    selectedSwitch.SwitchId,
-                    selectedSwitch.BrandId,
-                    selectedSwitch.SwitchTechnology,
-                    selectedSwitch.SwitchType,
-                    selectedSwitch.MountType,
-                    selectedSwitch.ActuationForceG,
-                    selectedSwitch.SoundProfile,
-                    selectedSwitch.PriceUsd),
-            Keycap: selectedKeycap is null
-                ? null
-                : new KeycapSnapshot(
-                    selectedKeycap.KeycapId,
-                    selectedKeycap.BrandId,
-                    selectedKeycap.Profile,
-                    selectedKeycap.Material,
-                    selectedKeycap.ColorPrimary,
-                    selectedKeycap.LegendType,
-                    selectedKeycap.PriceUsd),
-            Stabilizer: selectedStabilizer is null
-                ? null
-                : new StabilizerSnapshot(
-                    selectedStabilizer.StabilizerId,
-                    selectedStabilizer.BrandId,
-                    selectedStabilizer.StabilizerType,
-                    selectedStabilizer.SizesIncluded,
-                    selectedStabilizer.PriceUsd),
-            Mods: build.Mods.Select(mod => new ModSnapshot(
-                mod.ModType,
-                mod.TargetComponent,
-                mod.LubeType,
-                mod.IsFilmed,
-                mod.SpringWeightG,
-                mod.Notes)).ToList());
+                : new KitSnapshot(
+                    kit.KitId,
+                    kit.KitName,
+                    kit.BrandId,
+                    kit.LayoutId,
+                    kit.PcbTechnology,
+                    kit.SwitchMount,
+                    kit.RequiredSwitchQuantity,
+                    kit.IncludedParts,
+                    kit.PriceUsd),
+            Items: items,
+            Mods: build.Mods
+                .Select(mod => new ModSnapshot(mod.ModType, mod.TargetComponent, mod.Notes))
+                .ToList());
 
         return JsonSerializer.Serialize(snapshot, SnapshotJsonOptions);
     }
 
-    private static string? NormalizeNullable(string? value)
+    private async Task<ItemSnapshot> CreateItemSnapshotAsync(BuildItem item, CancellationToken cancellationToken)
     {
-        return string.IsNullOrWhiteSpace(value) ? null : value.Trim();
+        string productType;
+        string productId;
+        string productName;
+        decimal unitPrice;
+
+        if (item.SwitchId is not null)
+        {
+            var product = await _catalogService.GetSwitchByIdAsync(item.SwitchId, cancellationToken);
+            (productType, productId, productName, unitPrice) =
+                ("Switch", item.SwitchId, product?.SwitchName ?? item.SwitchId, product?.PriceUsd ?? item.UnitPriceSnapshot);
+        }
+        else if (item.KeycapId is not null)
+        {
+            var product = await _catalogService.GetKeycapSetByIdAsync(item.KeycapId, cancellationToken);
+            (productType, productId, productName, unitPrice) =
+                ("Keycap", item.KeycapId, product?.KeycapName ?? item.KeycapId, product?.PriceUsd ?? item.UnitPriceSnapshot);
+        }
+        else if (item.StabilizerId is not null)
+        {
+            var product = await _catalogService.GetStabilizerByIdAsync(item.StabilizerId, cancellationToken);
+            (productType, productId, productName, unitPrice) =
+                ("Stabilizer", item.StabilizerId, product?.StabilizerName ?? item.StabilizerId, product?.PriceUsd ?? item.UnitPriceSnapshot);
+        }
+        else
+        {
+            var product = await _catalogService.GetAccessoryByIdAsync(item.AccessoryId!, cancellationToken);
+            (productType, productId, productName, unitPrice) =
+                ("Accessory", item.AccessoryId!, product?.AccessoryName ?? item.AccessoryId!, product?.PriceUsd ?? item.UnitPriceSnapshot);
+        }
+
+        return new ItemSnapshot(
+            productType,
+            productId,
+            productName,
+            item.Quantity,
+            unitPrice,
+            Math.Round(item.Quantity * unitPrice, 2, MidpointRounding.AwayFromZero),
+            item.Notes);
     }
 
-    private static bool Same(string? left, string? right)
-    {
-        return string.Equals(left?.Trim(), right?.Trim(), StringComparison.OrdinalIgnoreCase);
-    }
+    private static string? NormalizeNullable(string? value)
+        => string.IsNullOrWhiteSpace(value) ? null : value.Trim();
 
     private sealed record BuildRequestSnapshot(
         BuildSnapshot Build,
         SellerSnapshot Seller,
-        LayoutSnapshot? Layout,
-        CaseSnapshot? Case,
-        PcbSnapshot? Pcb,
-        PlateSnapshot? Plate,
-        SwitchSnapshot? Switch,
-        KeycapSnapshot? Keycap,
-        StabilizerSnapshot? Stabilizer,
+        KitSnapshot? Kit,
+        IReadOnlyList<ItemSnapshot> Items,
         IReadOnlyList<ModSnapshot> Mods);
 
     private sealed record BuildSnapshot(
@@ -304,67 +293,25 @@ public sealed class RequestService : IRequestService
 
     private sealed record SellerSnapshot(int SellerUserId, string ShopName, string Phone, string Address);
 
-    private sealed record LayoutSnapshot(string LayoutId, string LayoutName, string FormFactor, int StandardKeyCount);
-
-    private sealed record CaseSnapshot(
-        string CaseId,
+    private sealed record KitSnapshot(
+        string KitId,
+        string KitName,
         int BrandId,
-        string Material,
-        string MountType,
-        string Color,
-        int WeightG,
-        decimal PriceUsd);
-
-    private sealed record PcbSnapshot(
-        string PcbId,
-        int BrandId,
+        string LayoutId,
         string PcbTechnology,
-        string MountType,
         string SwitchMount,
-        bool Hotswap,
-        bool Wireless,
-        bool Rgb,
+        int RequiredSwitchQuantity,
+        string? IncludedParts,
         decimal PriceUsd);
 
-    private sealed record PlateSnapshot(
-        string PlateId,
-        int BrandId,
-        string Material,
-        string MountType,
-        string FlexCut,
-        decimal PriceUsd);
-
-    private sealed record SwitchSnapshot(
-        string SwitchId,
-        int BrandId,
-        string SwitchTechnology,
-        string SwitchType,
-        string MountType,
-        int ActuationForceG,
-        string SoundProfile,
-        decimal PriceUsd);
-
-    private sealed record KeycapSnapshot(
-        string KeycapId,
-        int BrandId,
-        string Profile,
-        string Material,
-        string ColorPrimary,
-        string LegendType,
-        decimal PriceUsd);
-
-    private sealed record StabilizerSnapshot(
-        string StabilizerId,
-        int BrandId,
-        string StabilizerType,
-        string SizesIncluded,
-        decimal PriceUsd);
-
-    private sealed record ModSnapshot(
-        string ModType,
-        string TargetComponent,
-        string? LubeType,
-        bool IsFilmed,
-        int? SpringWeightG,
+    private sealed record ItemSnapshot(
+        string ProductType,
+        string ProductId,
+        string ProductName,
+        int Quantity,
+        decimal UnitPriceSnapshot,
+        decimal LineTotal,
         string? Notes);
+
+    private sealed record ModSnapshot(string ModType, string TargetComponent, string? Notes);
 }
