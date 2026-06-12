@@ -2,13 +2,11 @@ using Custom_keyboard.Models.Builds;
 
 namespace Custom_keyboard.ViewModels;
 
+// A single mod line on a build. The refactor ERD keeps only mod_type, target_component, notes.
 public sealed class BuildModEditorViewModel : ViewModelBase
 {
     private string _modType = "Lube";
     private string _targetComponent = "Switch";
-    private string? _lubeType;
-    private bool _isFilmed;
-    private int? _springWeightG;
     private string? _notes;
 
     public string ModType
@@ -23,29 +21,14 @@ public sealed class BuildModEditorViewModel : ViewModelBase
         set => SetProperty(ref _targetComponent, value);
     }
 
-    public string? LubeType
-    {
-        get => _lubeType;
-        set => SetProperty(ref _lubeType, value);
-    }
-
-    public bool IsFilmed
-    {
-        get => _isFilmed;
-        set => SetProperty(ref _isFilmed, value);
-    }
-
-    public int? SpringWeightG
-    {
-        get => _springWeightG;
-        set => SetProperty(ref _springWeightG, value);
-    }
-
     public string? Notes
     {
         get => _notes;
         set => SetProperty(ref _notes, value);
     }
+
+    public static string[] ModTypes { get; } = ["Lube", "Film", "Spring_swap", "Tape_mod", "Foam_mod"];
+    public static string[] TargetComponents { get; } = ["Switch", "Stabilizer", "Kit", "Build"];
 
     public BuildMod ToBuildMod()
     {
@@ -53,9 +36,6 @@ public sealed class BuildModEditorViewModel : ViewModelBase
         {
             ModType = ModType,
             TargetComponent = TargetComponent,
-            LubeType = LubeType,
-            IsFilmed = IsFilmed,
-            SpringWeightG = SpringWeightG,
             Notes = Notes
         };
     }

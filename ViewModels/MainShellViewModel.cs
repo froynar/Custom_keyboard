@@ -13,6 +13,7 @@ public sealed class MainShellViewModel : ViewModelBase
     private readonly IComponentCatalogService _componentCatalogService;
     private readonly IBuildService _buildService;
     private readonly IRequestService _requestService;
+    private readonly IChatService _chatService;
     private ViewModelBase _currentViewModel = null!;
     private User? _currentUser;
 
@@ -21,13 +22,15 @@ public sealed class MainShellViewModel : ViewModelBase
         IAdminService adminService,
         IComponentCatalogService componentCatalogService,
         IBuildService buildService,
-        IRequestService requestService)
+        IRequestService requestService,
+        IChatService chatService)
     {
         _accountService = accountService;
         _adminService = adminService;
         _componentCatalogService = componentCatalogService;
         _buildService = buildService;
         _requestService = requestService;
+        _chatService = chatService;
         LogoutCommand = new RelayCommand(_ => Logout(), _ => CurrentUser is not null);
         ShowLogin();
     }
@@ -81,22 +84,18 @@ public sealed class MainShellViewModel : ViewModelBase
     private void HandleLoginSucceeded(User user)
     {
         CurrentUser = user;
+        var chat = new ChatViewModel(_chatService, _requestService, user);
         CurrentViewModel = user.Role switch
         {
-            UserRole.Buyer => new BuyerDashboardViewModel(
-                user,
-                LogoutCommand,
-                _componentCatalogService,
-                _buildService,
-                _requestService),
-            UserRole.Seller => new SellerDashboardViewModel(user, LogoutCommand),
-            UserRole.Admin => new AdminDashboardViewModel(user, LogoutCommand, _adminService),
+            UserRole.Seller => new SellerDashboardViewModel(user, LogoutCommand, _requestService, chat),
+            UserRole.Admin => new AdminDashboardViewModel(user, LogoutCommand, _adminService, chat),
             _ => new BuyerDashboardViewModel(
                 user,
                 LogoutCommand,
                 _componentCatalogService,
                 _buildService,
-                _requestService)
+                _requestService,
+                chat)
         };
     }
 

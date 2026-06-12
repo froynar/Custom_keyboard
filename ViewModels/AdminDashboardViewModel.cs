@@ -1,4 +1,5 @@
 using System.Collections.ObjectModel;
+using System.Windows;
 using System.Windows.Input;
 using Custom_keyboard.Commands;
 using Custom_keyboard.Models.Accounts;
@@ -9,6 +10,8 @@ using Custom_keyboard.Services;
 
 namespace Custom_keyboard.ViewModels;
 
+// Admin flow: manage users + roles, seller verification, the 5 catalog types
+// (Kit/Switch/KeycapSet/Stabilizer/Accessory), brands, layouts, and the audit log.
 public sealed class AdminDashboardViewModel : RoleDashboardViewModel
 {
     private readonly IAdminService _adminService;
@@ -27,24 +30,29 @@ public sealed class AdminDashboardViewModel : RoleDashboardViewModel
     private string _sellerShopName = string.Empty;
     private string _sellerPhone = string.Empty;
     private string _sellerAddress = string.Empty;
-    private AdminComponentType _selectedComponentType = AdminComponentType.Case;
+    private AdminComponentType _selectedComponentType = AdminComponentType.Kit;
     private AdminComponentRecord? _selectedComponent;
-    private AdminComponentRecord _componentEditor = new() { ComponentType = AdminComponentType.Case };
+    private AdminComponentRecord _componentEditor = new() { ComponentType = AdminComponentType.Kit, IsAvailable = true };
 
-    public AdminDashboardViewModel(User currentUser, ICommand logoutCommand, IAdminService adminService)
+    public AdminDashboardViewModel(
+        User currentUser,
+        ICommand logoutCommand,
+        IAdminService adminService,
+        ChatViewModel chat)
         : base(
             currentUser,
             logoutCommand,
             "Admin dashboard",
-            "Quan ly user, seller va du lieu nen.",
+            "Quan ly user, seller va danh muc kit-based.",
             [
                 "Quan ly user va trang thai active",
-                "Quan ly seller profile",
-                "Quan ly danh muc linh kien",
-                "Xem audit log"
+                "Quan ly seller profile va verify",
+                "Quan ly kit/switch/keycap/stabilizer/accessory",
+                "Xem audit log va chat voi seller"
             ])
     {
         _adminService = adminService;
+        Chat = chat;
 
         AvailableRoles = Enum.GetValues<UserRole>();
         ComponentTypes = Enum.GetValues<AdminComponentType>();
@@ -72,6 +80,8 @@ public sealed class AdminDashboardViewModel : RoleDashboardViewModel
         RefreshAuditCommand = new AsyncRelayCommand(_ => ExecuteSafeAsync(RefreshAuditAsync, "Da refresh audit log."));
     }
 
+    public ChatViewModel Chat { get; }
+
     public UserRole[] AvailableRoles { get; }
     public AdminComponentType[] ComponentTypes { get; }
 
@@ -79,7 +89,6 @@ public sealed class AdminDashboardViewModel : RoleDashboardViewModel
     public ObservableCollection<AdminSellerProfileRow> SellerProfiles { get; } = [];
     public ObservableCollection<Brand> Brands { get; } = [];
     public ObservableCollection<Layout> Layouts { get; } = [];
-    public ObservableCollection<AdminLayoutOptionViewModel> ComponentLayoutOptions { get; } = [];
     public ObservableCollection<AdminComponentRecord> Components { get; } = [];
     public ObservableCollection<AuditLogEntry> AuditLogs { get; } = [];
 
@@ -223,6 +232,7 @@ public sealed class AdminDashboardViewModel : RoleDashboardViewModel
         {
             if (SetProperty(ref _selectedComponentType, value))
             {
+                RaiseComponentFieldVisibility();
                 NewComponentEditor();
                 if (_hasLoaded)
                 {
@@ -240,7 +250,6 @@ public sealed class AdminDashboardViewModel : RoleDashboardViewModel
             if (SetProperty(ref _selectedComponent, value) && value is not null)
             {
                 ComponentEditor = value.Clone();
-                ConfigureLayoutOptionsFromComponent(ComponentEditor);
             }
         }
     }
@@ -251,6 +260,13 @@ public sealed class AdminDashboardViewModel : RoleDashboardViewModel
         set => SetProperty(ref _componentEditor, value);
     }
 
+    public Visibility KitFieldsVisibility => VisibleWhen(AdminComponentType.Kit);
+    public Visibility SwitchFieldsVisibility => VisibleWhen(AdminComponentType.Switch);
+    public Visibility KeycapFieldsVisibility => VisibleWhen(AdminComponentType.KeycapSet);
+    public Visibility StabilizerFieldsVisibility => VisibleWhen(AdminComponentType.Stabilizer);
+    public Visibility AccessoryFieldsVisibility => VisibleWhen(AdminComponentType.Accessory);
+    public Visibility BrandFieldVisibility => _selectedComponentType == AdminComponentType.Accessory ? Visibility.Collapsed : Visibility.Visible;
+
     private async Task LoadAsync()
     {
         if (_hasLoaded)
@@ -260,6 +276,7 @@ public sealed class AdminDashboardViewModel : RoleDashboardViewModel
 
         _hasLoaded = true;
         await RefreshAllAsync();
+        await Chat.InitializeAsync();
     }
 
     private async Task RefreshAllAsync()
@@ -294,7 +311,6 @@ public sealed class AdminDashboardViewModel : RoleDashboardViewModel
     {
         await RefreshBrandsAsync();
         await RefreshLayoutsAsync();
-        ConfigureLayoutOptionsFromComponent(ComponentEditor);
     }
 
     private async Task RefreshBrandsAsync()
@@ -415,7 +431,6 @@ public sealed class AdminDashboardViewModel : RoleDashboardViewModel
     {
         LayoutEditor = await _adminService.SaveLayoutAsync(CloneLayout(LayoutEditor), CurrentUser.UserId);
         await RefreshLayoutsAsync();
-        ConfigureLayoutOptionsFromComponent(ComponentEditor);
         await RefreshAuditAsync();
     }
 
@@ -427,17 +442,14 @@ public sealed class AdminDashboardViewModel : RoleDashboardViewModel
             ComponentType = SelectedComponentType,
             IsAvailable = true
         };
-        ConfigureLayoutOptionsFromComponent(ComponentEditor);
     }
 
     private async Task SaveComponentAsync()
     {
         ComponentEditor.ComponentType = SelectedComponentType;
-        ApplyLayoutOptionsToComponent(ComponentEditor);
         var saved = await _adminService.SaveComponentAsync(ComponentEditor.Clone(), CurrentUser.UserId);
         ComponentEditor = saved.Clone();
         Summary = await _adminService.GetSummaryAsync();
-        ConfigureLayoutOptionsFromComponent(ComponentEditor);
         await RefreshComponentsAsync();
         await RefreshAuditAsync();
     }
@@ -459,46 +471,18 @@ public sealed class AdminDashboardViewModel : RoleDashboardViewModel
         await RefreshAuditAsync();
     }
 
-    private void ConfigureLayoutOptionsFromComponent(AdminComponentRecord component)
+    private void RaiseComponentFieldVisibility()
     {
-        var selectedLayoutIds = component.SupportedLayoutIds.ToHashSet(StringComparer.OrdinalIgnoreCase);
-        ComponentLayoutOptions.Clear();
-
-        foreach (var layout in Layouts)
-        {
-            ComponentLayoutOptions.Add(new AdminLayoutOptionViewModel(
-                layout,
-                selectedLayoutIds.Contains(layout.LayoutId)));
-        }
+        OnPropertyChanged(nameof(KitFieldsVisibility));
+        OnPropertyChanged(nameof(SwitchFieldsVisibility));
+        OnPropertyChanged(nameof(KeycapFieldsVisibility));
+        OnPropertyChanged(nameof(StabilizerFieldsVisibility));
+        OnPropertyChanged(nameof(AccessoryFieldsVisibility));
+        OnPropertyChanged(nameof(BrandFieldVisibility));
     }
 
-    private void ApplyLayoutOptionsToComponent(AdminComponentRecord component)
-    {
-        if (component.ComponentType is not (AdminComponentType.Case or AdminComponentType.Pcb or AdminComponentType.Plate))
-        {
-            component.SupportedLayoutIds = [];
-            component.PrimaryLayoutId = string.Empty;
-            component.PcbVariantName = string.Empty;
-            return;
-        }
-
-        component.SupportedLayoutIds = ComponentLayoutOptions
-            .Where(option => option.IsSelected)
-            .Select(option => option.LayoutId)
-            .ToList();
-
-        if (component.SupportedLayoutIds.Count == 0)
-        {
-            component.PrimaryLayoutId = string.Empty;
-            return;
-        }
-
-        if (string.IsNullOrWhiteSpace(component.PrimaryLayoutId)
-            || !component.SupportedLayoutIds.Contains(component.PrimaryLayoutId, StringComparer.OrdinalIgnoreCase))
-        {
-            component.PrimaryLayoutId = component.SupportedLayoutIds[0];
-        }
-    }
+    private Visibility VisibleWhen(AdminComponentType componentType)
+        => _selectedComponentType == componentType ? Visibility.Visible : Visibility.Collapsed;
 
     private static Brand CloneBrand(Brand brand)
     {
@@ -517,7 +501,7 @@ public sealed class AdminDashboardViewModel : RoleDashboardViewModel
             LayoutId = layout.LayoutId,
             LayoutName = layout.LayoutName,
             FormFactor = layout.FormFactor,
-            StandardKeyCount = layout.StandardKeyCount
+            KeyCount = layout.KeyCount
         };
     }
 

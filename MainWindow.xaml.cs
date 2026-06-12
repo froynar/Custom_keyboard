@@ -20,6 +20,7 @@ namespace Custom_keyboard
             var requestRepository = new SqlRequestRepository(connectionFactory);
             var buildRepository = new SqlBuildRepository(connectionFactory);
             var auditLogRepository = new SqlAuditLogRepository(connectionFactory);
+            var chatRepository = new SqlChatRepository(connectionFactory);
             var passwordHasher = new Pbkdf2PasswordHasher();
             var accountService = new AccountService(userRepository, passwordHasher);
             var componentCatalogService = new ComponentCatalogService(componentRepository);
@@ -36,13 +37,15 @@ namespace Custom_keyboard
                 componentRepository,
                 requestRepository,
                 auditLogRepository);
+            var chatService = new ChatService(chatRepository, userRepository, sellerRepository);
 
             DataContext = new MainShellViewModel(
                 accountService,
                 adminService,
                 componentCatalogService,
                 buildService,
-                requestService);
+                requestService,
+                chatService);
         }
     }
 }

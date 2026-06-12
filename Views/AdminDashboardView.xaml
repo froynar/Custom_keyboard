@@ -1,542 +1,315 @@
 <UserControl x:Class="Custom_keyboard.Views.AdminDashboardView"
              xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:views="clr-namespace:Custom_keyboard.Views"
              Loaded="OnLoaded">
-    <UserControl.Resources>
-        <Style x:Key="SectionBorderStyle" TargetType="Border">
-            <Setter Property="Background" Value="White"/>
-            <Setter Property="BorderBrush" Value="#DDE2E8"/>
-            <Setter Property="BorderThickness" Value="1"/>
-            <Setter Property="Padding" Value="14"/>
-        </Style>
-        <Style TargetType="Button">
-            <Setter Property="Padding" Value="12,7"/>
-            <Setter Property="Margin" Value="0,0,8,8"/>
-            <Setter Property="Background" Value="#EEF2F6"/>
-            <Setter Property="BorderBrush" Value="#DDE2E8"/>
-        </Style>
-        <Style TargetType="TextBox">
-            <Setter Property="Padding" Value="8,5"/>
-            <Setter Property="Margin" Value="0,4,10,10"/>
-            <Setter Property="MinWidth" Value="150"/>
-        </Style>
-        <Style TargetType="ComboBox">
-            <Setter Property="Padding" Value="6,4"/>
-            <Setter Property="Margin" Value="0,4,10,10"/>
-            <Setter Property="MinWidth" Value="150"/>
-        </Style>
-        <Style TargetType="DataGrid">
-            <Setter Property="AutoGenerateColumns" Value="False"/>
-            <Setter Property="CanUserAddRows" Value="False"/>
-            <Setter Property="IsReadOnly" Value="True"/>
-            <Setter Property="GridLinesVisibility" Value="Horizontal"/>
-            <Setter Property="HeadersVisibility" Value="Column"/>
-            <Setter Property="SelectionMode" Value="Single"/>
-            <Setter Property="Margin" Value="0,10,0,0"/>
-        </Style>
-    </UserControl.Resources>
-
     <Grid Margin="24">
         <Grid.RowDefinitions>
+            <RowDefinition Height="Auto"/>
             <RowDefinition Height="Auto"/>
             <RowDefinition Height="*"/>
             <RowDefinition Height="Auto"/>
         </Grid.RowDefinitions>
 
-        <DockPanel Margin="0,0,0,16">
-            <Button DockPanel.Dock="Right"
-                    Content="Dang xuat"
-                    Command="{Binding LogoutCommand}"/>
+        <!-- Header -->
+        <DockPanel Margin="0,0,0,12">
+            <Button DockPanel.Dock="Right" Content="Dang xuat" Command="{Binding LogoutCommand}"
+                    Padding="14,8" Background="#EEF2F6" BorderBrush="#DDE2E8"/>
+            <Button DockPanel.Dock="Right" Content="Refresh" Command="{Binding RefreshAllCommand}"
+                    Margin="0,0,8,0" Padding="14,8" Background="#EEF2F6" BorderBrush="#DDE2E8"/>
             <StackPanel>
-                <TextBlock Text="{Binding Title}"
-                           FontSize="26"
-                           FontWeight="SemiBold"
-                           Foreground="#20242B"/>
-                <TextBlock Text="{Binding Subtitle}"
-                           Margin="0,4,0,0"
-                           Foreground="#687381"/>
+                <TextBlock Text="{Binding Title}" FontSize="24" FontWeight="SemiBold" Foreground="#20242B"/>
+                <TextBlock Text="{Binding Subtitle}" Margin="0,4,0,0" Foreground="#687381"/>
             </StackPanel>
         </DockPanel>
 
-        <TabControl Grid.Row="1">
-            <TabItem Header="Tong quan">
-                <Grid Margin="14">
-                    <Grid.RowDefinitions>
-                        <RowDefinition Height="Auto"/>
-                        <RowDefinition Height="Auto"/>
-                    </Grid.RowDefinitions>
+        <!-- Summary -->
+        <StackPanel Grid.Row="1" Orientation="Horizontal" Margin="0,0,0,12">
+            <Border Background="White" BorderBrush="#DDE2E8" BorderThickness="1" Padding="14,8" Margin="0,0,10,0">
+                <StackPanel><TextBlock Text="Users" Foreground="#687381" FontSize="12"/><TextBlock Text="{Binding Summary.TotalUsers}" FontSize="18" FontWeight="SemiBold"/></StackPanel>
+            </Border>
+            <Border Background="White" BorderBrush="#DDE2E8" BorderThickness="1" Padding="14,8" Margin="0,0,10,0">
+                <StackPanel><TextBlock Text="Sellers" Foreground="#687381" FontSize="12"/><TextBlock Text="{Binding Summary.TotalSellers}" FontSize="18" FontWeight="SemiBold"/></StackPanel>
+            </Border>
+            <Border Background="White" BorderBrush="#DDE2E8" BorderThickness="1" Padding="14,8" Margin="0,0,10,0">
+                <StackPanel><TextBlock Text="Linh kien" Foreground="#687381" FontSize="12"/><TextBlock Text="{Binding Summary.TotalComponents}" FontSize="18" FontWeight="SemiBold"/></StackPanel>
+            </Border>
+            <Border Background="White" BorderBrush="#DDE2E8" BorderThickness="1" Padding="14,8">
+                <StackPanel><TextBlock Text="Requests" Foreground="#687381" FontSize="12"/><TextBlock Text="{Binding Summary.TotalRequests}" FontSize="18" FontWeight="SemiBold"/></StackPanel>
+            </Border>
+        </StackPanel>
 
-                    <UniformGrid Columns="4">
-                        <Border Style="{StaticResource SectionBorderStyle}" Margin="0,0,10,0">
-                            <StackPanel>
-                                <TextBlock Text="Users" Foreground="#687381"/>
-                                <TextBlock Text="{Binding Summary.TotalUsers}" FontSize="28" FontWeight="SemiBold"/>
-                            </StackPanel>
-                        </Border>
-                        <Border Style="{StaticResource SectionBorderStyle}" Margin="0,0,10,0">
-                            <StackPanel>
-                                <TextBlock Text="Sellers" Foreground="#687381"/>
-                                <TextBlock Text="{Binding Summary.TotalSellers}" FontSize="28" FontWeight="SemiBold"/>
-                            </StackPanel>
-                        </Border>
-                        <Border Style="{StaticResource SectionBorderStyle}" Margin="0,0,10,0">
-                            <StackPanel>
-                                <TextBlock Text="Components" Foreground="#687381"/>
-                                <TextBlock Text="{Binding Summary.TotalComponents}" FontSize="28" FontWeight="SemiBold"/>
-                            </StackPanel>
-                        </Border>
-                        <Border Style="{StaticResource SectionBorderStyle}">
-                            <StackPanel>
-                                <TextBlock Text="Requests" Foreground="#687381"/>
-                                <TextBlock Text="{Binding Summary.TotalRequests}" FontSize="28" FontWeight="SemiBold"/>
-                            </StackPanel>
-                        </Border>
-                    </UniformGrid>
-
-                    <StackPanel Grid.Row="1" Orientation="Horizontal" Margin="0,18,0,0">
-                        <Button Content="Refresh tat ca" Command="{Binding RefreshAllCommand}"/>
-                    </StackPanel>
-                </Grid>
-            </TabItem>
-
-            <TabItem Header="Users">
-                <Grid Margin="14">
-                    <Grid.RowDefinitions>
-                        <RowDefinition Height="Auto"/>
-                        <RowDefinition Height="*"/>
-                    </Grid.RowDefinitions>
-
-                    <StackPanel Orientation="Horizontal">
-                        <Button Content="Refresh" Command="{Binding RefreshUsersCommand}"/>
-                        <Button Content="Ban user" Command="{Binding BanUserCommand}"/>
-                        <Button Content="Mo ban" Command="{Binding UnbanUserCommand}"/>
-                        <ComboBox ItemsSource="{Binding AvailableRoles}"
-                                  SelectedItem="{Binding SelectedUserRole}"/>
-                        <Button Content="Doi role" Command="{Binding ChangeUserRoleCommand}"/>
-                    </StackPanel>
-
-                    <DataGrid Grid.Row="1"
-                              ItemsSource="{Binding Users}"
-                              SelectedItem="{Binding SelectedUser}">
-                        <DataGrid.Columns>
-                            <DataGridTextColumn Header="ID" Binding="{Binding UserId}" Width="60"/>
-                            <DataGridTextColumn Header="Username" Binding="{Binding Username}" Width="160"/>
-                            <DataGridTextColumn Header="Email" Binding="{Binding Email}" Width="220"/>
-                            <DataGridTextColumn Header="Phone" Binding="{Binding Phone}" Width="130"/>
-                            <DataGridTextColumn Header="Role" Binding="{Binding Role}" Width="100"/>
-                            <DataGridCheckBoxColumn Header="Active" Binding="{Binding IsActive}" Width="80"/>
-                        </DataGrid.Columns>
-                    </DataGrid>
-                </Grid>
-            </TabItem>
-
-            <TabItem Header="Sellers">
-                <Grid Margin="14">
-                    <Grid.RowDefinitions>
-                        <RowDefinition Height="Auto"/>
-                        <RowDefinition Height="*"/>
-                        <RowDefinition Height="Auto"/>
-                    </Grid.RowDefinitions>
-
-                    <StackPanel Orientation="Horizontal">
-                        <Button Content="Refresh" Command="{Binding RefreshSellersCommand}"/>
-                        <Button Content="Verify" Command="{Binding VerifySellerCommand}"/>
-                        <Button Content="Unverify" Command="{Binding UnverifySellerCommand}"/>
-                    </StackPanel>
-
-                    <DataGrid Grid.Row="1"
-                              ItemsSource="{Binding SellerProfiles}"
-                              SelectedItem="{Binding SelectedSellerProfile}">
-                        <DataGrid.Columns>
-                            <DataGridTextColumn Header="User ID" Binding="{Binding UserId}" Width="70"/>
-                            <DataGridTextColumn Header="Username" Binding="{Binding Username}" Width="140"/>
-                            <DataGridTextColumn Header="Email" Binding="{Binding Email}" Width="210"/>
-                            <DataGridTextColumn Header="Shop" Binding="{Binding ShopName}" Width="180"/>
-                            <DataGridTextColumn Header="Profile phone" Binding="{Binding ProfilePhone}" Width="130"/>
-                            <DataGridTextColumn Header="Address" Binding="{Binding Address}" Width="240"/>
-                            <DataGridCheckBoxColumn Header="Active" Binding="{Binding IsActive}" Width="70"/>
-                            <DataGridCheckBoxColumn Header="Verified" Binding="{Binding IsVerified}" Width="80"/>
-                            <DataGridTextColumn Header="Verified at" Binding="{Binding VerifiedAt}" Width="160"/>
-                        </DataGrid.Columns>
-                    </DataGrid>
-
-                    <Border Grid.Row="2" Style="{StaticResource SectionBorderStyle}" Margin="0,12,0,0">
-                        <Grid>
-                            <Grid.ColumnDefinitions>
-                                <ColumnDefinition Width="Auto"/>
-                                <ColumnDefinition Width="Auto"/>
-                                <ColumnDefinition Width="Auto"/>
-                                <ColumnDefinition Width="*"/>
-                            </Grid.ColumnDefinitions>
-                            <StackPanel Grid.Column="0">
-                                <TextBlock Text="User ID"/>
-                                <TextBox Text="{Binding SellerEditorUserId, UpdateSourceTrigger=PropertyChanged}"/>
-                            </StackPanel>
-                            <StackPanel Grid.Column="1">
-                                <TextBlock Text="Shop name"/>
-                                <TextBox Text="{Binding SellerShopName, UpdateSourceTrigger=PropertyChanged}"/>
-                            </StackPanel>
-                            <StackPanel Grid.Column="2">
-                                <TextBlock Text="Phone"/>
-                                <TextBox Text="{Binding SellerPhone, UpdateSourceTrigger=PropertyChanged}"/>
-                            </StackPanel>
-                            <StackPanel Grid.Column="3">
-                                <TextBlock Text="Address"/>
-                                <TextBox Text="{Binding SellerAddress, UpdateSourceTrigger=PropertyChanged}"
-                                         MinWidth="280"/>
-                            </StackPanel>
-                            <Button Grid.Column="3"
-                                    HorizontalAlignment="Right"
-                                    VerticalAlignment="Bottom"
-                                    Content="Luu profile"
-                                    Command="{Binding SaveSellerProfileCommand}"/>
-                        </Grid>
-                    </Border>
-                </Grid>
-            </TabItem>
-
-            <TabItem Header="Brands / Layouts">
-                <Grid Margin="14">
+        <TabControl Grid.Row="2">
+            <!-- Users -->
+            <TabItem Header="User">
+                <Grid Margin="0,12,0,0">
                     <Grid.ColumnDefinitions>
                         <ColumnDefinition Width="*"/>
-                        <ColumnDefinition Width="18"/>
+                        <ColumnDefinition Width="16"/>
+                        <ColumnDefinition Width="280"/>
+                    </Grid.ColumnDefinitions>
+                    <ListBox ItemsSource="{Binding Users}" SelectedItem="{Binding SelectedUser}" BorderBrush="#DDE2E8" BorderThickness="1">
+                        <ListBox.ItemTemplate>
+                            <DataTemplate>
+                                <StackPanel Margin="0,4">
+                                    <TextBlock Text="{Binding Username}" FontWeight="SemiBold"/>
+                                    <TextBlock FontSize="12" Foreground="#687381">
+                                        <Run Text="{Binding Email}"/><Run Text=" | "/><Run Text="{Binding Role}"/>
+                                        <Run Text=" | active="/><Run Text="{Binding IsActive}"/>
+                                    </TextBlock>
+                                </StackPanel>
+                            </DataTemplate>
+                        </ListBox.ItemTemplate>
+                    </ListBox>
+                    <StackPanel Grid.Column="2">
+                        <TextBlock Text="Role" Foreground="#687381" FontSize="12"/>
+                        <ComboBox ItemsSource="{Binding AvailableRoles}" SelectedItem="{Binding SelectedUserRole}" Margin="0,2,0,8"/>
+                        <Button Content="Doi role" Command="{Binding ChangeUserRoleCommand}" Margin="0,0,0,8" Padding="10,6"
+                                Background="#2F6FED" Foreground="White" BorderThickness="0"/>
+                        <Button Content="Ban user" Command="{Binding BanUserCommand}" Margin="0,0,0,8" Padding="10,6"
+                                Background="#E5484D" Foreground="White" BorderThickness="0"/>
+                        <Button Content="Mo ban" Command="{Binding UnbanUserCommand}" Padding="10,6"
+                                Background="#1F9D5B" Foreground="White" BorderThickness="0"/>
+                    </StackPanel>
+                </Grid>
+            </TabItem>
+
+            <!-- Sellers -->
+            <TabItem Header="Seller">
+                <Grid Margin="0,12,0,0">
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="*"/>
+                        <ColumnDefinition Width="16"/>
+                        <ColumnDefinition Width="300"/>
+                    </Grid.ColumnDefinitions>
+                    <ListBox ItemsSource="{Binding SellerProfiles}" SelectedItem="{Binding SelectedSellerProfile}" BorderBrush="#DDE2E8" BorderThickness="1">
+                        <ListBox.ItemTemplate>
+                            <DataTemplate>
+                                <StackPanel Margin="0,4">
+                                    <TextBlock Text="{Binding Username}" FontWeight="SemiBold"/>
+                                    <TextBlock FontSize="12" Foreground="#687381">
+                                        <Run Text="{Binding ShopName}"/><Run Text=" | verified="/><Run Text="{Binding IsVerified}"/>
+                                    </TextBlock>
+                                </StackPanel>
+                            </DataTemplate>
+                        </ListBox.ItemTemplate>
+                    </ListBox>
+                    <StackPanel Grid.Column="2">
+                        <TextBlock Text="Shop name" Foreground="#687381" FontSize="12"/>
+                        <TextBox Text="{Binding SellerShopName, UpdateSourceTrigger=PropertyChanged}" Margin="0,2,0,8" Padding="6"/>
+                        <TextBlock Text="Phone" Foreground="#687381" FontSize="12"/>
+                        <TextBox Text="{Binding SellerPhone, UpdateSourceTrigger=PropertyChanged}" Margin="0,2,0,8" Padding="6"/>
+                        <TextBlock Text="Address" Foreground="#687381" FontSize="12"/>
+                        <TextBox Text="{Binding SellerAddress, UpdateSourceTrigger=PropertyChanged}" Margin="0,2,0,8" Padding="6" TextWrapping="Wrap" MinHeight="44"/>
+                        <Button Content="Luu profile" Command="{Binding SaveSellerProfileCommand}" Margin="0,0,0,8" Padding="10,6"
+                                Background="#2F6FED" Foreground="White" BorderThickness="0"/>
+                        <Button Content="Verify" Command="{Binding VerifySellerCommand}" Margin="0,0,0,8" Padding="10,6"
+                                Background="#1F9D5B" Foreground="White" BorderThickness="0"/>
+                        <Button Content="Unverify" Command="{Binding UnverifySellerCommand}" Padding="10,6"
+                                Background="#EEF2F6" BorderBrush="#DDE2E8"/>
+                    </StackPanel>
+                </Grid>
+            </TabItem>
+
+            <!-- Brand & Layout -->
+            <TabItem Header="Brand &amp; Layout">
+                <Grid Margin="0,12,0,0">
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="*"/>
+                        <ColumnDefinition Width="16"/>
                         <ColumnDefinition Width="*"/>
                     </Grid.ColumnDefinitions>
-                    <Grid.RowDefinitions>
-                        <RowDefinition Height="Auto"/>
-                        <RowDefinition Height="*"/>
-                        <RowDefinition Height="Auto"/>
-                    </Grid.RowDefinitions>
 
-                    <StackPanel Grid.ColumnSpan="3" Orientation="Horizontal">
-                        <Button Content="Refresh" Command="{Binding RefreshCatalogCommand}"/>
-                    </StackPanel>
-
-                    <DataGrid Grid.Row="1"
-                              Grid.Column="0"
-                              ItemsSource="{Binding Brands}"
-                              SelectedItem="{Binding SelectedBrand}">
-                        <DataGrid.Columns>
-                            <DataGridTextColumn Header="ID" Binding="{Binding BrandId}" Width="60"/>
-                            <DataGridTextColumn Header="Brand name" Binding="{Binding BrandName}" Width="180"/>
-                            <DataGridTextColumn Header="Country" Binding="{Binding Country}" Width="140"/>
-                        </DataGrid.Columns>
-                    </DataGrid>
-
-                    <DataGrid Grid.Row="1"
-                              Grid.Column="2"
-                              ItemsSource="{Binding Layouts}"
-                              SelectedItem="{Binding SelectedLayout}">
-                        <DataGrid.Columns>
-                            <DataGridTextColumn Header="Layout ID" Binding="{Binding LayoutId}" Width="120"/>
-                            <DataGridTextColumn Header="Name" Binding="{Binding LayoutName}" Width="150"/>
-                            <DataGridTextColumn Header="Form factor" Binding="{Binding FormFactor}" Width="120"/>
-                            <DataGridTextColumn Header="Keys" Binding="{Binding StandardKeyCount}" Width="70"/>
-                        </DataGrid.Columns>
-                    </DataGrid>
-
-                    <Border Grid.Row="2" Grid.Column="0" Style="{StaticResource SectionBorderStyle}" Margin="0,12,0,0">
+                    <Border BorderBrush="#DDE2E8" BorderThickness="1" Background="White" Padding="12">
                         <StackPanel>
-                            <StackPanel Orientation="Horizontal">
-                                <Button Content="Brand moi" Command="{Binding NewBrandCommand}"/>
-                                <Button Content="Luu brand" Command="{Binding SaveBrandCommand}"/>
-                            </StackPanel>
-                            <StackPanel Orientation="Horizontal">
-                                <StackPanel>
-                                    <TextBlock Text="Brand ID"/>
-                                    <TextBox Text="{Binding BrandEditor.BrandId, UpdateSourceTrigger=PropertyChanged}"
-                                             IsReadOnly="True"
-                                             Background="#F6F7F9"/>
-                                </StackPanel>
-                                <StackPanel>
-                                    <TextBlock Text="Brand name"/>
-                                    <TextBox Text="{Binding BrandEditor.BrandName, UpdateSourceTrigger=PropertyChanged}"/>
-                                </StackPanel>
-                                <StackPanel>
-                                    <TextBlock Text="Country"/>
-                                    <TextBox Text="{Binding BrandEditor.Country, UpdateSourceTrigger=PropertyChanged}"/>
-                                </StackPanel>
-                            </StackPanel>
+                            <TextBlock Text="Brands" FontWeight="SemiBold" Margin="0,0,0,8"/>
+                            <ListBox ItemsSource="{Binding Brands}" SelectedItem="{Binding SelectedBrand}" Height="160" BorderThickness="0"
+                                     DisplayMemberPath="BrandName"/>
+                            <TextBlock Text="Ten brand" Foreground="#687381" FontSize="12" Margin="0,8,0,0"/>
+                            <TextBox Text="{Binding BrandEditor.BrandName, UpdateSourceTrigger=PropertyChanged}" Margin="0,2,0,6" Padding="6"/>
+                            <TextBlock Text="Quoc gia" Foreground="#687381" FontSize="12"/>
+                            <TextBox Text="{Binding BrandEditor.Country, UpdateSourceTrigger=PropertyChanged}" Margin="0,2,0,8" Padding="6"/>
+                            <WrapPanel>
+                                <Button Content="Moi" Command="{Binding NewBrandCommand}" Margin="0,0,8,0" Padding="10,6" Background="#EEF2F6" BorderBrush="#DDE2E8"/>
+                                <Button Content="Luu brand" Command="{Binding SaveBrandCommand}" Padding="10,6" Background="#2F6FED" Foreground="White" BorderThickness="0"/>
+                            </WrapPanel>
                         </StackPanel>
                     </Border>
 
-                    <Border Grid.Row="2" Grid.Column="2" Style="{StaticResource SectionBorderStyle}" Margin="0,12,0,0">
+                    <Border Grid.Column="2" BorderBrush="#DDE2E8" BorderThickness="1" Background="White" Padding="12">
                         <StackPanel>
-                            <StackPanel Orientation="Horizontal">
-                                <Button Content="Layout moi" Command="{Binding NewLayoutCommand}"/>
-                                <Button Content="Luu layout" Command="{Binding SaveLayoutCommand}"/>
-                            </StackPanel>
-                            <StackPanel Orientation="Horizontal">
-                                <StackPanel>
-                                    <TextBlock Text="Layout ID"/>
-                                    <TextBox Text="{Binding LayoutEditor.LayoutId, UpdateSourceTrigger=PropertyChanged}"/>
-                                </StackPanel>
-                                <StackPanel>
-                                    <TextBlock Text="Name"/>
-                                    <TextBox Text="{Binding LayoutEditor.LayoutName, UpdateSourceTrigger=PropertyChanged}"/>
-                                </StackPanel>
-                                <StackPanel>
-                                    <TextBlock Text="Form factor"/>
-                                    <TextBox Text="{Binding LayoutEditor.FormFactor, UpdateSourceTrigger=PropertyChanged}"/>
-                                </StackPanel>
-                                <StackPanel>
-                                    <TextBlock Text="Key count"/>
-                                    <TextBox Text="{Binding LayoutEditor.StandardKeyCount, UpdateSourceTrigger=PropertyChanged}"/>
-                                </StackPanel>
-                            </StackPanel>
+                            <TextBlock Text="Layouts" FontWeight="SemiBold" Margin="0,0,0,8"/>
+                            <ListBox ItemsSource="{Binding Layouts}" SelectedItem="{Binding SelectedLayout}" Height="160" BorderThickness="0"
+                                     DisplayMemberPath="LayoutName"/>
+                            <TextBlock Text="Layout id" Foreground="#687381" FontSize="12" Margin="0,8,0,0"/>
+                            <TextBox Text="{Binding LayoutEditor.LayoutId, UpdateSourceTrigger=PropertyChanged}" Margin="0,2,0,6" Padding="6"/>
+                            <TextBlock Text="Ten" Foreground="#687381" FontSize="12"/>
+                            <TextBox Text="{Binding LayoutEditor.LayoutName, UpdateSourceTrigger=PropertyChanged}" Margin="0,2,0,6" Padding="6"/>
+                            <TextBlock Text="Form factor" Foreground="#687381" FontSize="12"/>
+                            <TextBox Text="{Binding LayoutEditor.FormFactor, UpdateSourceTrigger=PropertyChanged}" Margin="0,2,0,6" Padding="6"/>
+                            <TextBlock Text="Key count" Foreground="#687381" FontSize="12"/>
+                            <TextBox Text="{Binding LayoutEditor.KeyCount, UpdateSourceTrigger=PropertyChanged}" Margin="0,2,0,8" Padding="6"/>
+                            <WrapPanel>
+                                <Button Content="Moi" Command="{Binding NewLayoutCommand}" Margin="0,0,8,0" Padding="10,6" Background="#EEF2F6" BorderBrush="#DDE2E8"/>
+                                <Button Content="Luu layout" Command="{Binding SaveLayoutCommand}" Padding="10,6" Background="#2F6FED" Foreground="White" BorderThickness="0"/>
+                            </WrapPanel>
                         </StackPanel>
                     </Border>
                 </Grid>
             </TabItem>
 
-            <TabItem Header="Components">
-                <Grid Margin="14">
-                    <Grid.RowDefinitions>
-                        <RowDefinition Height="Auto"/>
-                        <RowDefinition Height="*"/>
-                        <RowDefinition Height="Auto"/>
-                    </Grid.RowDefinitions>
+            <!-- Components -->
+            <TabItem Header="Linh kien">
+                <Grid Margin="0,12,0,0">
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="*"/>
+                        <ColumnDefinition Width="16"/>
+                        <ColumnDefinition Width="340"/>
+                    </Grid.ColumnDefinitions>
 
-                    <StackPanel Orientation="Horizontal">
-                        <TextBlock Text="Loai" VerticalAlignment="Center" Margin="0,0,8,8"/>
-                        <ComboBox ItemsSource="{Binding ComponentTypes}"
-                                  SelectedItem="{Binding SelectedComponentType}"/>
-                        <Button Content="Refresh" Command="{Binding RefreshComponentsCommand}"/>
-                        <Button Content="Them moi" Command="{Binding NewComponentCommand}"/>
-                        <Button Content="An" Command="{Binding HideComponentCommand}"/>
-                        <Button Content="Khoi phuc" Command="{Binding RestoreComponentCommand}"/>
-                    </StackPanel>
-
-                    <ScrollViewer Grid.Row="1"
-                                  HorizontalScrollBarVisibility="Auto"
-                                  VerticalScrollBarVisibility="Auto">
-                        <DataGrid ItemsSource="{Binding Components}"
-                                  SelectedItem="{Binding SelectedComponent}"
-                                  MinWidth="1250">
-                            <DataGrid.Columns>
-                                <DataGridTextColumn Header="ID" Binding="{Binding ComponentId}" Width="180"/>
-                                <DataGridTextColumn Header="Brand" Binding="{Binding BrandId}" Width="70"/>
-                                <DataGridTextColumn Header="Price" Binding="{Binding PriceUsd}" Width="80"/>
-                                <DataGridCheckBoxColumn Header="Available" Binding="{Binding IsAvailable}" Width="90"/>
-                                <DataGridTextColumn Header="Material" Binding="{Binding Material}" Width="120"/>
-                                <DataGridTextColumn Header="Mount" Binding="{Binding MountType}" Width="140"/>
-                                <DataGridTextColumn Header="Color" Binding="{Binding Color}" Width="100"/>
-                                <DataGridTextColumn Header="Weight" Binding="{Binding WeightG}" Width="80"/>
-                                <DataGridTextColumn Header="Technology" Binding="{Binding Technology}" Width="150"/>
-                                <DataGridTextColumn Header="Switch mount" Binding="{Binding SwitchMount}" Width="120"/>
-                                <DataGridTextColumn Header="Flex cut" Binding="{Binding FlexCut}" Width="120"/>
-                                <DataGridTextColumn Header="Switch type" Binding="{Binding SwitchType}" Width="110"/>
-                                <DataGridTextColumn Header="Force" Binding="{Binding ActuationForceG}" Width="70"/>
-                                <DataGridTextColumn Header="Profile" Binding="{Binding Profile}" Width="100"/>
-                                <DataGridTextColumn Header="Stab type" Binding="{Binding StabilizerType}" Width="120"/>
-                            </DataGrid.Columns>
-                        </DataGrid>
-                    </ScrollViewer>
-
-                    <Border Grid.Row="2" Style="{StaticResource SectionBorderStyle}" Margin="0,12,0,0">
-                        <ScrollViewer HorizontalScrollBarVisibility="Auto">
-                            <StackPanel>
-                                <StackPanel Orientation="Horizontal">
-                                    <StackPanel>
-                                        <TextBlock Text="Component ID"/>
-                                        <TextBox Text="{Binding ComponentEditor.ComponentId, UpdateSourceTrigger=PropertyChanged}"/>
-                                    </StackPanel>
-                                    <StackPanel>
-                                        <TextBlock Text="Brand"/>
-                                        <ComboBox ItemsSource="{Binding Brands}"
-                                                  DisplayMemberPath="BrandName"
-                                                  SelectedValuePath="BrandId"
-                                                  SelectedValue="{Binding ComponentEditor.BrandId, UpdateSourceTrigger=PropertyChanged}"
-                                                  MinWidth="180"/>
-                                    </StackPanel>
-                                    <StackPanel>
-                                        <TextBlock Text="Price USD"/>
-                                        <TextBox Text="{Binding ComponentEditor.PriceUsd, UpdateSourceTrigger=PropertyChanged}"/>
-                                    </StackPanel>
-                                    <CheckBox Content="Available"
-                                              IsChecked="{Binding ComponentEditor.IsAvailable}"
-                                              VerticalAlignment="Center"
-                                              Margin="0,18,16,8"/>
-                                    <Button Content="Luu linh kien"
-                                            Command="{Binding SaveComponentCommand}"
-                                            VerticalAlignment="Bottom"/>
-                                </StackPanel>
-
-                                <Border Style="{StaticResource SectionBorderStyle}" Margin="0,2,10,12">
-                                    <StackPanel>
-                                        <TextBlock Text="Layout mappings cho case / PCB / plate"
-                                                   FontWeight="SemiBold"
-                                                   Margin="0,0,0,8"/>
-                                        <StackPanel Orientation="Horizontal">
-                                            <StackPanel>
-                                                <TextBlock Text="Primary layout (case)"/>
-                                                <ComboBox ItemsSource="{Binding Layouts}"
-                                                          DisplayMemberPath="LayoutName"
-                                                          SelectedValuePath="LayoutId"
-                                                          SelectedValue="{Binding ComponentEditor.PrimaryLayoutId, UpdateSourceTrigger=PropertyChanged}"
-                                                          MinWidth="190"/>
-                                            </StackPanel>
-                                            <StackPanel>
-                                                <TextBlock Text="PCB variant name"/>
-                                                <TextBox Text="{Binding ComponentEditor.PcbVariantName, UpdateSourceTrigger=PropertyChanged}"
-                                                         MinWidth="190"/>
-                                            </StackPanel>
+                    <Border BorderBrush="#DDE2E8" BorderThickness="1" Background="White" Padding="12">
+                        <Grid>
+                            <Grid.RowDefinitions>
+                                <RowDefinition Height="Auto"/>
+                                <RowDefinition Height="*"/>
+                                <RowDefinition Height="Auto"/>
+                            </Grid.RowDefinitions>
+                            <DockPanel Margin="0,0,0,8">
+                                <ComboBox DockPanel.Dock="Right" Width="150" ItemsSource="{Binding ComponentTypes}" SelectedItem="{Binding SelectedComponentType}"/>
+                                <TextBlock Text="Loai" FontWeight="SemiBold" VerticalAlignment="Center"/>
+                            </DockPanel>
+                            <ListBox Grid.Row="1" ItemsSource="{Binding Components}" SelectedItem="{Binding SelectedComponent}" BorderThickness="0">
+                                <ListBox.ItemTemplate>
+                                    <DataTemplate>
+                                        <StackPanel Margin="0,4">
+                                            <TextBlock Text="{Binding Name}" FontWeight="SemiBold"/>
+                                            <TextBlock FontSize="12" Foreground="#687381">
+                                                <Run Text="{Binding ComponentId}"/><Run Text=" | "/>
+                                                <Run Text="{Binding PriceUsd, StringFormat={}{0:F2} USD}"/>
+                                                <Run Text=" | available="/><Run Text="{Binding IsAvailable}"/>
+                                            </TextBlock>
                                         </StackPanel>
-                                        <DataGrid ItemsSource="{Binding ComponentLayoutOptions}"
-                                                  IsReadOnly="False"
-                                                  Height="132"
-                                                  MinWidth="560">
-                                            <DataGrid.Columns>
-                                                <DataGridCheckBoxColumn Header="Use"
-                                                                        Binding="{Binding IsSelected, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"
-                                                                        Width="60"/>
-                                                <DataGridTextColumn Header="Layout ID"
-                                                                    Binding="{Binding LayoutId}"
-                                                                    Width="120"
-                                                                    IsReadOnly="True"/>
-                                                <DataGridTextColumn Header="Layout"
-                                                                    Binding="{Binding LayoutName}"
-                                                                    Width="180"
-                                                                    IsReadOnly="True"/>
-                                                <DataGridTextColumn Header="Form factor"
-                                                                    Binding="{Binding FormFactor}"
-                                                                    Width="120"
-                                                                    IsReadOnly="True"/>
-                                            </DataGrid.Columns>
-                                        </DataGrid>
-                                    </StackPanel>
-                                </Border>
+                                    </DataTemplate>
+                                </ListBox.ItemTemplate>
+                            </ListBox>
+                            <WrapPanel Grid.Row="2" Margin="0,8,0,0">
+                                <Button Content="An" Command="{Binding HideComponentCommand}" Margin="0,0,8,0" Padding="10,6" Background="#EEF2F6" BorderBrush="#DDE2E8"/>
+                                <Button Content="Khoi phuc" Command="{Binding RestoreComponentCommand}" Padding="10,6" Background="#EEF2F6" BorderBrush="#DDE2E8"/>
+                            </WrapPanel>
+                        </Grid>
+                    </Border>
 
-                                <StackPanel Orientation="Horizontal">
-                                    <StackPanel>
-                                        <TextBlock Text="Material"/>
-                                        <TextBox Text="{Binding ComponentEditor.Material, UpdateSourceTrigger=PropertyChanged}"/>
-                                    </StackPanel>
-                                    <StackPanel>
-                                        <TextBlock Text="Mount type"/>
-                                        <TextBox Text="{Binding ComponentEditor.MountType, UpdateSourceTrigger=PropertyChanged}"/>
-                                    </StackPanel>
-                                    <StackPanel>
-                                        <TextBlock Text="Color"/>
-                                        <TextBox Text="{Binding ComponentEditor.Color, UpdateSourceTrigger=PropertyChanged}"/>
-                                    </StackPanel>
-                                    <StackPanel>
-                                        <TextBlock Text="Weight g"/>
-                                        <TextBox Text="{Binding ComponentEditor.WeightG, UpdateSourceTrigger=PropertyChanged}"/>
-                                    </StackPanel>
+                    <Border Grid.Column="2" BorderBrush="#DDE2E8" BorderThickness="1" Background="White" Padding="12">
+                        <ScrollViewer VerticalScrollBarVisibility="Auto">
+                            <StackPanel>
+                                <TextBlock Text="Editor linh kien" FontWeight="SemiBold" Margin="0,0,0,8"/>
+                                <TextBlock Text="Component id" Foreground="#687381" FontSize="12"/>
+                                <TextBox Text="{Binding ComponentEditor.ComponentId, UpdateSourceTrigger=PropertyChanged}" Margin="0,2,0,6" Padding="6"/>
+                                <TextBlock Text="Ten" Foreground="#687381" FontSize="12"/>
+                                <TextBox Text="{Binding ComponentEditor.Name, UpdateSourceTrigger=PropertyChanged}" Margin="0,2,0,6" Padding="6"/>
+                                <TextBlock Text="Gia (USD)" Foreground="#687381" FontSize="12"/>
+                                <TextBox Text="{Binding ComponentEditor.PriceUsd, UpdateSourceTrigger=PropertyChanged}" Margin="0,2,0,6" Padding="6"/>
+                                <CheckBox Content="Available" IsChecked="{Binding ComponentEditor.IsAvailable}" Margin="0,0,0,6"/>
+
+                                <StackPanel Visibility="{Binding BrandFieldVisibility}">
+                                    <TextBlock Text="Brand" Foreground="#687381" FontSize="12"/>
+                                    <ComboBox ItemsSource="{Binding Brands}" SelectedValue="{Binding ComponentEditor.BrandId}"
+                                              SelectedValuePath="BrandId" DisplayMemberPath="BrandName" Margin="0,2,0,6"/>
                                 </StackPanel>
 
-                                <StackPanel Orientation="Horizontal">
-                                    <StackPanel>
-                                        <TextBlock Text="Technology"/>
-                                        <TextBox Text="{Binding ComponentEditor.Technology, UpdateSourceTrigger=PropertyChanged}"/>
-                                    </StackPanel>
-                                    <CheckBox Content="Hotswap"
-                                              IsChecked="{Binding ComponentEditor.Hotswap}"
-                                              VerticalAlignment="Center"
-                                              Margin="0,18,16,8"/>
-                                    <CheckBox Content="Wireless"
-                                              IsChecked="{Binding ComponentEditor.Wireless}"
-                                              VerticalAlignment="Center"
-                                              Margin="0,18,16,8"/>
-                                    <CheckBox Content="RGB"
-                                              IsChecked="{Binding ComponentEditor.Rgb}"
-                                              VerticalAlignment="Center"
-                                              Margin="0,18,16,8"/>
-                                    <StackPanel>
-                                        <TextBlock Text="Switch mount"/>
-                                        <TextBox Text="{Binding ComponentEditor.SwitchMount, UpdateSourceTrigger=PropertyChanged}"/>
-                                    </StackPanel>
+                                <!-- Kit -->
+                                <StackPanel Visibility="{Binding KitFieldsVisibility}">
+                                    <TextBlock Text="Layout" Foreground="#687381" FontSize="12"/>
+                                    <ComboBox ItemsSource="{Binding Layouts}" SelectedValue="{Binding ComponentEditor.LayoutId}"
+                                              SelectedValuePath="LayoutId" DisplayMemberPath="LayoutName" Margin="0,2,0,6"/>
+                                    <TextBlock Text="PCB technology" Foreground="#687381" FontSize="12"/>
+                                    <TextBox Text="{Binding ComponentEditor.PcbTechnology, UpdateSourceTrigger=PropertyChanged}" Margin="0,2,0,6" Padding="6"/>
+                                    <TextBlock Text="Switch mount" Foreground="#687381" FontSize="12"/>
+                                    <TextBox Text="{Binding ComponentEditor.SwitchMount, UpdateSourceTrigger=PropertyChanged}" Margin="0,2,0,6" Padding="6"/>
+                                    <TextBlock Text="Required switch quantity" Foreground="#687381" FontSize="12"/>
+                                    <TextBox Text="{Binding ComponentEditor.RequiredSwitchQuantity, UpdateSourceTrigger=PropertyChanged}" Margin="0,2,0,6" Padding="6"/>
+                                    <TextBlock Text="Included parts" Foreground="#687381" FontSize="12"/>
+                                    <TextBox Text="{Binding ComponentEditor.IncludedParts, UpdateSourceTrigger=PropertyChanged}" Margin="0,2,0,6" Padding="6" TextWrapping="Wrap"/>
                                 </StackPanel>
 
-                                <StackPanel Orientation="Horizontal">
-                                    <StackPanel>
-                                        <TextBlock Text="Flex cut"/>
-                                        <TextBox Text="{Binding ComponentEditor.FlexCut, UpdateSourceTrigger=PropertyChanged}"/>
-                                    </StackPanel>
-                                    <StackPanel>
-                                        <TextBlock Text="Switch type"/>
-                                        <TextBox Text="{Binding ComponentEditor.SwitchType, UpdateSourceTrigger=PropertyChanged}"/>
-                                    </StackPanel>
-                                    <StackPanel>
-                                        <TextBlock Text="Actuation force"/>
-                                        <TextBox Text="{Binding ComponentEditor.ActuationForceG, UpdateSourceTrigger=PropertyChanged}"/>
-                                    </StackPanel>
-                                    <StackPanel>
-                                        <TextBlock Text="Sound profile"/>
-                                        <TextBox Text="{Binding ComponentEditor.SoundProfile, UpdateSourceTrigger=PropertyChanged}"/>
-                                    </StackPanel>
+                                <!-- Switch -->
+                                <StackPanel Visibility="{Binding SwitchFieldsVisibility}">
+                                    <TextBlock Text="Switch technology" Foreground="#687381" FontSize="12"/>
+                                    <TextBox Text="{Binding ComponentEditor.SwitchTechnology, UpdateSourceTrigger=PropertyChanged}" Margin="0,2,0,6" Padding="6"/>
+                                    <TextBlock Text="Mount type" Foreground="#687381" FontSize="12"/>
+                                    <TextBox Text="{Binding ComponentEditor.MountType, UpdateSourceTrigger=PropertyChanged}" Margin="0,2,0,6" Padding="6"/>
+                                    <TextBlock Text="Switch type" Foreground="#687381" FontSize="12"/>
+                                    <TextBox Text="{Binding ComponentEditor.SwitchType, UpdateSourceTrigger=PropertyChanged}" Margin="0,2,0,6" Padding="6"/>
+                                    <TextBlock Text="Actuation force (g)" Foreground="#687381" FontSize="12"/>
+                                    <TextBox Text="{Binding ComponentEditor.ActuationForceG, UpdateSourceTrigger=PropertyChanged, TargetNullValue=''}" Margin="0,2,0,6" Padding="6"/>
                                 </StackPanel>
 
-                                <StackPanel Orientation="Horizontal">
-                                    <StackPanel>
-                                        <TextBlock Text="Keycap profile"/>
-                                        <TextBox Text="{Binding ComponentEditor.Profile, UpdateSourceTrigger=PropertyChanged}"/>
-                                    </StackPanel>
-                                    <StackPanel>
-                                        <TextBlock Text="Color primary"/>
-                                        <TextBox Text="{Binding ComponentEditor.ColorPrimary, UpdateSourceTrigger=PropertyChanged}"/>
-                                    </StackPanel>
-                                    <StackPanel>
-                                        <TextBlock Text="Legend type"/>
-                                        <TextBox Text="{Binding ComponentEditor.LegendType, UpdateSourceTrigger=PropertyChanged}"/>
-                                    </StackPanel>
-                                    <StackPanel>
-                                        <TextBlock Text="Stabilizer type"/>
-                                        <TextBox Text="{Binding ComponentEditor.StabilizerType, UpdateSourceTrigger=PropertyChanged}"/>
-                                    </StackPanel>
-                                    <StackPanel>
-                                        <TextBlock Text="Sizes included"/>
-                                        <TextBox Text="{Binding ComponentEditor.SizesIncluded, UpdateSourceTrigger=PropertyChanged}"/>
-                                    </StackPanel>
+                                <!-- Keycap -->
+                                <StackPanel Visibility="{Binding KeycapFieldsVisibility}">
+                                    <TextBlock Text="Supported form factor" Foreground="#687381" FontSize="12"/>
+                                    <TextBox Text="{Binding ComponentEditor.SupportedFormFactor, UpdateSourceTrigger=PropertyChanged}" Margin="0,2,0,6" Padding="6"/>
+                                    <TextBlock Text="Profile" Foreground="#687381" FontSize="12"/>
+                                    <TextBox Text="{Binding ComponentEditor.Profile, UpdateSourceTrigger=PropertyChanged}" Margin="0,2,0,6" Padding="6"/>
+                                    <TextBlock Text="Material" Foreground="#687381" FontSize="12"/>
+                                    <TextBox Text="{Binding ComponentEditor.Material, UpdateSourceTrigger=PropertyChanged}" Margin="0,2,0,6" Padding="6"/>
                                 </StackPanel>
+
+                                <!-- Stabilizer -->
+                                <StackPanel Visibility="{Binding StabilizerFieldsVisibility}">
+                                    <TextBlock Text="Supported layouts" Foreground="#687381" FontSize="12"/>
+                                    <TextBox Text="{Binding ComponentEditor.SupportedLayouts, UpdateSourceTrigger=PropertyChanged}" Margin="0,2,0,6" Padding="6"/>
+                                </StackPanel>
+
+                                <!-- Accessory -->
+                                <StackPanel Visibility="{Binding AccessoryFieldsVisibility}">
+                                    <TextBlock Text="Accessory type" Foreground="#687381" FontSize="12"/>
+                                    <TextBox Text="{Binding ComponentEditor.AccessoryType, UpdateSourceTrigger=PropertyChanged}" Margin="0,2,0,6" Padding="6"/>
+                                    <TextBlock Text="Target component" Foreground="#687381" FontSize="12"/>
+                                    <TextBox Text="{Binding ComponentEditor.TargetComponent, UpdateSourceTrigger=PropertyChanged}" Margin="0,2,0,6" Padding="6"/>
+                                </StackPanel>
+
+                                <WrapPanel Margin="0,8,0,0">
+                                    <Button Content="Moi" Command="{Binding NewComponentCommand}" Margin="0,0,8,0" Padding="10,6" Background="#EEF2F6" BorderBrush="#DDE2E8"/>
+                                    <Button Content="Luu linh kien" Command="{Binding SaveComponentCommand}" Padding="10,6" Background="#2F6FED" Foreground="White" BorderThickness="0"/>
+                                </WrapPanel>
                             </StackPanel>
                         </ScrollViewer>
                     </Border>
                 </Grid>
             </TabItem>
 
-            <TabItem Header="Audit">
-                <Grid Margin="14">
-                    <Grid.RowDefinitions>
-                        <RowDefinition Height="Auto"/>
-                        <RowDefinition Height="*"/>
-                    </Grid.RowDefinitions>
+            <!-- Audit -->
+            <TabItem Header="Audit log">
+                <Grid Margin="0,12,0,0">
+                    <DockPanel>
+                        <Button DockPanel.Dock="Top" HorizontalAlignment="Left" Content="Refresh audit"
+                                Command="{Binding RefreshAuditCommand}" Margin="0,0,0,8" Padding="10,6"
+                                Background="#EEF2F6" BorderBrush="#DDE2E8"/>
+                        <ListBox ItemsSource="{Binding AuditLogs}" BorderBrush="#DDE2E8" BorderThickness="1">
+                            <ListBox.ItemTemplate>
+                                <DataTemplate>
+                                    <StackPanel Margin="0,4">
+                                        <TextBlock FontWeight="SemiBold">
+                                            <Run Text="{Binding Action}"/><Run Text=" - "/><Run Text="{Binding TableName}"/>
+                                            <Run Text=" #"/><Run Text="{Binding RecordId}"/>
+                                        </TextBlock>
+                                        <TextBlock Text="{Binding ChangedAt, StringFormat=yyyy-MM-dd HH:mm}" FontSize="12" Foreground="#687381"/>
+                                    </StackPanel>
+                                </DataTemplate>
+                            </ListBox.ItemTemplate>
+                        </ListBox>
+                    </DockPanel>
+                </Grid>
+            </TabItem>
 
-                    <StackPanel Orientation="Horizontal">
-                        <Button Content="Refresh" Command="{Binding RefreshAuditCommand}"/>
-                    </StackPanel>
-
-                    <DataGrid Grid.Row="1"
-                              ItemsSource="{Binding AuditLogs}"
-                              AutoGenerateColumns="False">
-                        <DataGrid.Columns>
-                            <DataGridTextColumn Header="Log ID" Binding="{Binding LogId}" Width="70"/>
-                            <DataGridTextColumn Header="Admin ID" Binding="{Binding UserId}" Width="80"/>
-                            <DataGridTextColumn Header="Table" Binding="{Binding TableName}" Width="130"/>
-                            <DataGridTextColumn Header="Record" Binding="{Binding RecordId}" Width="150"/>
-                            <DataGridTextColumn Header="Action" Binding="{Binding Action}" Width="160"/>
-                            <DataGridTextColumn Header="Changed at" Binding="{Binding ChangedAt}" Width="160"/>
-                            <DataGridTextColumn Header="Old JSON" Binding="{Binding OldValueJson}" Width="260"/>
-                            <DataGridTextColumn Header="New JSON" Binding="{Binding NewValueJson}" Width="260"/>
-                        </DataGrid.Columns>
-                    </DataGrid>
+            <!-- Chat -->
+            <TabItem Header="Chat">
+                <Grid Margin="0,12,0,0">
+                    <views:ChatView DataContext="{Binding Chat}"/>
                 </Grid>
             </TabItem>
         </TabControl>
 
-        <Border Grid.Row="2"
-                Margin="0,12,0,0"
-                Padding="10"
-                Background="#EEF2F6"
-                BorderBrush="#DDE2E8"
-                BorderThickness="1">
-            <DockPanel>
-                <TextBlock DockPanel.Dock="Right"
-                           Text="{Binding IsBusy, StringFormat=Busy: {0}}"
-                           Foreground="#687381"/>
-                <TextBlock Text="{Binding StatusMessage}" Foreground="#20242B"/>
-            </DockPanel>
-        </Border>
+        <TextBlock Grid.Row="3" Text="{Binding StatusMessage}" Margin="0,12,0,0" Foreground="#687381"/>
     </Grid>
 </UserControl>
