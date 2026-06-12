@@ -21,7 +21,7 @@ public sealed class SqlRequestRepository : IRequestRepository
         await connection.OpenAsync(cancellationToken);
 
         await using var command = connection.CreateCommand();
-        command.CommandText = $"{BaseSelectSql} WHERE request_id = @request_id;";
+        command.CommandText = $"{BaseSelectSql} WHERE br.request_id = @request_id;";
         command.AddParameter("@request_id", SqlDbType.VarChar, requestId, 50);
 
         await using var reader = await command.ExecuteReaderAsync(cancellationToken);
@@ -30,8 +30,14 @@ public sealed class SqlRequestRepository : IRequestRepository
 
     public Task<IReadOnlyList<BuildRequest>> GetByBuyerAsync(int buyerId, CancellationToken cancellationToken = default)
     {
+        // build_requests no longer stores buyer_id; the buyer is derived from the linked build.
         return QueryAsync(
-            $"{BaseSelectSql} WHERE buyer_id = @buyer_id ORDER BY requested_at DESC, request_id;",
+            $"""
+            {BaseSelectSql}
+            INNER JOIN builds AS b ON b.build_id = br.build_id
+            WHERE b.buyer_id = @buyer_id
+            ORDER BY br.requested_at DESC, br.request_id;
+            """,
             command => command.AddParameter("@buyer_id", SqlDbType.Int, buyerId),
             cancellationToken);
     }
@@ -39,7 +45,7 @@ public sealed class SqlRequestRepository : IRequestRepository
     public Task<IReadOnlyList<BuildRequest>> GetBySellerAsync(int sellerUserId, CancellationToken cancellationToken = default)
     {
         return QueryAsync(
-            $"{BaseSelectSql} WHERE seller_user_id = @seller_user_id ORDER BY requested_at DESC, request_id;",
+            $"{BaseSelectSql} WHERE br.seller_user_id = @seller_user_id ORDER BY br.requested_at DESC, br.request_id;",
             command => command.AddParameter("@seller_user_id", SqlDbType.Int, sellerUserId),
             cancellationToken);
     }
@@ -71,7 +77,6 @@ public sealed class SqlRequestRepository : IRequestRepository
                 UPDATE build_requests
                 SET
                     build_id = @build_id,
-                    buyer_id = @buyer_id,
                     seller_user_id = @seller_user_id,
                     request_payload_json = @request_payload_json,
                     status = @status,
@@ -86,7 +91,6 @@ public sealed class SqlRequestRepository : IRequestRepository
                 INSERT INTO build_requests (
                     request_id,
                     build_id,
-                    buyer_id,
                     seller_user_id,
                     request_payload_json,
                     status,
@@ -98,7 +102,6 @@ public sealed class SqlRequestRepository : IRequestRepository
                 VALUES (
                     @request_id,
                     @build_id,
-                    @buyer_id,
                     @seller_user_id,
                     @request_payload_json,
                     @status,
@@ -110,19 +113,18 @@ public sealed class SqlRequestRepository : IRequestRepository
             END;
 
             SELECT
-                request_id,
-                build_id,
-                buyer_id,
-                seller_user_id,
-                request_payload_json,
-                status,
-                note,
-                requested_at,
-                accepted_at,
-                completed_at,
-                updated_at
-            FROM build_requests
-            WHERE request_id = @request_id;
+                br.request_id,
+                br.build_id,
+                br.seller_user_id,
+                br.request_payload_json,
+                br.status,
+                br.note,
+                br.requested_at,
+                br.accepted_at,
+                br.completed_at,
+                br.updated_at
+            FROM build_requests AS br
+            WHERE br.request_id = @request_id;
             """;
         AddRequestParameters(command, request);
 
@@ -137,18 +139,17 @@ public sealed class SqlRequestRepository : IRequestRepository
 
     private const string BaseSelectSql = """
         SELECT
-            request_id,
-            build_id,
-            buyer_id,
-            seller_user_id,
-            request_payload_json,
-            status,
-            note,
-            requested_at,
-            accepted_at,
-            completed_at,
-            updated_at
-        FROM build_requests
+            br.request_id,
+            br.build_id,
+            br.seller_user_id,
+            br.request_payload_json,
+            br.status,
+            br.note,
+            br.requested_at,
+            br.accepted_at,
+            br.completed_at,
+            br.updated_at
+        FROM build_requests AS br
         """;
 
     private async Task<IReadOnlyList<BuildRequest>> QueryAsync(
@@ -178,7 +179,6 @@ public sealed class SqlRequestRepository : IRequestRepository
     {
         command.AddParameter("@request_id", SqlDbType.VarChar, request.RequestId, 50);
         command.AddParameter("@build_id", SqlDbType.VarChar, request.BuildId, 50);
-        command.AddParameter("@buyer_id", SqlDbType.Int, request.BuyerId);
         command.AddParameter("@seller_user_id", SqlDbType.Int, request.SellerUserId);
         command.AddParameter("@request_payload_json", SqlDbType.NVarChar, request.RequestPayloadJson, -1);
         command.AddParameter("@status", SqlDbType.VarChar, request.Status.ToString(), 50);
@@ -194,7 +194,6 @@ public sealed class SqlRequestRepository : IRequestRepository
         {
             RequestId = reader.GetStringValue("request_id"),
             BuildId = reader.GetStringValue("build_id"),
-            BuyerId = reader.GetIntValue("buyer_id"),
             SellerUserId = reader.GetIntValue("seller_user_id"),
             RequestPayloadJson = reader.GetStringValue("request_payload_json"),
             Status = reader.GetEnumValue<RequestStatus>("status"),

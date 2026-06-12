@@ -39,13 +39,10 @@ public sealed class SqlSellerRepository : ISellerRepository
                 u.phone AS user_phone,
                 u.is_active,
                 COALESCE(sp.seller_profile_id, 0) AS seller_profile_id,
-                sp.assigned_by_admin_id,
                 COALESCE(sp.shop_name, '') AS shop_name,
                 COALESCE(sp.phone, '') AS profile_phone,
                 COALESCE(sp.address, '') AS address,
                 CAST(COALESCE(sp.is_verified, 0) AS bit) AS is_verified,
-                sp.verified_by_admin_id,
-                sp.assigned_at,
                 sp.verified_at
             FROM users AS u
             INNER JOIN roles AS r ON r.role_id = u.role_id
@@ -63,13 +60,10 @@ public sealed class SqlSellerRepository : ISellerRepository
             SELECT
                 sp.seller_profile_id,
                 sp.user_id,
-                sp.assigned_by_admin_id,
                 sp.shop_name,
                 sp.phone,
                 sp.address,
                 sp.is_verified,
-                sp.verified_by_admin_id,
-                sp.assigned_at,
                 sp.verified_at
             FROM seller_profiles AS sp
             INNER JOIN users AS u ON u.user_id = sp.user_id
@@ -115,13 +109,10 @@ public sealed class SqlSellerRepository : ISellerRepository
             BEGIN
                 UPDATE seller_profiles
                 SET
-                    assigned_by_admin_id = @assigned_by_admin_id,
                     shop_name = @shop_name,
                     phone = @phone,
                     address = @address,
                     is_verified = @is_verified,
-                    verified_by_admin_id = @verified_by_admin_id,
-                    assigned_at = @assigned_at,
                     verified_at = @verified_at
                 WHERE seller_profile_id = @seller_profile_id
                    OR user_id = @user_id;
@@ -130,24 +121,18 @@ public sealed class SqlSellerRepository : ISellerRepository
             BEGIN
                 INSERT INTO seller_profiles (
                     user_id,
-                    assigned_by_admin_id,
                     shop_name,
                     phone,
                     address,
                     is_verified,
-                    verified_by_admin_id,
-                    assigned_at,
                     verified_at
                 )
                 VALUES (
                     @user_id,
-                    @assigned_by_admin_id,
                     @shop_name,
                     @phone,
                     @address,
                     @is_verified,
-                    @verified_by_admin_id,
-                    @assigned_at,
                     @verified_at
                 );
             END;
@@ -155,13 +140,10 @@ public sealed class SqlSellerRepository : ISellerRepository
             SELECT
                 seller_profile_id,
                 user_id,
-                assigned_by_admin_id,
                 shop_name,
                 phone,
                 address,
                 is_verified,
-                verified_by_admin_id,
-                assigned_at,
                 verified_at
             FROM seller_profiles
             WHERE user_id = @user_id;
@@ -179,6 +161,9 @@ public sealed class SqlSellerRepository : ISellerRepository
 
     public async Task SetVerifiedAsync(int sellerUserId, bool isVerified, int adminUserId, CancellationToken cancellationToken = default)
     {
+        // adminUserId is recorded by the admin service in audit_log; seller_profiles no longer stores it.
+        _ = adminUserId;
+
         await using var connection = _connectionFactory.CreateConnection();
         await connection.OpenAsync(cancellationToken);
 
@@ -187,13 +172,11 @@ public sealed class SqlSellerRepository : ISellerRepository
             UPDATE seller_profiles
             SET
                 is_verified = @is_verified,
-                verified_by_admin_id = CASE WHEN @is_verified = 1 THEN @admin_user_id ELSE NULL END,
                 verified_at = CASE WHEN @is_verified = 1 THEN SYSUTCDATETIME() ELSE NULL END
             WHERE user_id = @user_id;
             """;
         command.AddParameter("@user_id", SqlDbType.Int, sellerUserId);
         command.AddParameter("@is_verified", SqlDbType.Bit, isVerified);
-        command.AddParameter("@admin_user_id", SqlDbType.Int, adminUserId);
 
         await command.ExecuteNonQueryAsync(cancellationToken);
     }
@@ -202,13 +185,10 @@ public sealed class SqlSellerRepository : ISellerRepository
         SELECT
             seller_profile_id,
             user_id,
-            assigned_by_admin_id,
             shop_name,
             phone,
             address,
             is_verified,
-            verified_by_admin_id,
-            assigned_at,
             verified_at
         FROM seller_profiles
         """;
@@ -261,13 +241,10 @@ public sealed class SqlSellerRepository : ISellerRepository
     {
         command.AddParameter("@seller_profile_id", SqlDbType.Int, sellerProfile.SellerProfileId);
         command.AddParameter("@user_id", SqlDbType.Int, sellerProfile.UserId);
-        command.AddParameter("@assigned_by_admin_id", SqlDbType.Int, sellerProfile.AssignedByAdminId);
         command.AddParameter("@shop_name", SqlDbType.VarChar, sellerProfile.ShopName, 255);
         command.AddParameter("@phone", SqlDbType.VarChar, sellerProfile.Phone, 30);
         command.AddParameter("@address", SqlDbType.VarChar, sellerProfile.Address, 500);
         command.AddParameter("@is_verified", SqlDbType.Bit, sellerProfile.IsVerified);
-        command.AddParameter("@verified_by_admin_id", SqlDbType.Int, sellerProfile.VerifiedByAdminId);
-        command.AddParameter("@assigned_at", SqlDbType.DateTime2, sellerProfile.AssignedAt);
         command.AddParameter("@verified_at", SqlDbType.DateTime2, sellerProfile.VerifiedAt);
     }
 
@@ -277,13 +254,10 @@ public sealed class SqlSellerRepository : ISellerRepository
         {
             SellerProfileId = reader.GetIntValue("seller_profile_id"),
             UserId = reader.GetIntValue("user_id"),
-            AssignedByAdminId = reader.GetNullableIntValue("assigned_by_admin_id"),
             ShopName = reader.GetStringValue("shop_name"),
             Phone = reader.GetStringValue("phone"),
             Address = reader.GetStringValue("address"),
             IsVerified = reader.GetBoolValue("is_verified"),
-            VerifiedByAdminId = reader.GetNullableIntValue("verified_by_admin_id"),
-            AssignedAt = reader.GetNullableDateTimeValue("assigned_at"),
             VerifiedAt = reader.GetNullableDateTimeValue("verified_at")
         };
     }
@@ -298,13 +272,10 @@ public sealed class SqlSellerRepository : ISellerRepository
             UserPhone = reader.GetStringValue("user_phone"),
             IsActive = reader.GetBoolValue("is_active"),
             SellerProfileId = reader.GetIntValue("seller_profile_id"),
-            AssignedByAdminId = reader.GetNullableIntValue("assigned_by_admin_id"),
             ShopName = reader.GetStringValue("shop_name"),
             ProfilePhone = reader.GetStringValue("profile_phone"),
             Address = reader.GetStringValue("address"),
             IsVerified = reader.GetBoolValue("is_verified"),
-            VerifiedByAdminId = reader.GetNullableIntValue("verified_by_admin_id"),
-            AssignedAt = reader.GetNullableDateTimeValue("assigned_at"),
             VerifiedAt = reader.GetNullableDateTimeValue("verified_at")
         };
     }
