@@ -2,6 +2,7 @@ using System.Collections.ObjectModel;
 using System.Windows;
 using System.Windows.Input;
 using Custom_keyboard.Commands;
+using Custom_keyboard.Diagnostics;
 using Custom_keyboard.Models.Accounts;
 using Custom_keyboard.Models.Chat;
 using Custom_keyboard.Models.Enums;
@@ -227,7 +228,8 @@ public sealed class ChatViewModel : ViewModelBase
         }
         catch (Exception ex)
         {
-            StatusMessage = ex.Message;
+            AppLog.Error("Chat", ex);
+            StatusMessage = AppLog.ToUserMessage(ex);
         }
         finally
         {

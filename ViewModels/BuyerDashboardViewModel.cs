@@ -2,6 +2,7 @@ using System.Collections.ObjectModel;
 using System.Windows;
 using System.Windows.Input;
 using Custom_keyboard.Commands;
+using Custom_keyboard.Diagnostics;
 using Custom_keyboard.Models.Accounts;
 using Custom_keyboard.Models.Builds;
 using Custom_keyboard.Models.Components;
@@ -683,7 +684,8 @@ public sealed class BuyerDashboardViewModel : RoleDashboardViewModel
         }
         catch (Exception ex)
         {
-            StatusMessage = ex.Message;
+            AppLog.Error("BuyerDashboard", ex);
+            StatusMessage = AppLog.ToUserMessage(ex);
         }
         finally
         {

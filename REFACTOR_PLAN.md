@@ -203,3 +203,16 @@ Không nên đảo thứ tự: schema chốt trước để models bám theo; re
 6. `Documents_Refactor/Custom_Keyboard_DFD_*` (Context/Level1/Level2)
 7. `Documents_Refactor/Custom_Keyboard_Class_Diagram_Refactor.md`
 8. `Documents_Refactor/SeedData_Refactor.sql` + `SeedData_Refactor_Check.md`
+
+## Phase 6 Execution Update - 2026-06-12
+
+Phase 6 da duoc thuc hien va verify bang:
+
+```powershell
+dotnet build
+dotnet run --project Phase6Verification\Phase6Verification.csproj
+```
+
+Ket qua: build pass; `Phase6Verification` pass 6/6; UI smoke buyer/seller/admin pass, khong con popup `Loi (UI thread)`.
+
+Chi tiet duoc ghi tai `Documents_Refactor/Phase6_Verification_Report.md`.

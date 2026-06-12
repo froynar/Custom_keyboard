@@ -1,6 +1,7 @@
 using System.Collections.ObjectModel;
 using System.Windows.Input;
 using Custom_keyboard.Commands;
+using Custom_keyboard.Diagnostics;
 using Custom_keyboard.Models.Accounts;
 using Custom_keyboard.Models.Builds;
 using Custom_keyboard.Models.Enums;
@@ -157,7 +158,8 @@ public sealed class SellerDashboardViewModel : RoleDashboardViewModel
         }
         catch (Exception ex)
         {
-            StatusMessage = ex.Message;
+            AppLog.Error("SellerDashboard", ex);
+            StatusMessage = AppLog.ToUserMessage(ex);
         }
         finally
         {

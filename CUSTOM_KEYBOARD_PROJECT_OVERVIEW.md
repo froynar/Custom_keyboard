@@ -1,5 +1,32 @@
 # Custom Keyboard Builder - Project Overview & Refactor Status
 
+**Current update:** 12/06/2026  
+**Current status:** Phase 6 verified - kit-based refactor builds, service/integration verification passes, DB invariants are clean, and buyer/seller/admin UI smoke login has no `Loi (UI thread)` popup.
+
+## Phase 6 Verification Status
+
+Phase 6 is implemented in `Phase6Verification/`.
+
+Commands:
+
+```powershell
+dotnet build
+dotnet run --project Phase6Verification\Phase6Verification.csproj
+```
+
+Latest verified result:
+
+- `dotnet build`: pass, 0 warning, 0 error.
+- `Phase6Verification`: 6/6 checks pass.
+- Unit-style checks: `BuildService`, `RequestService`, `ChatService`.
+- SQL integration: temporary build, request, chat, and cleanup using `P6_` data.
+- DB invariants: total snapshot, switch quantity, exactly-one-FK, seller verified, conversation XOR, FK orphan, requested build/request, chat sender participant.
+- UI smoke: `buyer_refactor`, `seller_soigear`, `admin_refactor` login successfully without UI-thread error popups.
+
+Note: the test DB currently has an extra manually-created build (`kkkkkk`), and users may grow through app registration, so live verification checks exact counts for static/catalog tables and minimum seed baselines for users plus mutable transaction tables.
+
+Legacy status block below is kept for historical context from before the code refactor.
+
 **Ngày cập nhật:** 11/06/2026  
 **Trạng thái:** Đang chuẩn bị refactor - Tài liệu sẵn sàng, cần bắt đầu refactor code
 

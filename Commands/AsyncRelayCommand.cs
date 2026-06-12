@@ -1,4 +1,5 @@
 using System.Windows.Input;
+using Custom_keyboard.Diagnostics;
 
 namespace Custom_keyboard.Commands;
 
@@ -36,13 +37,9 @@ public sealed class AsyncRelayCommand : ICommand
         }
         catch (Exception ex)
         {
-            // An async void command must never tear down the process; surface it instead.
+            // An async void command must never tear down the process; log + surface it instead.
             System.Windows.Application.Current?.Dispatcher.Invoke(() =>
-                System.Windows.MessageBox.Show(
-                    ex.ToString(),
-                    "Loi thao tac",
-                    System.Windows.MessageBoxButton.OK,
-                    System.Windows.MessageBoxImage.Error));
+                ErrorReporter.Report("Thao tac", ex));
         }
         finally
         {

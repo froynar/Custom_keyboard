@@ -1,5 +1,6 @@
 using System.Windows;
 using System.Windows.Threading;
+using Custom_keyboard.Diagnostics;
 
 namespace Custom_keyboard
 {
@@ -49,11 +50,7 @@ namespace Custom_keyboard
             try
             {
                 _isShowingError = true;
-                MessageBox.Show(
-                    ex.ToString(),
-                    $"Loi ({source})",
-                    MessageBoxButton.OK,
-                    MessageBoxImage.Error);
+                ErrorReporter.Report(source, ex);
             }
             finally
             {

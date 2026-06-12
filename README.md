@@ -1,17 +1,32 @@
 # Custom Keyboard Builder
 
-Phan mem ho tro buyer tao cau hinh ban phim co ban, gui yeu cau build cho seller, va cho admin quan ly nguoi dung cung linh kien.
+Phan mem WPF ho tro buyer tao cau hinh ban phim theo mo hinh kit-based, gui yeu cau build cho seller, chat theo role, va cho admin quan ly user/seller/catalog/audit log.
 
-Du an hien tai la ung dung desktop WPF dung .NET.
+Du an hien tai la ung dung desktop WPF dung .NET va SQL Server database `CustomKeyboard_Refactor`.
+
+## Trang Thai Refactor Hien Tai
+
+- Refactor kit-based da duoc code den Phase 6.
+- ERD refactor moi la source of truth: `Documents_Refactor/`.
+- Tai lieu cu trong `Documents/` chi de tham khao lich su.
+- Test/verification runner nam o `Phase6Verification/`.
+- DB test mac dinh: `CustomKeyboard_Refactor` tren `KHOADZS1VN\SQLEXPRESS`.
+
+Lenh kiem tra chinh:
+
+```powershell
+dotnet build
+dotnet run --project Phase6Verification\Phase6Verification.csproj
+```
 
 ## Muc Tieu
 
 He thong tap trung vao phan mem quan ly build keyboard, khong di qua sau vao mo phong ky thuat ban phim. MVP can lam duoc:
 
-- Buyer dang ky, dang nhap, tao cau hinh keyboard custom.
-- Buyer chon layout, case, PCB, plate, switch, keycap, stabilizer va mod co ban.
+- Buyer dang ky, dang nhap, tao cau hinh keyboard custom tu keyboard kit.
+- Buyer chon kit, switch, keycap, stabilizer, accessory va mod note co ban.
 - Buyer gui yeu cau build cho seller.
-- Backend luu yeu cau vao database va forward realtime qua MQTT.
+- App luu build/request/chat vao SQL Server.
 - Seller xem danh sach yeu cau build, nhan don, cap nhat trang thai hoan thanh.
 - Admin xem thong tin user, ban/unban user, them linh kien, va an linh kien bang soft delete.
 
@@ -61,28 +76,28 @@ Chuc nang chinh:
 
 Admin khong duoc xem mat khau that cua user. Database chi luu `password_hash`. Neu can, admin chi nen reset password.
 
-## Kien Truc Du Kien
+## Kien Truc Hien Tai
 
 ```text
-Buyer App
-  -> MQTT publish build request
-  -> MQTT Broker
-  -> Backend Server
-      -> Save request to Database
-      -> Publish request to Seller Dashboard topic
-  -> Seller Dashboard receives realtime request
+WPF App
+  -> MainWindow composition root
+  -> MainShellViewModel
+  -> Role dashboards
+  -> Services
+  -> SQL repositories
+  -> SQL Server CustomKeyboard_Refactor
 ```
 
-Database la source of truth. MQTT chi dung cho realtime delivery.
+Database la source of truth. Realtime/MQTT khong nam trong scope refactor hien tai.
 
-Neu seller offline, backend van phai luu request trong database. Khi seller mo dashboard, app lay lai danh sach request tu backend/database.
+Neu seller offline, request van duoc luu trong database. Khi seller mo dashboard, app lay lai danh sach request tu SQL Server.
 
-## Cong Nghe Du Kien
+## Cong Nghe
 
 - Desktop app: WPF, .NET
-- Database: SQL Server, PostgreSQL, MySQL, hoac SQLite cho MVP
-- Realtime messaging: MQTT
-- Backend API: ASP.NET Core Web API
+- Database: SQL Server
+- Data access: `Microsoft.Data.SqlClient`
+- Pattern: MVVM + repository/service layer
 - Auth: username/email + password hash
 
 ## ERD Tom Tat
@@ -98,27 +113,29 @@ Neu seller offline, backend van phai luu request trong database. Khi seller mo d
 
 - `brands`: thuong hieu linh kien.
 - `layouts`: layout keyboard.
+- `keyboard_kits`: kit nen tang gom case/PCB/plate/included parts.
 - `switches`: switch.
 - `keycap_sets`: bo keycap.
-- `cases`: case keyboard.
-- `pcbs`: PCB.
-- `plates`: plate.
 - `stabilizers`: stabilizer.
+- `accessories`: phu kien bo sung.
 
 Moi bang linh kien co `is_available` de ho tro soft delete.
 
 ### Compatibility
 
-- `case_layouts`: case ho tro layout nao.
-- `pcb_layouts`: PCB ho tro layout nao.
-- `plate_layouts`: plate ho tro layout nao.
-- `compatibility_rules`: rule kiem tra do tuong thich giua case, PCB, plate; app kiem tra them PCB technology voi switch technology va `pcb.switch_mount` khop voi `switch.mount_type`.
+- Khong con bang `compatibility_rules`.
+- App validate truc tiep trong `BuildService`.
+- Kit quyet dinh `layout_id`, `pcb_technology`, `switch_mount`, va `required_switch_quantity`.
+- Switch phai khop technology/mount voi kit.
+- Keycap/stabilizer duoc check bang form factor/layout text.
 
 ### Build Flow
 
 - `builds`: cau hinh build cua buyer.
-- `build_mods`: mod co ban nhu lube, film, spring.
+- `build_items`: cac item switch/keycap/stabilizer/accessory; moi row dung exactly one product FK.
+- `build_mods`: mod note co ban nhu lube, film, foam, calibration.
 - `build_requests`: yeu cau build buyer gui cho seller.
+- `chat_conversations`, `chat_messages`: chat buyer-seller va admin-seller.
 
 `build_requests.status` la truong chinh de seller cap nhat tien do don hang.
 
@@ -336,6 +353,19 @@ Build project:
 ```powershell
 dotnet build
 ```
+
+Chay Phase 6 verification:
+
+```powershell
+dotnet run --project Phase6Verification\Phase6Verification.csproj
+```
+
+Verification bao gom:
+
+- Unit-style checks cho `BuildService`, `RequestService`, `ChatService`.
+- SQL integration flow tao build tam, gui request, tao chat, sau do cleanup.
+- DB invariant checks tu `VerifyRefactor.sql`: total snapshot, switch quantity, exactly-one-FK, seller verified, conversation XOR, FK orphan, requested build/request, chat sender participant.
+- UI smoke manual/automation da kiem buyer/seller/admin login khong con popup `Loi (UI thread)`.
 
 ## Ghi Chu Thiet Ke
 

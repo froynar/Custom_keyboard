@@ -1,3 +1,4 @@
+using System.Text.RegularExpressions;
 using Custom_keyboard.Models.Accounts;
 using Custom_keyboard.Models.Enums;
 using Custom_keyboard.Repositories;
@@ -7,6 +8,15 @@ namespace Custom_keyboard.Services;
 
 public sealed class AccountService : IAccountService
 {
+    // Pragmatic format checks: one "@", a dotted domain, and 8-15 phone digits (optional +).
+    private static readonly Regex EmailPattern = new(
+        @"^[^@\s]+@[^@\s]+\.[^@\s]+$",
+        RegexOptions.Compiled | RegexOptions.CultureInvariant);
+
+    private static readonly Regex PhonePattern = new(
+        @"^\+?\d{8,15}$",
+        RegexOptions.Compiled | RegexOptions.CultureInvariant);
+
     private readonly IUserRepository _userRepository;
     private readonly IPasswordHasher _passwordHasher;
 
@@ -59,7 +69,9 @@ public sealed class AccountService : IAccountService
     {
         username = username.Trim();
         email = email.Trim();
-        phone = phone.Trim();
+        // Normalize away common separators so "090 123 4567" and "090-123-4567" validate and
+        // de-duplicate consistently with what we store.
+        phone = NormalizePhone(phone);
 
         if (string.IsNullOrWhiteSpace(username)
             || string.IsNullOrWhiteSpace(email)
@@ -76,6 +88,20 @@ public sealed class AccountService : IAccountService
             return AccountResult.Failure(
                 AccountOperationStatus.ValidationError,
                 "Mat khau can it nhat 6 ky tu.");
+        }
+
+        if (!EmailPattern.IsMatch(email))
+        {
+            return AccountResult.Failure(
+                AccountOperationStatus.ValidationError,
+                "Email khong dung dinh dang (vd: ten@domain.com).");
+        }
+
+        if (!PhonePattern.IsMatch(phone))
+        {
+            return AccountResult.Failure(
+                AccountOperationStatus.ValidationError,
+                "So dien thoai khong hop le (8-15 chu so, co the bat dau bang +).");
         }
 
         if (await _userRepository.FindByUsernameAsync(username, cancellationToken) is not null)
@@ -115,5 +141,11 @@ public sealed class AccountService : IAccountService
     public void Logout()
     {
         CurrentUser = null;
+    }
+
+    private static string NormalizePhone(string phone)
+    {
+        // Keep a leading '+' and digits; drop spaces, dashes, dots, and parentheses.
+        return string.Concat(phone.Where(c => char.IsDigit(c) || c == '+')).Trim();
     }
 }

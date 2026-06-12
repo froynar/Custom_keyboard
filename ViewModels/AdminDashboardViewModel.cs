@@ -2,6 +2,7 @@ using System.Collections.ObjectModel;
 using System.Windows;
 using System.Windows.Input;
 using Custom_keyboard.Commands;
+using Custom_keyboard.Diagnostics;
 using Custom_keyboard.Models.Accounts;
 using Custom_keyboard.Models.Admin;
 using Custom_keyboard.Models.Components;
@@ -517,7 +518,8 @@ public sealed class AdminDashboardViewModel : RoleDashboardViewModel
         }
         catch (Exception ex)
         {
-            StatusMessage = ex.Message;
+            AppLog.Error("AdminDashboard", ex);
+            StatusMessage = AppLog.ToUserMessage(ex);
         }
         finally
         {

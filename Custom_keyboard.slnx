@@ -1,3 +1,4 @@
 <Solution>
   <Project Path="Custom_keyboard.csproj" />
+  <Project Path="Phase6Verification/Phase6Verification.csproj" />
 </Solution>
