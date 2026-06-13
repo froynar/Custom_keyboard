@@ -1,28 +1,41 @@
 using System.Collections.ObjectModel;
 using System.Windows.Input;
+using Custom_keyboard.Analytics;
 using Custom_keyboard.Commands;
 using Custom_keyboard.Diagnostics;
 using Custom_keyboard.Models.Accounts;
 using Custom_keyboard.Models.Builds;
 using Custom_keyboard.Models.Enums;
 using Custom_keyboard.Services;
+using Custom_keyboard.Services.Stats;
+using LiveChartsCore;
+using LiveChartsCore.SkiaSharpView;
 
 namespace Custom_keyboard.ViewModels;
 
-// Seller flow: see assigned build requests, read the build snapshot, and move the request
-// through its state machine (Accept -> In_progress -> Completed, or Cancel).
+// Seller flow: see assigned build requests, read the build snapshot, move the request
+// through its state machine (Accept -> In_progress -> Completed, or Cancel), and view analytics.
 public sealed class SellerDashboardViewModel : RoleDashboardViewModel
 {
     private readonly IRequestService _requestService;
+    private readonly IStatsService _statsService;
     private bool _hasLoaded;
     private bool _isBusy;
     private string _statusMessage = "San sang.";
     private BuildRequest? _selectedRequest;
 
+    private SellerDashboardStats _stats = new();
+    private StatsPeriod _selectedPeriod = StatsPeriod.Monthly;
+    private ISeries[] _revenueSeries = [];
+    private Axis[] _revenueXAxes = [];
+    private Axis[] _revenueYAxes = [];
+    private ISeries[] _statusSeries = [];
+
     public SellerDashboardViewModel(
         User currentUser,
         ICommand logoutCommand,
         IRequestService requestService,
+        IStatsService statsService,
         ChatViewModel chat)
         : base(
             currentUser,
@@ -37,10 +50,11 @@ public sealed class SellerDashboardViewModel : RoleDashboardViewModel
             ])
     {
         _requestService = requestService;
+        _statsService = statsService;
         Chat = chat;
 
         LoadCommand = new AsyncRelayCommand(_ => ExecuteSafeAsync(LoadAsync));
-        RefreshCommand = new AsyncRelayCommand(_ => ExecuteSafeAsync(RefreshRequestsAsync, "Da refresh request."));
+        RefreshCommand = new AsyncRelayCommand(_ => ExecuteSafeAsync(RefreshSellerAsync, "Da refresh request."));
         AcceptCommand = new AsyncRelayCommand(_ => UpdateStatusAsync(RequestStatus.Accepted), _ => CanTransitionTo(RequestStatus.Accepted));
         StartProgressCommand = new AsyncRelayCommand(_ => UpdateStatusAsync(RequestStatus.In_progress), _ => CanTransitionTo(RequestStatus.In_progress));
         CompleteCommand = new AsyncRelayCommand(_ => UpdateStatusAsync(RequestStatus.Completed), _ => CanTransitionTo(RequestStatus.Completed));
@@ -50,6 +64,9 @@ public sealed class SellerDashboardViewModel : RoleDashboardViewModel
     public ChatViewModel Chat { get; }
 
     public ObservableCollection<BuildRequest> Requests { get; } = [];
+    public ObservableCollection<KitSales> TopKits { get; } = [];
+
+    public StatsPeriod[] Periods { get; } = Enum.GetValues<StatsPeriod>();
 
     public ICommand LoadCommand { get; }
     public ICommand RefreshCommand { get; }
@@ -93,6 +110,50 @@ public sealed class SellerDashboardViewModel : RoleDashboardViewModel
         ? "Chon request de xem snapshot build."
         : SelectedRequest.RequestPayloadJson;
 
+    // --- Analytics (read-only, derived from build_requests + builds) ---
+
+    public decimal TotalRevenue => _stats.TotalRevenue;
+    public int ProductsMade => _stats.ProductsMade;
+    public int TotalCustomers => _stats.TotalCustomers;
+    public int InProgressOrders => _stats.InProgressOrders;
+    public string AvgCompletionText => _stats.AvgCompletionDays is { } days ? $"{days:N1} ngay" : "-";
+
+    public StatsPeriod SelectedPeriod
+    {
+        get => _selectedPeriod;
+        set
+        {
+            if (SetProperty(ref _selectedPeriod, value) && _hasLoaded)
+            {
+                _ = ExecuteSafeAsync(LoadStatsAsync, "Da cap nhat bieu do.");
+            }
+        }
+    }
+
+    public ISeries[] RevenueSeries
+    {
+        get => _revenueSeries;
+        private set => SetProperty(ref _revenueSeries, value);
+    }
+
+    public Axis[] RevenueXAxes
+    {
+        get => _revenueXAxes;
+        private set => SetProperty(ref _revenueXAxes, value);
+    }
+
+    public Axis[] RevenueYAxes
+    {
+        get => _revenueYAxes;
+        private set => SetProperty(ref _revenueYAxes, value);
+    }
+
+    public ISeries[] StatusSeries
+    {
+        get => _statusSeries;
+        private set => SetProperty(ref _statusSeries, value);
+    }
+
     private async Task LoadAsync()
     {
         if (_hasLoaded)
@@ -102,7 +163,36 @@ public sealed class SellerDashboardViewModel : RoleDashboardViewModel
 
         _hasLoaded = true;
         await RefreshRequestsAsync();
+        await LoadStatsAsync();
         await Chat.InitializeAsync();
+    }
+
+    private async Task RefreshSellerAsync()
+    {
+        await RefreshRequestsAsync();
+        await LoadStatsAsync();
+    }
+
+    private async Task LoadStatsAsync()
+    {
+        var stats = await _statsService.GetSellerDashboardAsync(CurrentUser.UserId, SelectedPeriod);
+        _stats = stats;
+        OnPropertyChanged(nameof(TotalRevenue));
+        OnPropertyChanged(nameof(ProductsMade));
+        OnPropertyChanged(nameof(TotalCustomers));
+        OnPropertyChanged(nameof(InProgressOrders));
+        OnPropertyChanged(nameof(AvgCompletionText));
+
+        RevenueSeries = ChartFactory.SellerRevenueOrders(stats.TimeSeries);
+        RevenueXAxes = ChartFactory.LabelAxis(stats.TimeSeries.Select(bucket => bucket.Label));
+        RevenueYAxes = ChartFactory.RevenueOrdersYAxes();
+        StatusSeries = ChartFactory.StatusDonut(stats.StatusBreakdown);
+
+        TopKits.Clear();
+        foreach (var kit in stats.TopKits)
+        {
+            TopKits.Add(kit);
+        }
     }
 
     /// <summary>Reload requests in response to a realtime "new request" event.</summary>
@@ -132,6 +222,7 @@ public sealed class SellerDashboardViewModel : RoleDashboardViewModel
 
             await _requestService.UpdateStatusAsync(SelectedRequest.RequestId, CurrentUser.UserId, status);
             await RefreshRequestsAsync();
+            await LoadStatsAsync();
         }, $"Da cap nhat request sang {status}.");
 
     private bool CanTransitionTo(RequestStatus status)

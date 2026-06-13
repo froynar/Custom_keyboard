@@ -4,55 +4,146 @@
              xmlns:views="clr-namespace:Custom_keyboard.Views"
              xmlns:vm="clr-namespace:Custom_keyboard.ViewModels"
              Loaded="OnLoaded">
-    <Grid Margin="24">
-        <Grid.RowDefinitions>
-            <RowDefinition Height="Auto"/>
-            <RowDefinition Height="*"/>
-            <RowDefinition Height="Auto"/>
-        </Grid.RowDefinitions>
+    <UserControl.Resources>
+        <!-- Sidebar nav buttons that light up when their screen is active -->
+        <Style x:Key="NavHome" TargetType="{x:Type Button}" BasedOn="{StaticResource SidebarButton}">
+            <Style.Triggers>
+                <DataTrigger Binding="{Binding HomeVisibility}" Value="Visible">
+                    <Setter Property="Background" Value="{StaticResource AccentBrush}"/>
+                    <Setter Property="Foreground" Value="White"/>
+                    <Setter Property="FontWeight" Value="SemiBold"/>
+                </DataTrigger>
+            </Style.Triggers>
+        </Style>
+        <Style x:Key="NavBuildList" TargetType="{x:Type Button}" BasedOn="{StaticResource SidebarButton}">
+            <Style.Triggers>
+                <DataTrigger Binding="{Binding BuildListVisibility}" Value="Visible">
+                    <Setter Property="Background" Value="{StaticResource AccentBrush}"/>
+                    <Setter Property="Foreground" Value="White"/>
+                    <Setter Property="FontWeight" Value="SemiBold"/>
+                </DataTrigger>
+            </Style.Triggers>
+        </Style>
+        <Style x:Key="NavConfigurator" TargetType="{x:Type Button}" BasedOn="{StaticResource SidebarButton}">
+            <Style.Triggers>
+                <DataTrigger Binding="{Binding ConfiguratorVisibility}" Value="Visible">
+                    <Setter Property="Background" Value="{StaticResource AccentBrush}"/>
+                    <Setter Property="Foreground" Value="White"/>
+                    <Setter Property="FontWeight" Value="SemiBold"/>
+                </DataTrigger>
+            </Style.Triggers>
+        </Style>
+        <Style x:Key="NavRequests" TargetType="{x:Type Button}" BasedOn="{StaticResource SidebarButton}">
+            <Style.Triggers>
+                <DataTrigger Binding="{Binding SentRequestsVisibility}" Value="Visible">
+                    <Setter Property="Background" Value="{StaticResource AccentBrush}"/>
+                    <Setter Property="Foreground" Value="White"/>
+                    <Setter Property="FontWeight" Value="SemiBold"/>
+                </DataTrigger>
+            </Style.Triggers>
+        </Style>
+        <Style x:Key="NavChat" TargetType="{x:Type Button}" BasedOn="{StaticResource SidebarButton}">
+            <Style.Triggers>
+                <DataTrigger Binding="{Binding ChatVisibility}" Value="Visible">
+                    <Setter Property="Background" Value="{StaticResource AccentBrush}"/>
+                    <Setter Property="Foreground" Value="White"/>
+                    <Setter Property="FontWeight" Value="SemiBold"/>
+                </DataTrigger>
+            </Style.Triggers>
+        </Style>
+    </UserControl.Resources>
 
-        <!-- Header -->
-        <DockPanel Margin="0,0,0,16">
-            <Button DockPanel.Dock="Right" Content="Dang xuat"
-                    Command="{Binding LogoutCommand}"
-                    Padding="14,8" Background="#EEF2F6" BorderBrush="#DDE2E8"/>
-            <Button DockPanel.Dock="Right" Content="Refresh"
-                    Command="{Binding RefreshAllCommand}"
-                    Margin="0,0,8,0" Padding="14,8" Background="#EEF2F6" BorderBrush="#DDE2E8"/>
-            <StackPanel>
-                <TextBlock Text="{Binding Title}" FontSize="24" FontWeight="SemiBold" Foreground="#20242B"/>
-                <TextBlock Text="{Binding Subtitle}" Margin="0,4,0,0" Foreground="#687381"/>
-            </StackPanel>
-        </DockPanel>
+    <Grid Background="{StaticResource BodyBgBrush}">
+        <Grid.ColumnDefinitions>
+            <ColumnDefinition Width="240"/>
+            <ColumnDefinition Width="*"/>
+        </Grid.ColumnDefinitions>
 
-        <Grid Grid.Row="1">
-            <Grid.ColumnDefinitions>
-                <ColumnDefinition Width="180"/>
-                <ColumnDefinition Width="16"/>
-                <ColumnDefinition Width="*"/>
-            </Grid.ColumnDefinitions>
+        <!-- Sidebar -->
+        <Border Background="{StaticResource SidebarBgBrush}" Padding="18">
+            <DockPanel LastChildFill="True">
+                <StackPanel DockPanel.Dock="Top">
+                    <StackPanel Orientation="Horizontal" Margin="0,4,0,2">
+                        <Border Width="30" Height="30" CornerRadius="6"
+                                Background="{StaticResource AccentBrush}" Margin="0,0,10,0">
+                            <TextBlock Text="&#xE765;" FontFamily="Segoe MDL2 Assets"
+                                       Foreground="White" FontSize="15"
+                                       HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                        </Border>
+                        <TextBlock Text="CK Builder"
+                                   Foreground="{StaticResource SidebarTextBrush}"
+                                   FontSize="20" FontWeight="SemiBold"
+                                   VerticalAlignment="Center"/>
+                    </StackPanel>
+                    <TextBlock Text="Buyer workspace"
+                               Foreground="#AFC1D0"
+                               FontSize="12"
+                               Margin="0,0,0,24"/>
 
-            <!-- Nav rail -->
-            <StackPanel>
-                <Button Content="Trang chu" Command="{Binding ShowHomeCommand}" Margin="0,0,0,8" Padding="12,8" HorizontalContentAlignment="Left"/>
-                <Button Content="Build cua toi" Command="{Binding ShowBuildListCommand}" Margin="0,0,0,8" Padding="12,8" HorizontalContentAlignment="Left"/>
-                <Button Content="Tao build moi" Command="{Binding NewBuildCommand}" Margin="0,0,0,8" Padding="12,8" HorizontalContentAlignment="Left"
-                        Background="#2F6FED" Foreground="White" BorderThickness="0"/>
-                <Button Content="Request da gui" Command="{Binding ShowSentRequestsCommand}" Margin="0,0,0,8" Padding="12,8" HorizontalContentAlignment="Left"/>
-                <Button Content="Chat" Command="{Binding ShowChatCommand}" Margin="0,0,0,8" Padding="12,8" HorizontalContentAlignment="Left"/>
-            </StackPanel>
+                    <Button Content="Trang chu" Command="{Binding ShowHomeCommand}" Style="{StaticResource NavHome}"/>
+                    <Button Content="Build cua toi" Command="{Binding ShowBuildListCommand}" Style="{StaticResource NavBuildList}"/>
+                    <Button Content="Tao build moi" Command="{Binding NewBuildCommand}" Style="{StaticResource NavConfigurator}"/>
+                    <Button Content="Request da gui" Command="{Binding ShowSentRequestsCommand}" Style="{StaticResource NavRequests}"/>
+                    <Button Content="Chat" Command="{Binding ShowChatCommand}" Style="{StaticResource NavChat}"/>
+                </StackPanel>
 
-            <!-- Content -->
-            <Grid Grid.Column="2">
-                <!-- Home -->
-                <Border Visibility="{Binding HomeVisibility}" Background="White" BorderBrush="#DDE2E8" BorderThickness="1" Padding="18">
+                <Border DockPanel.Dock="Bottom"
+                        Background="{StaticResource SidebarBgAltBrush}"
+                        CornerRadius="4"
+                        Padding="12">
                     <StackPanel>
-                        <TextBlock Text="{Binding UserMenuHeader}" FontSize="16" FontWeight="SemiBold"/>
-                        <TextBlock Text="Quy trinh buyer" FontWeight="SemiBold" Margin="0,14,0,8"/>
+                        <TextBlock Text="{Binding UserMenuHeader}"
+                                   Foreground="{StaticResource SidebarTextBrush}"
+                                   FontWeight="SemiBold"
+                                   TextWrapping="Wrap"/>
+                        <StackPanel Orientation="Horizontal" Margin="0,5,0,0">
+                            <Ellipse Width="8" Height="8" Fill="{StaticResource AccentBrush}" VerticalAlignment="Center" Margin="0,0,6,0"/>
+                            <TextBlock Text="Online"
+                                       Foreground="{StaticResource AccentBrush}"
+                                       FontSize="12"/>
+                        </StackPanel>
+                    </StackPanel>
+                </Border>
+            </DockPanel>
+        </Border>
+
+        <!-- Content -->
+        <Grid Grid.Column="1" Margin="24">
+            <Grid.RowDefinitions>
+                <RowDefinition Height="Auto"/>
+                <RowDefinition Height="*"/>
+                <RowDefinition Height="Auto"/>
+            </Grid.RowDefinitions>
+
+            <!-- Topbar -->
+            <DockPanel Margin="0,0,0,16">
+                <Button DockPanel.Dock="Right" Content="Dang xuat"
+                        Command="{Binding LogoutCommand}"
+                        Style="{StaticResource SecondaryButton}"/>
+                <Button DockPanel.Dock="Right" Content="Refresh"
+                        Command="{Binding RefreshAllCommand}"
+                        Style="{StaticResource SecondaryButton}" Margin="0,0,8,0"/>
+                <StackPanel>
+                    <TextBlock Text="{Binding Title}" FontSize="24" FontWeight="SemiBold" Foreground="{StaticResource TextPrimaryBrush}"/>
+                    <TextBlock Text="{Binding Subtitle}" Margin="0,4,0,0" Foreground="{StaticResource TextMutedBrush}"/>
+                </StackPanel>
+            </DockPanel>
+
+            <Grid Grid.Row="1">
+                <!-- Home -->
+                <Border Visibility="{Binding HomeVisibility}" Style="{StaticResource DashboardCard}" VerticalAlignment="Top">
+                    <StackPanel>
+                        <TextBlock Text="{Binding UserMenuHeader}" Style="{StaticResource SectionTitle}"/>
+                        <TextBlock Text="Quy trinh buyer" FontWeight="SemiBold" Margin="0,4,0,12"/>
                         <ItemsControl ItemsSource="{Binding Tasks}">
                             <ItemsControl.ItemTemplate>
                                 <DataTemplate>
-                                    <TextBlock Text="{Binding}" Margin="0,0,0,8"/>
+                                    <StackPanel Orientation="Horizontal" Margin="0,0,0,10">
+                                        <Border Width="6" Height="6" CornerRadius="3"
+                                                Background="{StaticResource AccentBrush}"
+                                                VerticalAlignment="Center" Margin="0,0,10,0"/>
+                                        <TextBlock Text="{Binding}" TextWrapping="Wrap"/>
+                                    </StackPanel>
                                 </DataTemplate>
                             </ItemsControl.ItemTemplate>
                         </ItemsControl>
@@ -60,100 +151,117 @@
                 </Border>
 
                 <!-- Build list -->
-                <Border Visibility="{Binding BuildListVisibility}" Background="White" BorderBrush="#DDE2E8" BorderThickness="1" Padding="14">
+                <Border Visibility="{Binding BuildListVisibility}" Style="{StaticResource DashboardCard}">
                     <Grid>
                         <Grid.RowDefinitions>
                             <RowDefinition Height="Auto"/>
                             <RowDefinition Height="*"/>
                             <RowDefinition Height="Auto"/>
                         </Grid.RowDefinitions>
-                        <TextBlock Text="Build cua toi" FontWeight="SemiBold" FontSize="15" Margin="0,0,0,10"/>
-                        <ListBox Grid.Row="1" ItemsSource="{Binding Builds}" SelectedItem="{Binding SelectedBuild}" BorderThickness="0">
-                            <ListBox.ItemTemplate>
-                                <DataTemplate>
-                                    <StackPanel Margin="0,4">
-                                        <TextBlock Text="{Binding Name}" FontWeight="SemiBold"/>
-                                        <TextBlock FontSize="12" Foreground="#687381">
-                                            <Run Text="Kit:"/>
-                                            <Run Text="{Binding KitId}"/>
-                                            <Run Text=" | "/>
-                                            <Run Text="{Binding Status}"/>
-                                            <Run Text=" | "/>
-                                            <Run Text="{Binding TotalCostSnapshot, StringFormat={}{0:F2} USD}"/>
-                                        </TextBlock>
-                                    </StackPanel>
-                                </DataTemplate>
-                            </ListBox.ItemTemplate>
-                        </ListBox>
-                        <WrapPanel Grid.Row="2" Margin="0,10,0,0">
-                            <Button Content="Mo trong configurator" Command="{Binding OpenBuildCommand}" Margin="0,0,8,0" Padding="12,6"
-                                    Background="#2F6FED" Foreground="White" BorderThickness="0"/>
-                            <Button Content="Archive" Command="{Binding ArchiveBuildCommand}" Padding="12,6"
-                                    Background="#EEF2F6" BorderBrush="#DDE2E8"/>
+                        <DockPanel Margin="0,0,0,10">
+                            <Button DockPanel.Dock="Right" Content="+ Tao build moi"
+                                    Command="{Binding NewBuildCommand}"
+                                    Style="{StaticResource PrimaryButton}"/>
+                            <TextBlock Text="Build cua toi" Style="{StaticResource SectionTitle}" Margin="0" VerticalAlignment="Center"/>
+                        </DockPanel>
+
+                        <DataGrid Grid.Row="1"
+                                  ItemsSource="{Binding Builds}"
+                                  SelectedItem="{Binding SelectedBuild}"
+                                  AlternationCount="2">
+                            <DataGrid.Columns>
+                                <DataGridTextColumn Header="TEN BUILD" Binding="{Binding Name}" Width="*"/>
+                                <DataGridTextColumn Header="KIT" Binding="{Binding KitId}" Width="120"/>
+                                <DataGridTemplateColumn Header="TRANG THAI" Width="130">
+                                    <DataGridTemplateColumn.CellTemplate>
+                                        <DataTemplate>
+                                            <Border Style="{StaticResource StatusBadge}">
+                                                <TextBlock Text="{Binding Status, Converter={StaticResource StatusToTextConverter}}"
+                                                           Style="{StaticResource StatusBadgeText}"/>
+                                            </Border>
+                                        </DataTemplate>
+                                    </DataGridTemplateColumn.CellTemplate>
+                                </DataGridTemplateColumn>
+                                <DataGridTextColumn Header="TONG (USD)" Binding="{Binding TotalCostSnapshot, StringFormat=N2}" Width="120">
+                                    <DataGridTextColumn.ElementStyle>
+                                        <Style TargetType="{x:Type TextBlock}">
+                                            <Setter Property="HorizontalAlignment" Value="Right"/>
+                                            <Setter Property="FontWeight" Value="SemiBold"/>
+                                        </Style>
+                                    </DataGridTextColumn.ElementStyle>
+                                </DataGridTextColumn>
+                            </DataGrid.Columns>
+                        </DataGrid>
+
+                        <WrapPanel Grid.Row="2" Margin="0,12,0,0">
+                            <Button Content="Mo trong configurator" Command="{Binding OpenBuildCommand}"
+                                    Style="{StaticResource PrimaryButton}" Margin="0,0,8,0"/>
+                            <Button Content="Archive" Command="{Binding ArchiveBuildCommand}"
+                                    Style="{StaticResource SecondaryButton}"/>
                         </WrapPanel>
                     </Grid>
                 </Border>
 
                 <!-- Configurator -->
-                <Border Visibility="{Binding ConfiguratorVisibility}" Background="White" BorderBrush="#DDE2E8" BorderThickness="1" Padding="14">
+                <Border Visibility="{Binding ConfiguratorVisibility}" Style="{StaticResource DashboardCard}">
                     <ScrollViewer VerticalScrollBarVisibility="Auto">
                         <Grid>
                             <Grid.ColumnDefinitions>
                                 <ColumnDefinition Width="*"/>
-                                <ColumnDefinition Width="16"/>
+                                <ColumnDefinition Width="20"/>
                                 <ColumnDefinition Width="320"/>
                             </Grid.ColumnDefinitions>
 
                             <!-- Left: selections -->
                             <StackPanel>
-                                <TextBlock Text="Cau hinh build" FontWeight="SemiBold" FontSize="15" Margin="0,0,0,10"/>
+                                <TextBlock Text="Cau hinh build" Style="{StaticResource SectionTitle}"/>
 
-                                <TextBlock Text="Ten build"/>
-                                <TextBox Text="{Binding BuildName, UpdateSourceTrigger=PropertyChanged}" Margin="0,2,0,10" Padding="6"/>
+                                <TextBlock Text="Ten build" Style="{StaticResource FieldLabel}"/>
+                                <TextBox Text="{Binding BuildName, UpdateSourceTrigger=PropertyChanged}" Margin="0,0,0,12"/>
 
-                                <TextBlock Text="Ghi chu"/>
-                                <TextBox Text="{Binding BuildNotes, UpdateSourceTrigger=PropertyChanged}" Margin="0,2,0,10" Padding="6"
+                                <TextBlock Text="Ghi chu" Style="{StaticResource FieldLabel}"/>
+                                <TextBox Text="{Binding BuildNotes, UpdateSourceTrigger=PropertyChanged}" Margin="0,0,0,12"
                                          TextWrapping="Wrap" AcceptsReturn="True" MinHeight="48"/>
 
-                                <TextBlock Text="Kit"/>
-                                <ComboBox ItemsSource="{Binding Kits}" SelectedItem="{Binding SelectedKit}" DisplayMemberPath="KitName" Margin="0,2,0,4"/>
-                                <TextBlock Text="{Binding KitSummary}" Foreground="#687381" FontSize="12" TextWrapping="Wrap" Margin="0,0,0,10"/>
+                                <TextBlock Text="Kit" Style="{StaticResource FieldLabel}"/>
+                                <ComboBox ItemsSource="{Binding Kits}" SelectedItem="{Binding SelectedKit}" DisplayMemberPath="KitName" Margin="0,0,0,4"/>
+                                <TextBlock Text="{Binding KitSummary}" Foreground="{StaticResource TextMutedBrush}" FontSize="12" TextWrapping="Wrap" Margin="0,0,0,12"/>
 
-                                <TextBlock Text="Switch"/>
-                                <ComboBox ItemsSource="{Binding Switches}" SelectedItem="{Binding SelectedSwitch}" DisplayMemberPath="SwitchName" Margin="0,2,0,4"/>
-                                <DockPanel Margin="0,0,0,10">
+                                <TextBlock Text="Switch" Style="{StaticResource FieldLabel}"/>
+                                <ComboBox ItemsSource="{Binding Switches}" SelectedItem="{Binding SelectedSwitch}" DisplayMemberPath="SwitchName" Margin="0,0,0,8"/>
+                                <DockPanel Margin="0,0,0,12">
                                     <Button DockPanel.Dock="Right" Content="Dung so luong kit"
                                             Command="{Binding ApplyRequiredSwitchQuantityCommand}"
-                                            Margin="8,0,0,0" Padding="10,4" Background="#EEF2F6" BorderBrush="#DDE2E8"/>
+                                            Style="{StaticResource SecondaryButton}" Margin="8,0,0,0" VerticalAlignment="Bottom"/>
                                     <StackPanel>
-                                        <TextBlock Text="So luong switch" FontSize="12" Foreground="#687381"/>
-                                        <TextBox Text="{Binding SwitchQuantity, UpdateSourceTrigger=PropertyChanged}" Padding="6"/>
+                                        <TextBlock Text="So luong switch" Style="{StaticResource FieldLabel}"/>
+                                        <TextBox Text="{Binding SwitchQuantity, UpdateSourceTrigger=PropertyChanged}"/>
                                     </StackPanel>
                                 </DockPanel>
 
-                                <TextBlock Text="Keycap"/>
-                                <ComboBox ItemsSource="{Binding Keycaps}" SelectedItem="{Binding SelectedKeycap}" DisplayMemberPath="KeycapName" Margin="0,2,0,10"/>
+                                <TextBlock Text="Keycap" Style="{StaticResource FieldLabel}"/>
+                                <ComboBox ItemsSource="{Binding Keycaps}" SelectedItem="{Binding SelectedKeycap}" DisplayMemberPath="KeycapName" Margin="0,0,0,12"/>
 
-                                <TextBlock Text="Stabilizer"/>
-                                <ComboBox ItemsSource="{Binding Stabilizers}" SelectedItem="{Binding SelectedStabilizer}" DisplayMemberPath="StabilizerName" Margin="0,2,0,10"/>
+                                <TextBlock Text="Stabilizer" Style="{StaticResource FieldLabel}"/>
+                                <ComboBox ItemsSource="{Binding Stabilizers}" SelectedItem="{Binding SelectedStabilizer}" DisplayMemberPath="StabilizerName" Margin="0,0,0,12"/>
 
-                                <TextBlock Text="Accessory" Margin="0,0,0,4"/>
-                                <ItemsControl ItemsSource="{Binding Accessories}" Margin="0,0,0,10">
+                                <TextBlock Text="Accessory" Style="{StaticResource FieldLabel}"/>
+                                <ItemsControl ItemsSource="{Binding Accessories}" Margin="0,0,0,12">
                                     <ItemsControl.ItemTemplate>
                                         <DataTemplate>
-                                            <CheckBox IsChecked="{Binding IsSelected}" Content="{Binding Label}" Margin="0,2"/>
+                                            <CheckBox IsChecked="{Binding IsSelected}" Content="{Binding Label}" Margin="0,3"/>
                                         </DataTemplate>
                                     </ItemsControl.ItemTemplate>
                                 </ItemsControl>
 
-                                <DockPanel Margin="0,0,0,4">
+                                <DockPanel Margin="0,0,0,6">
                                     <Button DockPanel.Dock="Right" Content="Xoa mod" Command="{Binding RemoveModCommand}"
-                                            Margin="8,0,0,0" Padding="10,4" Background="#EEF2F6" BorderBrush="#DDE2E8"/>
+                                            Style="{StaticResource SecondaryButton}" Margin="8,0,0,0"/>
                                     <Button DockPanel.Dock="Right" Content="Them mod" Command="{Binding AddModCommand}"
-                                            Margin="8,0,0,0" Padding="10,4" Background="#EEF2F6" BorderBrush="#DDE2E8"/>
-                                    <TextBlock Text="Mod" VerticalAlignment="Center"/>
+                                            Style="{StaticResource SecondaryButton}" Margin="8,0,0,0"/>
+                                    <TextBlock Text="Mod" Style="{StaticResource FieldLabel}" Margin="0" VerticalAlignment="Center"/>
                                 </DockPanel>
-                                <ListBox ItemsSource="{Binding Mods}" SelectedItem="{Binding SelectedMod}" BorderThickness="1" BorderBrush="#DDE2E8" MaxHeight="180">
+                                <ListBox ItemsSource="{Binding Mods}" SelectedItem="{Binding SelectedMod}" MaxHeight="180">
                                     <ListBox.ItemTemplate>
                                         <DataTemplate>
                                             <Grid Margin="0,2">
@@ -166,99 +274,145 @@
                                                           SelectedItem="{Binding ModType}" Margin="0,0,6,0"/>
                                                 <ComboBox Grid.Column="1" ItemsSource="{x:Static vm:BuildModEditorViewModel.TargetComponents}"
                                                           SelectedItem="{Binding TargetComponent}" Margin="0,0,6,0"/>
-                                                <TextBox Grid.Column="2" Text="{Binding Notes, UpdateSourceTrigger=PropertyChanged}" Padding="4"/>
+                                                <TextBox Grid.Column="2" Text="{Binding Notes, UpdateSourceTrigger=PropertyChanged}"/>
                                             </Grid>
                                         </DataTemplate>
                                     </ListBox.ItemTemplate>
                                 </ListBox>
                             </StackPanel>
 
-                            <!-- Right: validation + actions -->
+                            <!-- Right: total + validation + actions -->
                             <StackPanel Grid.Column="2">
-                                <Border Background="#F8FAFC" BorderBrush="#DDE2E8" BorderThickness="1" Padding="12" Margin="0,0,0,12">
+                                <Border Background="{StaticResource AccentBrush}" CornerRadius="6" Padding="14" Margin="0,0,0,14">
                                     <StackPanel>
-                                        <TextBlock Text="Tong gia (snapshot)" Foreground="#687381" FontSize="12"/>
-                                        <TextBlock Text="{Binding TotalPreview, StringFormat={}{0:F2} USD}" FontSize="22" FontWeight="SemiBold"/>
+                                        <TextBlock Text="TONG GIA (SNAPSHOT)" Foreground="#D6F5EE" FontSize="11" FontWeight="SemiBold"/>
+                                        <TextBlock Text="{Binding TotalPreview, StringFormat={}{0:N2} USD}" Foreground="White" FontSize="26" FontWeight="SemiBold" Margin="0,2,0,0"/>
                                     </StackPanel>
                                 </Border>
 
-                                <TextBlock Text="Loi" FontWeight="SemiBold" Foreground="#E5484D"/>
-                                <ItemsControl ItemsSource="{Binding Errors}" Margin="0,2,0,10">
+                                <ItemsControl ItemsSource="{Binding Errors}" Margin="0,0,0,8">
                                     <ItemsControl.ItemTemplate>
                                         <DataTemplate>
-                                            <TextBlock Text="{Binding}" Foreground="#E5484D" TextWrapping="Wrap" Margin="0,0,0,3"/>
+                                            <Border Background="#FDECEA" CornerRadius="4" Padding="8,5" Margin="0,0,0,4">
+                                                <TextBlock Text="{Binding}" Foreground="{StaticResource DangerBrush}" TextWrapping="Wrap" FontSize="12"/>
+                                            </Border>
                                         </DataTemplate>
                                     </ItemsControl.ItemTemplate>
                                 </ItemsControl>
 
-                                <TextBlock Text="Canh bao" FontWeight="SemiBold" Foreground="#B7791F"/>
-                                <ItemsControl ItemsSource="{Binding Warnings}" Margin="0,2,0,10">
+                                <ItemsControl ItemsSource="{Binding Warnings}" Margin="0,0,0,8">
                                     <ItemsControl.ItemTemplate>
                                         <DataTemplate>
-                                            <TextBlock Text="{Binding}" Foreground="#B7791F" TextWrapping="Wrap" Margin="0,0,0,3"/>
+                                            <Border Background="#FEF5E7" CornerRadius="4" Padding="8,5" Margin="0,0,0,4">
+                                                <TextBlock Text="{Binding}" Foreground="{StaticResource WarningBrush}" TextWrapping="Wrap" FontSize="12"/>
+                                            </Border>
                                         </DataTemplate>
                                     </ItemsControl.ItemTemplate>
                                 </ItemsControl>
 
-                                <TextBlock Text="Thong tin" FontWeight="SemiBold" Foreground="#687381"/>
-                                <ItemsControl ItemsSource="{Binding Infos}" Margin="0,2,0,12">
+                                <ItemsControl ItemsSource="{Binding Infos}" Margin="0,0,0,12">
                                     <ItemsControl.ItemTemplate>
                                         <DataTemplate>
-                                            <TextBlock Text="{Binding}" Foreground="#687381" TextWrapping="Wrap" Margin="0,0,0,3"/>
+                                            <TextBlock Text="{Binding}" Foreground="{StaticResource TextMutedBrush}" TextWrapping="Wrap" FontSize="12" Margin="0,0,0,3"/>
                                         </DataTemplate>
                                     </ItemsControl.ItemTemplate>
                                 </ItemsControl>
 
-                                <Button Content="Luu build" Command="{Binding SaveBuildCommand}" Padding="12,8" Margin="0,0,0,16"
-                                        Background="#1F9D5B" Foreground="White" BorderThickness="0"/>
+                                <Button Content="Luu build" Command="{Binding SaveBuildCommand}"
+                                        Style="{StaticResource SuccessButton}" Margin="0,0,0,18"/>
 
-                                <TextBlock Text="Gui request cho seller" FontWeight="SemiBold" Margin="0,0,0,6"/>
-                                <ComboBox ItemsSource="{Binding AvailableSellers}" SelectedItem="{Binding SelectedSeller}" DisplayMemberPath="ShopName" Margin="0,0,0,6"/>
-                                <TextBlock Text="{Binding SellerEmptyMessage}" Foreground="#E5484D" FontSize="12" TextWrapping="Wrap"/>
-                                <TextBox Text="{Binding RequestNote, UpdateSourceTrigger=PropertyChanged}" Padding="6" Margin="0,4,0,6"
-                                         TextWrapping="Wrap" AcceptsReturn="True" MinHeight="44"/>
-                                <Button Content="Gui request" Command="{Binding SendRequestCommand}" Padding="12,8"
-                                        Background="#2F6FED" Foreground="White" BorderThickness="0"/>
+                                <Border Background="#F8FAFC" BorderBrush="{StaticResource BorderBrush}" BorderThickness="1" CornerRadius="6" Padding="14">
+                                    <StackPanel>
+                                        <TextBlock Text="Gui request cho seller" FontWeight="SemiBold" Margin="0,0,0,8"/>
+                                        <ComboBox ItemsSource="{Binding AvailableSellers}" SelectedItem="{Binding SelectedSeller}" DisplayMemberPath="ShopName" Margin="0,0,0,6"/>
+                                        <TextBlock Text="{Binding SellerEmptyMessage}" Foreground="{StaticResource DangerBrush}" FontSize="12" TextWrapping="Wrap"/>
+
+                                        <!-- Public seller stats (no revenue) -->
+                                        <Border Visibility="{Binding SellerStatsVisibility}"
+                                                Background="White" BorderBrush="{StaticResource BorderBrush}" BorderThickness="1"
+                                                CornerRadius="6" Padding="10" Margin="0,2,0,8">
+                                            <StackPanel>
+                                                <DockPanel Margin="0,0,0,8">
+                                                    <Border DockPanel.Dock="Right" Style="{StaticResource BadgeChrome}"
+                                                            Background="{Binding SellerStats.IsVerified, Converter={StaticResource BoolToBadgeBrush}}">
+                                                        <TextBlock Style="{StaticResource StatusBadgeText}"
+                                                                   Text="{Binding SellerStats.IsVerified, Converter={StaticResource BoolToLabel}, ConverterParameter='Verified|Chua verify'}"/>
+                                                    </Border>
+                                                    <TextBlock Text="Uy tin seller" FontWeight="SemiBold" VerticalAlignment="Center"/>
+                                                </DockPanel>
+                                                <DockPanel Margin="0,0,0,3">
+                                                    <TextBlock DockPanel.Dock="Right" Text="{Binding SellerStats.ProductsMade}" FontWeight="SemiBold"/>
+                                                    <TextBlock Text="San pham da lam" Foreground="{StaticResource TextMutedBrush}" FontSize="12"/>
+                                                </DockPanel>
+                                                <DockPanel Margin="0,0,0,3">
+                                                    <TextBlock DockPanel.Dock="Right" Text="{Binding SellerStats.TotalOrders}" FontWeight="SemiBold"/>
+                                                    <TextBlock Text="Tong don nhan" Foreground="{StaticResource TextMutedBrush}" FontSize="12"/>
+                                                </DockPanel>
+                                                <DockPanel Margin="0,0,0,3">
+                                                    <TextBlock DockPanel.Dock="Right" Text="{Binding SellerStats.Customers}" FontWeight="SemiBold"/>
+                                                    <TextBlock Text="Khach da phuc vu" Foreground="{StaticResource TextMutedBrush}" FontSize="12"/>
+                                                </DockPanel>
+                                                <DockPanel>
+                                                    <TextBlock DockPanel.Dock="Right" FontWeight="SemiBold"
+                                                               Text="{Binding SellerStats.VerifiedAt, StringFormat=yyyy-MM-dd, TargetNullValue=-}"/>
+                                                    <TextBlock Text="Thanh vien tu" Foreground="{StaticResource TextMutedBrush}" FontSize="12"/>
+                                                </DockPanel>
+                                            </StackPanel>
+                                        </Border>
+                                        <TextBox Text="{Binding RequestNote, UpdateSourceTrigger=PropertyChanged}" Margin="0,6,0,8"
+                                                 TextWrapping="Wrap" AcceptsReturn="True" MinHeight="44"/>
+                                        <Button Content="Gui request" Command="{Binding SendRequestCommand}"
+                                                Style="{StaticResource PrimaryButton}" HorizontalAlignment="Stretch"/>
+                                    </StackPanel>
+                                </Border>
                             </StackPanel>
                         </Grid>
                     </ScrollViewer>
                 </Border>
 
                 <!-- Sent requests -->
-                <Border Visibility="{Binding SentRequestsVisibility}" Background="White" BorderBrush="#DDE2E8" BorderThickness="1" Padding="14">
+                <Border Visibility="{Binding SentRequestsVisibility}" Style="{StaticResource DashboardCard}">
                     <Grid>
                         <Grid.RowDefinitions>
                             <RowDefinition Height="Auto"/>
                             <RowDefinition Height="*"/>
                         </Grid.RowDefinitions>
-                        <TextBlock Text="Request da gui" FontWeight="SemiBold" FontSize="15" Margin="0,0,0,10"/>
-                        <ListBox Grid.Row="1" ItemsSource="{Binding Requests}" BorderThickness="0">
-                            <ListBox.ItemTemplate>
-                                <DataTemplate>
-                                    <StackPanel Margin="0,4">
-                                        <TextBlock Text="{Binding RequestId}" FontWeight="SemiBold"/>
-                                        <TextBlock FontSize="12" Foreground="#687381">
-                                            <Run Text="Build:"/>
-                                            <Run Text="{Binding BuildId}"/>
-                                            <Run Text=" | seller #"/>
-                                            <Run Text="{Binding SellerUserId}"/>
-                                            <Run Text=" | "/>
-                                            <Run Text="{Binding Status}"/>
-                                        </TextBlock>
-                                    </StackPanel>
-                                </DataTemplate>
-                            </ListBox.ItemTemplate>
-                        </ListBox>
+                        <TextBlock Text="Request da gui" Style="{StaticResource SectionTitle}"/>
+                        <DataGrid Grid.Row="1"
+                                  ItemsSource="{Binding Requests}"
+                                  AlternationCount="2">
+                            <DataGrid.Columns>
+                                <DataGridTextColumn Header="REQUEST" Binding="{Binding RequestId}" Width="*"/>
+                                <DataGridTextColumn Header="BUILD" Binding="{Binding BuildId}" Width="*"/>
+                                <DataGridTextColumn Header="SELLER" Binding="{Binding SellerUserId}" Width="90"/>
+                                <DataGridTemplateColumn Header="TRANG THAI" Width="130">
+                                    <DataGridTemplateColumn.CellTemplate>
+                                        <DataTemplate>
+                                            <Border Style="{StaticResource StatusBadge}">
+                                                <TextBlock Text="{Binding Status, Converter={StaticResource StatusToTextConverter}}"
+                                                           Style="{StaticResource StatusBadgeText}"/>
+                                            </Border>
+                                        </DataTemplate>
+                                    </DataGridTemplateColumn.CellTemplate>
+                                </DataGridTemplateColumn>
+                            </DataGrid.Columns>
+                        </DataGrid>
                     </Grid>
                 </Border>
 
                 <!-- Chat -->
-                <Border Visibility="{Binding ChatVisibility}" Background="#F6F7F9">
+                <Border Visibility="{Binding ChatVisibility}" Background="{StaticResource BodyBgBrush}">
                     <views:ChatView DataContext="{Binding Chat}"/>
                 </Border>
             </Grid>
-        </Grid>
 
-        <TextBlock Grid.Row="2" Text="{Binding StatusMessage}" Margin="0,12,0,0" Foreground="#687381"/>
+            <!-- Status bar -->
+            <Border Grid.Row="2" Margin="0,12,0,0" Background="#EEF2F6" CornerRadius="4" Padding="12,8">
+                <StackPanel Orientation="Horizontal">
+                    <Border Width="4" Background="{StaticResource AccentBrush}" CornerRadius="2" Margin="0,0,10,0"/>
+                    <TextBlock Text="{Binding StatusMessage}" Foreground="{StaticResource TextMutedBrush}" VerticalAlignment="Center"/>
+                </StackPanel>
+            </Border>
+        </Grid>
     </Grid>
 </UserControl>

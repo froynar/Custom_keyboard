@@ -8,6 +8,7 @@ using Custom_keyboard.Models.Builds;
 using Custom_keyboard.Models.Components;
 using Custom_keyboard.Models.Enums;
 using Custom_keyboard.Services;
+using Custom_keyboard.Services.Stats;
 
 namespace Custom_keyboard.ViewModels;
 
@@ -18,6 +19,8 @@ public sealed class BuyerDashboardViewModel : RoleDashboardViewModel
     private readonly IComponentCatalogService _catalogService;
     private readonly IBuildService _buildService;
     private readonly IRequestService _requestService;
+    private readonly IStatsService _statsService;
+    private SellerPublicStats? _sellerStats;
 
     private bool _hasLoaded;
     private bool _isBusy;
@@ -48,6 +51,7 @@ public sealed class BuyerDashboardViewModel : RoleDashboardViewModel
         IComponentCatalogService catalogService,
         IBuildService buildService,
         IRequestService requestService,
+        IStatsService statsService,
         ChatViewModel chat)
         : base(
             currentUser,
@@ -64,6 +68,7 @@ public sealed class BuyerDashboardViewModel : RoleDashboardViewModel
         _catalogService = catalogService;
         _buildService = buildService;
         _requestService = requestService;
+        _statsService = statsService;
         Chat = chat;
 
         LoadCommand = new AsyncRelayCommand(_ => ExecuteSafeAsync(LoadAsync));
@@ -286,9 +291,26 @@ public sealed class BuyerDashboardViewModel : RoleDashboardViewModel
             if (SetProperty(ref _selectedSeller, value))
             {
                 RaiseCommandStatesChanged();
+                _ = LoadSellerStatsAsync(value);
             }
         }
     }
+
+    // Public (non-financial) stats of the currently selected seller, shown as a small card
+    // to help the buyer compare sellers before sending a request.
+    public SellerPublicStats? SellerStats
+    {
+        get => _sellerStats;
+        private set
+        {
+            if (SetProperty(ref _sellerStats, value))
+            {
+                OnPropertyChanged(nameof(SellerStatsVisibility));
+            }
+        }
+    }
+
+    public Visibility SellerStatsVisibility => SellerStats is not null ? Visibility.Visible : Visibility.Collapsed;
 
     public BuildModEditorViewModel? SelectedMod
     {
@@ -398,6 +420,25 @@ public sealed class BuyerDashboardViewModel : RoleDashboardViewModel
         SelectedSeller = AvailableSellers.FirstOrDefault(item => item.UserId == previousSellerId)
             ?? AvailableSellers.FirstOrDefault();
         OnPropertyChanged(nameof(SellerEmptyMessage));
+    }
+
+    private async Task LoadSellerStatsAsync(SellerProfile? seller)
+    {
+        if (seller is null)
+        {
+            SellerStats = null;
+            return;
+        }
+
+        try
+        {
+            SellerStats = await _statsService.GetSellerPublicAsync(seller.UserId);
+        }
+        catch (Exception ex)
+        {
+            AppLog.Error("BuyerDashboard", ex);
+            SellerStats = null;
+        }
     }
 
     private async Task SaveBuildAsync()

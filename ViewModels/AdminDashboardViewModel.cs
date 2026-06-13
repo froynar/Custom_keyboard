@@ -1,6 +1,7 @@
 using System.Collections.ObjectModel;
 using System.Windows;
 using System.Windows.Input;
+using Custom_keyboard.Analytics;
 using Custom_keyboard.Commands;
 using Custom_keyboard.Diagnostics;
 using Custom_keyboard.Models.Accounts;
@@ -8,6 +9,9 @@ using Custom_keyboard.Models.Admin;
 using Custom_keyboard.Models.Components;
 using Custom_keyboard.Models.Enums;
 using Custom_keyboard.Services;
+using Custom_keyboard.Services.Stats;
+using LiveChartsCore;
+using LiveChartsCore.SkiaSharpView;
 
 namespace Custom_keyboard.ViewModels;
 
@@ -16,10 +20,19 @@ namespace Custom_keyboard.ViewModels;
 public sealed class AdminDashboardViewModel : RoleDashboardViewModel
 {
     private readonly IAdminService _adminService;
+    private readonly IStatsService _statsService;
     private bool _hasLoaded;
     private bool _isBusy;
     private string _statusMessage = "San sang.";
     private AdminDashboardSummary _summary = new();
+    private AdminOverviewStats _overview = new();
+    private StatsPeriod _selectedPeriod = StatsPeriod.Monthly;
+    private ISeries[] _statusSeries = [];
+    private ISeries[] _revenueSeries = [];
+    private Axis[] _revenueXAxes = [];
+    private Axis[] _revenueYAxes = [];
+    private ISeries[] _topSellersSeries = [];
+    private Axis[] _topSellersXAxes = [];
     private User? _selectedUser;
     private UserRole _selectedUserRole = UserRole.Buyer;
     private AdminSellerProfileRow? _selectedSellerProfile;
@@ -39,6 +52,7 @@ public sealed class AdminDashboardViewModel : RoleDashboardViewModel
         User currentUser,
         ICommand logoutCommand,
         IAdminService adminService,
+        IStatsService statsService,
         ChatViewModel chat)
         : base(
             currentUser,
@@ -53,6 +67,7 @@ public sealed class AdminDashboardViewModel : RoleDashboardViewModel
             ])
     {
         _adminService = adminService;
+        _statsService = statsService;
         Chat = chat;
 
         AvailableRoles = Enum.GetValues<UserRole>();
@@ -92,6 +107,9 @@ public sealed class AdminDashboardViewModel : RoleDashboardViewModel
     public ObservableCollection<Layout> Layouts { get; } = [];
     public ObservableCollection<AdminComponentRecord> Components { get; } = [];
     public ObservableCollection<AuditLogEntry> AuditLogs { get; } = [];
+    public ObservableCollection<SellerRank> TopSellers { get; } = [];
+
+    public StatsPeriod[] Periods { get; } = Enum.GetValues<StatsPeriod>();
 
     public ICommand LoadCommand { get; }
     public ICommand RefreshAllCommand { get; }
@@ -131,6 +149,59 @@ public sealed class AdminDashboardViewModel : RoleDashboardViewModel
     {
         get => _summary;
         private set => SetProperty(ref _summary, value);
+    }
+
+    // --- Analytics overview (read-only, whole platform) ---
+
+    public decimal TotalRevenue => _overview.TotalRevenue;
+    public int CompletedOrders => _overview.CompletedOrders;
+
+    public StatsPeriod SelectedPeriod
+    {
+        get => _selectedPeriod;
+        set
+        {
+            if (SetProperty(ref _selectedPeriod, value) && _hasLoaded)
+            {
+                _ = ExecuteSafeAsync(LoadOverviewAsync, "Da cap nhat bieu do.");
+            }
+        }
+    }
+
+    public ISeries[] StatusSeries
+    {
+        get => _statusSeries;
+        private set => SetProperty(ref _statusSeries, value);
+    }
+
+    public ISeries[] RevenueSeries
+    {
+        get => _revenueSeries;
+        private set => SetProperty(ref _revenueSeries, value);
+    }
+
+    public Axis[] RevenueXAxes
+    {
+        get => _revenueXAxes;
+        private set => SetProperty(ref _revenueXAxes, value);
+    }
+
+    public Axis[] RevenueYAxes
+    {
+        get => _revenueYAxes;
+        private set => SetProperty(ref _revenueYAxes, value);
+    }
+
+    public ISeries[] TopSellersSeries
+    {
+        get => _topSellersSeries;
+        private set => SetProperty(ref _topSellersSeries, value);
+    }
+
+    public Axis[] TopSellersXAxes
+    {
+        get => _topSellersXAxes;
+        private set => SetProperty(ref _topSellersXAxes, value);
     }
 
     public User? SelectedUser
@@ -283,11 +354,33 @@ public sealed class AdminDashboardViewModel : RoleDashboardViewModel
     private async Task RefreshAllAsync()
     {
         Summary = await _adminService.GetSummaryAsync();
+        await LoadOverviewAsync();
         await RefreshUsersAsync();
         await RefreshSellersAsync();
         await RefreshCatalogAsync();
         await RefreshComponentsAsync();
         await RefreshAuditAsync();
+    }
+
+    private async Task LoadOverviewAsync()
+    {
+        var overview = await _statsService.GetAdminOverviewAsync(SelectedPeriod);
+        _overview = overview;
+        OnPropertyChanged(nameof(TotalRevenue));
+        OnPropertyChanged(nameof(CompletedOrders));
+
+        StatusSeries = ChartFactory.StatusDonut(overview.StatusBreakdown);
+        RevenueSeries = ChartFactory.RevenueLine(overview.RevenueSeries);
+        RevenueXAxes = ChartFactory.LabelAxis(overview.RevenueSeries.Select(bucket => bucket.Label));
+        RevenueYAxes = ChartFactory.RevenueYAxis();
+        TopSellersSeries = ChartFactory.TopSellersColumns(overview.TopSellers);
+        TopSellersXAxes = ChartFactory.LabelAxis(overview.TopSellers.Select(seller => seller.ShopName));
+
+        TopSellers.Clear();
+        foreach (var seller in overview.TopSellers)
+        {
+            TopSellers.Add(seller);
+        }
     }
 
     private async Task RefreshUsersAsync()

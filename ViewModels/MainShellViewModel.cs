@@ -15,6 +15,7 @@ public sealed class MainShellViewModel : ViewModelBase
     private readonly IBuildService _buildService;
     private readonly IRequestService _requestService;
     private readonly IChatService _chatService;
+    private readonly IStatsService _statsService;
     private readonly IRealtimeSubscriber _realtime;
     private ViewModelBase _currentViewModel = null!;
     private User? _currentUser;
@@ -27,6 +28,7 @@ public sealed class MainShellViewModel : ViewModelBase
         IBuildService buildService,
         IRequestService requestService,
         IChatService chatService,
+        IStatsService statsService,
         IRealtimeSubscriber realtime)
     {
         _accountService = accountService;
@@ -35,6 +37,7 @@ public sealed class MainShellViewModel : ViewModelBase
         _buildService = buildService;
         _requestService = requestService;
         _chatService = chatService;
+        _statsService = statsService;
         _realtime = realtime;
         _realtime.SellerRequestsChanged += OnRealtimeReloadAsync;
         _realtime.BuyerRequestsChanged += OnRealtimeReloadAsync;
@@ -95,13 +98,13 @@ public sealed class MainShellViewModel : ViewModelBase
         switch (user.Role)
         {
             case UserRole.Seller:
-                var seller = new SellerDashboardViewModel(user, LogoutCommand, _requestService, chat);
+                var seller = new SellerDashboardViewModel(user, LogoutCommand, _requestService, _statsService, chat);
                 _realtimeReload = seller.ReloadRequestsAsync;
                 CurrentViewModel = seller;
                 break;
             case UserRole.Admin:
                 _realtimeReload = null;
-                CurrentViewModel = new AdminDashboardViewModel(user, LogoutCommand, _adminService, chat);
+                CurrentViewModel = new AdminDashboardViewModel(user, LogoutCommand, _adminService, _statsService, chat);
                 break;
             default:
                 var buyer = new BuyerDashboardViewModel(
@@ -110,6 +113,7 @@ public sealed class MainShellViewModel : ViewModelBase
                     _componentCatalogService,
                     _buildService,
                     _requestService,
+                    _statsService,
                     chat);
                 _realtimeReload = buyer.ReloadRequestsAsync;
                 CurrentViewModel = buyer;
