@@ -205,3 +205,18 @@ Tùy chọn: ✅ MQTT (Phase 8) đã xong; SignalR realtime (Phase 8A) còn lạ
 - Báo cáo verify: `Documents_Refactor/Phase6_Verification_Report.md`.
 - Kiến trúc hiện tại: `Architecture.md`; tổng quan: `CUSTOM_KEYBOARD_PROJECT_OVERVIEW.md`.
 - Logic validation: `Documents_Refactor/Keyboard_Build_Validation_Logic.md`.
+
+---
+
+## 7. Review Fixes & Hạn Chế Đã Biết (sau Phase 10, 13/06/2026)
+
+Sau rà soát toàn dự án, đã sửa các lỗi logic/đồng bộ (runner nâng lên **15/15**):
+
+- **Build → Requested khi gửi request:** `RequestService.SendRequestAsync` nay gọi `IBuildRepository.SetStatusAsync(buildId, Requested)` sau khi lưu request. Thêm invariant chiều ngược "active request ⟹ build Requested" (`VerifyRefactor.sql` Extra B2 + runner) và unit test; đã vá 1 dòng data live còn lệch.
+- **Switch quantity = at-least:** chốt rule **≥** `required_switch_quantity` (đúng `BuildService` + `Keyboard_Build_Validation_Logic.md`). Sửa verifier SQL + invariant runner từ `<>` (exact) sang `<` (thiếu mới lỗi).
+- **Archive ẩn khỏi list chính:** `GetByBuyerAsync` (SQL + fake) lọc `status <> 'Archived'`; thêm unit test. `ArchiveAsync` nay gọi chung `SetStatusAsync`.
+- **(False positive)** Admin Switch CRUD: `ActuationForceG is <= 0` là relational pattern trên `int?` → **không** match null, nên null vẫn được phép (đúng contract); chỉ chặn giá trị non-null ≤ 0. Không sửa.
+
+**Hạn chế đã biết (chưa làm — hardening tương lai):**
+
+- **Revalidate role/active giữa session:** login chặn user inactive, nhưng `SaveBuildAsync`/`SendRequestAsync`/`UpdateStatusAsync`/`SendMessageAsync` tin `userId` từ session, **không** kiểm lại user còn active/đúng role. Nếu admin ban/đổi role giữa lúc session mở, user vẫn thao tác được tới khi logout. Hướng sửa nhất quán: inject `IUserRepository` (ChatService đã có) vào các service mutating + guard `EnsureActiveAsync(userId, role)` ở đầu mỗi thao tác. Để ngoài đợt này vì là cross-cutting, cần làm đồng bộ cả 3 service + DI + fakes.

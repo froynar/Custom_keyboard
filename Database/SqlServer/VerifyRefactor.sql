@@ -52,8 +52,8 @@ HAVING b.total_cost_snapshot <> CAST(k.price_usd + SUM(bi.quantity * bi.unit_pri
 GO
 
 PRINT '================================================================';
-PRINT ' 14.3  Switch quantity for Saved/Requested builds = required_switch_quantity';
-PRINT '       Expected: 0 rows.';
+PRINT ' 14.3  Switch quantity for Saved/Requested builds >= required_switch_quantity';
+PRINT '       Rule is at-least (BuildService allows buying spare switches). Expected: 0 rows.';
 PRINT '================================================================';
 SELECT
     b.build_id,
@@ -64,7 +64,7 @@ INNER JOIN keyboard_kits k ON k.kit_id = b.kit_id
 LEFT JOIN build_items bi ON bi.build_id = b.build_id
 WHERE b.status IN ('Saved', 'Requested')
 GROUP BY b.build_id, k.required_switch_quantity
-HAVING SUM(CASE WHEN bi.switch_id IS NOT NULL THEN bi.quantity ELSE 0 END) <> k.required_switch_quantity;
+HAVING SUM(CASE WHEN bi.switch_id IS NOT NULL THEN bi.quantity ELSE 0 END) < k.required_switch_quantity;
 GO
 
 PRINT '================================================================';
@@ -160,6 +160,19 @@ SELECT b.build_id, b.status
 FROM builds b
 WHERE b.status = 'Requested'
   AND NOT EXISTS (SELECT 1 FROM build_requests br WHERE br.build_id = b.build_id);
+GO
+
+PRINT '================================================================';
+PRINT ' Extra B2 Builds with an active request are Requested';
+PRINT '          Expected: 0 rows.';
+PRINT '================================================================';
+SELECT b.build_id, b.status
+FROM builds b
+WHERE b.status NOT IN ('Requested', 'Archived')
+  AND EXISTS (
+      SELECT 1 FROM build_requests br
+      WHERE br.build_id = b.build_id
+        AND br.status IN ('Pending', 'Accepted', 'In_progress'));
 GO
 
 PRINT '================================================================';

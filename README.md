@@ -207,37 +207,31 @@ keyboard/build-request/{requestId}/status/update
 
 Payload build request nen la JSON snapshot, vi gia va thong tin linh kien co the thay doi sau nay.
 
-Vi du:
+Vi du (kit-based, khop `RequestService` snapshot — kit + build_items, khong con case/PCB/plate rieng):
 
 ```json
 {
-  "requestId": "REQ001",
-  "buildId": "BUILD001",
-  "buyerId": 12,
-  "sellerUserId": 5,
-  "requestedAt": "2026-06-05T22:30:00",
-  "build": {
-    "layoutId": "75",
-    "caseId": "CASE001",
-    "pcbId": "PCB001",
-    "plateId": "PLATE001",
-    "switchId": "SW001",
-    "keycapId": "KEYCAP001",
-    "stabId": "STAB001",
-    "totalCostSnapshot": 199.99
-  }
+  "build": { "buildId": "BUILD001", "name": "QK65 Thock Build", "status": "Requested", "totalCostSnapshot": 368.60 },
+  "seller": { "sellerUserId": 5, "shopName": "Soigear Refactor Shop" },
+  "kit": { "kitId": "KIT_QK65", "kitName": "QK65", "pcbTechnology": "Mechanical", "switchMount": "MX 3-pin", "requiredSwitchQuantity": 70, "priceUsd": 165.00 },
+  "items": [
+    { "productType": "Switch", "productId": "SW_OILKING", "quantity": 70, "unitPriceSnapshot": 0.55, "lineTotal": 38.50 },
+    { "productType": "Keycap", "productId": "KC_GMK", "quantity": 1, "unitPriceSnapshot": 120.00, "lineTotal": 120.00 },
+    { "productType": "Stabilizer", "productId": "ST_DUROCK", "quantity": 1, "unitPriceSnapshot": 18.00, "lineTotal": 18.00 }
+  ],
+  "mods": [ { "modType": "Film", "targetComponent": "Switch", "notes": "switch films" } ]
 }
 ```
 
 ## Luong Nghiep Vu
 
-### Buyer Tao Build
+### Buyer Tao Build (kit-based)
 
-1. Buyer chon layout.
-2. App loc linh kien kha dung theo layout va compatibility.
-3. Buyer chon case, PCB, plate, switch, keycap, stabilizer.
-4. App tinh `total_cost_snapshot`.
-5. Backend luu vao `builds`.
+1. Buyer chon mot `keyboard_kit` (kit da gom case/PCB/plate qua `included_parts`; kit quyet dinh layout, pcb_technology, switch_mount, required_switch_quantity).
+2. Buyer them `build_items`: switch (du so luong theo kit), keycap, stabilizer, accessory; moi item dung dung mot FK san pham.
+3. App validate compatibility (switch technology/mount khop kit; switch qty >= required) + tinh `total_cost_snapshot` = gia kit + tong (qty * unit price).
+4. Buyer them mod note co ban qua `build_mods` (lube/film/foam...).
+5. Backend luu vao `builds` + `build_items` + `build_mods`.
 
 ### Buyer Gui Request
 

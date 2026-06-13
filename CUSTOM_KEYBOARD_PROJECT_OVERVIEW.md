@@ -1,7 +1,7 @@
 # Custom Keyboard Builder - Project Overview & Refactor Status
 
-**Current update:** 12/06/2026  
-**Current status:** Phase 6 verified - kit-based refactor builds, service/integration verification passes, DB invariants are clean, and buyer/seller/admin UI smoke login has no `Loi (UI thread)` popup.
+**Current update:** 13/06/2026  
+**Current status:** Kit-based MVP done through Phase 10 (Phase 7 hardening, Phase 8 optional MQTT realtime, Phase 9 test matrix/demo, Phase 10 clean-machine handover with real `Password123` seed hashes). Service/integration verification passes, DB invariants are clean, and buyer/seller/admin UI smoke login has no `Loi (UI thread)` popup. See `Documents_Refactor/Custom_Keyboard_Post_Refactor_Roadmap.md`.
 
 ## Phase 6 Verification Status
 
@@ -17,10 +17,10 @@ dotnet run --project Phase6Verification\Phase6Verification.csproj
 Latest verified result:
 
 - `dotnet build`: pass, 0 warning, 0 error.
-- `Phase6Verification`: 6/6 checks pass.
-- Unit-style checks: `BuildService`, `RequestService`, `ChatService`.
-- SQL integration: temporary build, request, chat, and cleanup using `P6_` data.
-- DB invariants: total snapshot, switch quantity, exactly-one-FK, seller verified, conversation XOR, FK orphan, requested build/request, chat sender participant.
+- `Phase6Verification`: 15/15 checks pass (grew from the Phase 6 baseline of 10; +5 in Phase 9/10).
+- Unit-style checks: `BuildService` (totals, compat, archived hidden from list), `RequestService` (state machine, build→Requested, seller scoping, unverified block, realtime best-effort), `ChatService`, `AccountService` (register validation + login T01/T02), `AdminService` audit.
+- SQL integration: temporary build/request/chat with cleanup (`P6_` data) + seed accounts login `Password123`.
+- DB invariants: total snapshot, switch quantity (at-least), exactly-one-FK, seller verified, conversation XOR, FK orphan, requested build/request (both directions), chat sender participant, password hash format.
 - UI smoke: `buyer_refactor`, `seller_soigear`, `admin_refactor` login successfully without UI-thread error popups.
 
 Note: the test DB currently has an extra manually-created build (`kkkkkk`), and users may grow through app registration, so live verification checks exact counts for static/catalog tables and minimum seed baselines for users plus mutable transaction tables.

@@ -107,8 +107,10 @@ public sealed class RequestService : IRequestService
             Note = NormalizeNullable(note)
         };
 
-        // DB is the source of truth: save first, then publish realtime as a best-effort bonus.
+        // DB is the source of truth: save the request, then flag the build as Requested so the
+        // build list/state reflects it, then publish realtime as a best-effort bonus.
         var saved = await _requestRepository.SaveAsync(request, cancellationToken);
+        await _buildRepository.SetStatusAsync(build.BuildId, BuildStatus.Requested, cancellationToken);
         await PublishSafelyAsync(() =>
             _realtimeNotifier.RequestCreatedAsync(saved.SellerUserId, saved.RequestId, cancellationToken));
         return saved;

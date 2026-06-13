@@ -17,8 +17,9 @@ public sealed class SqlBuildRepository : IBuildRepository
 
     public Task<IReadOnlyList<KeyboardBuild>> GetByBuyerAsync(int buyerId, CancellationToken cancellationToken = default)
     {
+        // Archived builds are soft-removed from the buyer's main list (use case: archive hides a build).
         return QueryAsync(
-            $"{BuildSelectSql} WHERE buyer_id = @buyer_id ORDER BY created_at DESC, build_id;",
+            $"{BuildSelectSql} WHERE buyer_id = @buyer_id AND status <> 'Archived' ORDER BY created_at DESC, build_id;",
             command => command.AddParameter("@buyer_id", SqlDbType.Int, buyerId),
             cancellationToken);
     }
@@ -131,7 +132,7 @@ public sealed class SqlBuildRepository : IBuildRepository
         return saved;
     }
 
-    public async Task ArchiveAsync(string buildId, CancellationToken cancellationToken = default)
+    public async Task SetStatusAsync(string buildId, BuildStatus status, CancellationToken cancellationToken = default)
     {
         await using var connection = _connectionFactory.CreateConnection();
         await connection.OpenAsync(cancellationToken);
@@ -139,13 +140,17 @@ public sealed class SqlBuildRepository : IBuildRepository
         await using var command = connection.CreateCommand();
         command.CommandText = """
             UPDATE builds
-            SET status = 'Archived',
+            SET status = @status,
                 updated_at = SYSUTCDATETIME()
             WHERE build_id = @build_id;
             """;
+        command.AddParameter("@status", SqlDbType.VarChar, status.ToString(), 50);
         command.AddParameter("@build_id", SqlDbType.VarChar, buildId, 50);
         await command.ExecuteNonQueryAsync(cancellationToken);
     }
+
+    public Task ArchiveAsync(string buildId, CancellationToken cancellationToken = default)
+        => SetStatusAsync(buildId, BuildStatus.Archived, cancellationToken);
 
     private const string BuildSelectSql = """
         SELECT

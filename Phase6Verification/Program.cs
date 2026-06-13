@@ -26,6 +26,7 @@ internal sealed class Phase6Runner
 
         await Run("BuildService validates totals and applies snapshots", UnitBuildServiceValidTotalAsync);
         await Run("BuildService rejects incompatible switch technology", UnitBuildServiceRejectsIncompatibleSwitchAsync);
+        await Run("BuildService hides archived builds from the buyer list", UnitBuildServiceExcludesArchivedAsync);
         await Run("RequestService enforces request status state machine", UnitRequestServiceStateMachineAsync);
         await Run("RequestService rejects requests to unverified sellers", UnitRequestServiceRejectsUnverifiedSellerAsync);
         await Run("RequestService scopes requests to the owning seller (T08/T09)", UnitRequestServiceSellerScopingAsync);
@@ -103,6 +104,26 @@ internal sealed class Phase6Runner
         AssertContains(validation.Errors, "Switch technology", "switch technology error");
     }
 
+    private static async Task UnitBuildServiceExcludesArchivedAsync()
+    {
+        var catalog = FakeCatalog.Standard();
+        var builds = new FakeBuildRepository();
+        var service = new BuildService(builds, catalog);
+
+        var active = StandardBuild();
+        active.BuildId = "BUILD_ACTIVE";
+        await service.SaveBuildAsync(active);
+
+        var archived = StandardBuild();
+        archived.BuildId = "BUILD_ARCHIVED";
+        await service.SaveBuildAsync(archived);
+        await service.ArchiveBuildAsync("BUILD_ARCHIVED", archived.BuyerId);
+
+        var list = await service.GetBuyerBuildsAsync(active.BuyerId);
+        AssertTrue(list.Any(item => item.BuildId == "BUILD_ACTIVE"), "active build is listed");
+        AssertFalse(list.Any(item => item.BuildId == "BUILD_ARCHIVED"), "archived build hidden from buyer list");
+    }
+
     private static async Task UnitRequestServiceStateMachineAsync()
     {
         var build = StandardBuild();
@@ -122,6 +143,10 @@ internal sealed class Phase6Runner
         var request = await service.SendRequestAsync(build.BuildId, build.BuyerId, 20, "phase 6 snapshot");
         AssertEqual(RequestStatus.Pending, request.Status, "initial status");
         AssertContains(request.RequestPayloadJson, build.BuildId, "request payload build id");
+
+        // Sending a request flips the build to Requested so its state reflects the active request.
+        var requestedBuild = await buildRepository.GetByIdAsync(build.BuildId);
+        AssertEqual(BuildStatus.Requested, requestedBuild!.Status, "build marked Requested after send");
 
         var accepted = await service.UpdateStatusAsync(request.RequestId, 20, RequestStatus.Accepted);
         AssertEqual(RequestStatus.Accepted, accepted.Status, "accepted status");
@@ -546,14 +571,16 @@ internal sealed class Phase6Runner
             HAVING b.total_cost_snapshot <> CAST(k.price_usd + SUM(bi.quantity * bi.unit_price_snapshot) AS decimal(10,2));
             """);
 
-        await AssertZeroRowsAsync(connection, "Saved/Requested switch quantity mismatch", """
+        // Rule is at-least: BuildService errors only when fewer than required switches are selected
+        // (buying spare switches is allowed), so the invariant flags shortfalls, not exact mismatches.
+        await AssertZeroRowsAsync(connection, "Saved/Requested switch quantity below required", """
             SELECT b.build_id
             FROM builds b
             INNER JOIN keyboard_kits k ON k.kit_id = b.kit_id
             LEFT JOIN build_items bi ON bi.build_id = b.build_id
             WHERE b.status IN ('Saved', 'Requested')
             GROUP BY b.build_id, k.required_switch_quantity
-            HAVING SUM(CASE WHEN bi.switch_id IS NOT NULL THEN bi.quantity ELSE 0 END) <> k.required_switch_quantity;
+            HAVING SUM(CASE WHEN bi.switch_id IS NOT NULL THEN bi.quantity ELSE 0 END) < k.required_switch_quantity;
             """);
 
         await AssertZeroRowsAsync(connection, "Build item product FK rule", """
@@ -632,6 +659,17 @@ internal sealed class Phase6Runner
             FROM builds b
             WHERE b.status = 'Requested'
               AND NOT EXISTS (SELECT 1 FROM build_requests br WHERE br.build_id = b.build_id);
+            """);
+
+        // Reverse direction: a build with an active request must be Requested (RequestService flips it).
+        await AssertZeroRowsAsync(connection, "Active request implies Requested build", """
+            SELECT b.build_id
+            FROM builds b
+            WHERE b.status NOT IN ('Requested', 'Archived')
+              AND EXISTS (
+                  SELECT 1 FROM build_requests br
+                  WHERE br.build_id = b.build_id
+                    AND br.status IN ('Pending', 'Accepted', 'In_progress'));
             """);
 
         await AssertZeroRowsAsync(connection, "Chat sender participant rule", """
@@ -957,7 +995,10 @@ internal sealed class FakeBuildRepository : IBuildRepository
     private readonly Dictionary<string, KeyboardBuild> _builds = new(StringComparer.OrdinalIgnoreCase);
 
     public Task<IReadOnlyList<KeyboardBuild>> GetByBuyerAsync(int buyerId, CancellationToken cancellationToken = default)
-        => Task.FromResult<IReadOnlyList<KeyboardBuild>>(_builds.Values.Where(build => build.BuyerId == buyerId).Select(CloneBuild).ToList());
+        => Task.FromResult<IReadOnlyList<KeyboardBuild>>(_builds.Values
+            .Where(build => build.BuyerId == buyerId && build.Status != BuildStatus.Archived)
+            .Select(CloneBuild)
+            .ToList());
 
     public Task<KeyboardBuild?> GetByIdAsync(string buildId, CancellationToken cancellationToken = default)
         => Task.FromResult(_builds.TryGetValue(buildId, out var build) ? CloneBuild(build) : null);
@@ -975,15 +1016,18 @@ internal sealed class FakeBuildRepository : IBuildRepository
         return Task.FromResult(CloneBuild(clone));
     }
 
-    public Task ArchiveAsync(string buildId, CancellationToken cancellationToken = default)
+    public Task SetStatusAsync(string buildId, BuildStatus status, CancellationToken cancellationToken = default)
     {
         if (_builds.TryGetValue(buildId, out var build))
         {
-            build.Status = BuildStatus.Archived;
+            build.Status = status;
         }
 
         return Task.CompletedTask;
     }
+
+    public Task ArchiveAsync(string buildId, CancellationToken cancellationToken = default)
+        => SetStatusAsync(buildId, BuildStatus.Archived, cancellationToken);
 
     private static KeyboardBuild CloneBuild(KeyboardBuild build)
     {
