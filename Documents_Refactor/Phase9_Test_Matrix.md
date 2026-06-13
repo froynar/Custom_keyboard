@@ -2,7 +2,7 @@
 
 **Cập nhật:** 13/06/2026
 **Nguồn sự thật:** code nhánh `refactor/kit-based-erd` + runner `Phase6Verification`.
-**Kết quả tự động:** `Phase6Verification` **13/13 PASS** (8 unit + 1 unit realtime best-effort + 2 SQL integration; 13 case ánh xạ T01–T15 dưới đây cộng các invariant nền).
+**Kết quả tự động:** `Phase6Verification` **14/14 PASS** (10 unit + 1 realtime best-effort + 3 SQL: integration build/request/chat, **seed-account login `Password123`** (Phase 10), invariant queries).
 
 > Ghi chú: bộ test vẫn mang tên lịch sử "Phase 6 verification" nhưng nay phủ cả các case Phase 9. Đổi tên project là việc cosmetic, chưa làm để tránh vỡ tham chiếu trong docs/roadmap.
 
@@ -69,4 +69,4 @@ Cùng `RequestService publishes realtime after DB write (best-effort)`: publish 
 
 - **T03 (ẩn/khôi phục linh kiện):** chưa có unit cho `SetComponentAvailabilityAsync` ở tầng service — hiện dựa vào UI smoke. Có thể bổ sung 1 unit nếu cần phủ tự động hoàn toàn.
 - **T16 (SignalR realtime):** defer theo Phase 8A.
-- **UI polish + screenshot:** thuộc phần "Hoàn thiện demo" của Phase 9 (xem `Phase9_Demo_Script.md`); screenshot login phụ thuộc DB demo có hash mật khẩu thật (xem caveat Phase 10).
+- **UI polish + screenshot:** thuộc phần "Hoàn thiện demo" (xem `Phase9_Demo_Script.md`). Blocker mật khẩu seed đã gỡ ở Phase 10 (`SeedData_Refactor.sql` nhúng hash thật `Password123` + test `seed-account login`) → login/screenshot chụp được; còn lại là chạy GUI chụp ảnh (manual).

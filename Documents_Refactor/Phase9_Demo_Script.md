@@ -13,7 +13,7 @@
    ```powershell
    dotnet run --project Custom_keyboard.csproj
    ```
-4. (Khuyến nghị) chạy `dotnet run --project Phase6Verification/Phase6Verification.csproj` trước, chụp màn hình **13/13 PASS** làm bằng chứng test.
+4. (Khuyến nghị) chạy `dotnet run --project Phase6Verification/Phase6Verification.csproj` trước, chụp màn hình **14/14 PASS** làm bằng chứng test.
 
 ### Tài khoản seed (mật khẩu `Password123`)
 
@@ -27,7 +27,7 @@
 | `seller_keyboardlab` | Seller | **verified** |
 | `seller_unverified` | Seller | **chưa verified** — demo T07 |
 
-> ⚠️ **Caveat mật khẩu (Phase 10):** `SeedData_Refactor.sql` ship hash giả (`PBKDF2-DEMO-HASH-...`) — clean machine **không login được** cho tới khi có bước reset mật khẩu seed về `Password123`. DB demo trên máy dev đã được reset hash thật. Việc đưa script reset vào quy trình bàn giao thuộc **Phase 10**.
+> ✅ **Mật khẩu seed (Phase 10 — đã gỡ blocker):** `SeedData_Refactor.sql` nay nhúng **hash PBKDF2 thật của `Password123`** cho mọi tài khoản → clean machine login được ngay sau khi seed. Có test tự động `SQL integration: seed accounts log in with Password123` chứng minh. Xem `Phase10_Handover.md`.
 
 ---
 
@@ -85,7 +85,7 @@ Mở 2 instance (vd Buyer máy này, Seller máy khác / cửa sổ khác), bậ
 
 Chụp tối thiểu các ảnh sau (đặt trong `Documents_Refactor/screenshots/` đề xuất):
 
-- [ ] `00-tests-13pass.png` — runner 13/13 PASS.
+- [ ] `00-tests-14pass.png` — runner 14/14 PASS.
 - [ ] `01-login.png` — màn login.
 - [ ] `02-admin-audit.png` — Audit Log sau khi verify/ban.
 - [ ] `03-admin-catalog.png` — quản lý catalog.
@@ -98,4 +98,4 @@ Chụp tối thiểu các ảnh sau (đặt trong `Documents_Refactor/screenshot
 - [ ] `10-chat.png` — chat buyer↔seller / admin↔seller.
 - [ ] `11-banned-login.png` — `buyer_inactive` bị chặn (T02).
 
-> Screenshot phụ thuộc DB demo có hash mật khẩu thật (xem caveat mục 0). Nếu chưa reset được mật khẩu, ưu tiên chụp `00-tests-13pass.png` trước làm bằng chứng tự động, phần ảnh UI hoàn tất sau bước Phase 10.
+> Blocker mật khẩu đã gỡ (mục 0) nên login chụp được ngay sau khi seed. Ảnh `00-tests-14pass.png` (runner) là bằng chứng test tự động; phần ảnh UI chụp khi chạy GUI demo.

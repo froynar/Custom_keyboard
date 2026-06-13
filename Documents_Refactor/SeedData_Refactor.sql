@@ -24,14 +24,17 @@ WHEN NOT MATCHED THEN
 MERGE users AS target
 USING (
     SELECT r.role_id, v.username, v.email, v.phone, v.password_hash, v.is_active
+    -- password_hash below = real PBKDF2-SHA256 hash of "Password123" (Pbkdf2PasswordHasher format).
+    -- Every seed account logs in with Password123. Re-running this MERGE also fixes any DB
+    -- still holding the old placeholder hashes. (buyer_inactive is banned -> login blocked by is_active.)
     FROM (VALUES
-        ('admin_refactor', 'admin.refactor@example.com', '0900000101', 'PBKDF2-DEMO-HASH-admin-refactor', 1, 'Admin'),
-        ('buyer_refactor', 'buyer.refactor@example.com', '0900000102', 'PBKDF2-DEMO-HASH-buyer-refactor', 1, 'Buyer'),
-        ('buyer_second', 'buyer.second@example.com', '0900000103', 'PBKDF2-DEMO-HASH-buyer-second', 1, 'Buyer'),
-        ('seller_soigear', 'seller.soigear@example.com', '0900000201', 'PBKDF2-DEMO-HASH-seller-soigear', 1, 'Seller'),
-        ('seller_keyboardlab', 'seller.keyboardlab@example.com', '0900000202', 'PBKDF2-DEMO-HASH-seller-keyboardlab', 1, 'Seller'),
-        ('seller_unverified', 'seller.unverified@example.com', '0900000203', 'PBKDF2-DEMO-HASH-seller-unverified', 1, 'Seller'),
-        ('buyer_inactive', 'buyer.inactive@example.com', '0900000104', 'PBKDF2-DEMO-HASH-buyer-inactive', 0, 'Buyer')
+        ('admin_refactor', 'admin.refactor@example.com', '0900000101', 'PBKDF2-SHA256$100000$u+czwNOU+6VTwbiTxJYeeg==$fnxOYROvgpC00LNeZY2XURIMki6uL6jjpYTJDcpoUnw=', 1, 'Admin'),
+        ('buyer_refactor', 'buyer.refactor@example.com', '0900000102', 'PBKDF2-SHA256$100000$vfuE4QJ6283VigZl+Cz5Ig==$7oAEqZ/9kGX7IUU23cn7bTo50EbQp+5CyIBejDOednI=', 1, 'Buyer'),
+        ('buyer_second', 'buyer.second@example.com', '0900000103', 'PBKDF2-SHA256$100000$BTIVbbCl+QBUgu7G7imKKA==$S5Nq0X9eQT/kmdqkpXilfMCQ+/hBudRu8kcG0gZe/4I=', 1, 'Buyer'),
+        ('seller_soigear', 'seller.soigear@example.com', '0900000201', 'PBKDF2-SHA256$100000$RZl15AGpcvDRRqubiU9THg==$8Ca835Cu2F4HFUMpEF8woJ5rXla0jrmJCUscqsyeZ5M=', 1, 'Seller'),
+        ('seller_keyboardlab', 'seller.keyboardlab@example.com', '0900000202', 'PBKDF2-SHA256$100000$8mNAeYM+GhS6HOHwB+GE3w==$dmYsF3B4U2kvK6Vb+GeFGYmCrBOC0QXjBH+v26B9CAA=', 1, 'Seller'),
+        ('seller_unverified', 'seller.unverified@example.com', '0900000203', 'PBKDF2-SHA256$100000$jb+ng4S4IKGmFPkwxVRJiA==$nF/0FCEmRuOx9+Hlz7VQtpnEoAnl0f3kddEqKG6DIz4=', 1, 'Seller'),
+        ('buyer_inactive', 'buyer.inactive@example.com', '0900000104', 'PBKDF2-SHA256$100000$Ckx2r0uNULJoZt4aMBW1ow==$QjnkpSbjOdGtBWK9z6FuTPjDqX703iVQdhUmOu7mSq4=', 0, 'Buyer')
     ) AS v (username, email, phone, password_hash, is_active, role_name)
     INNER JOIN roles AS r ON r.role_name = v.role_name
 ) AS source

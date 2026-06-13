@@ -38,7 +38,7 @@ Kế hoạch gốc mô tả Buyer chọn **layout → case → PCB → plate →
 | **8** MQTT realtime | optional | ✅ Done | `Realtime/` (`IRealtimeNotifier`/`IRealtimeSubscriber` + `MqttRealtimeService`, MQTTnet v4). Buyer publish "request mới" → seller reload; seller publish "status update" → buyer reload. DB-first, publish-after, best-effort (broker tắt → app vẫn chạy DB-only). Round-trip đã verify trên broker thật |
 | **8A** SignalR chat realtime | chat realtime | 🟡 DB-only | Đã: `chat_conversations/messages`, `ChatService` (buyer-seller & admin-seller, chặn buyer-admin, participant check), `ChatView` nhúng 3 dashboard. **Thiếu: tầng SignalR realtime** (hiện phải refresh thủ công) |
 | **9** Testing & demo | test matrix + UI polish | 🟡 Một phần | Đã: `Phase6Verification` **13/13** (unit + SQL integration + DB invariants) — bổ sung **login T01/T02**, **seller scoping T08/T09**, **admin-seller chat T14**; **test matrix T01–T16 chính thức** (`Phase9_Test_Matrix.md`) + **demo script 3 role** (`Phase9_Demo_Script.md`). Còn lại: UI polish (DataGrid/chuẩn hóa), screenshot (chờ reset mật khẩu seed — Phase 10) |
-| **10** Packaging & handover | bàn giao | 🟡 Một phần | Đã: README/Architecture có lệnh chạy; `Phase6_Verification_Report` ghi tài khoản smoke test `Password123`. Thiếu: đưa tài khoản seed chính thức vào README/setup handover, checklist clean-machine, gói bàn giao hoàn chỉnh |
+| **10** Packaging & handover | bàn giao | ✅ Done *(còn screenshot manual)* | Seed nhúng **hash thật `Password123`** (bỏ hash giả) + test tự động `seed accounts login`; `Phase10_Handover.md` (clean-machine step-by-step + troubleshooting + gói bàn giao); README có quickstart + bảng tài khoản seed. `Phase6Verification` **14/14**. Còn lại: chụp screenshot UI (manual GUI) |
 
 **Tóm tắt:** Lõi nghiệp vụ MVP (Phase 0–6) **đã hoàn thành** trên mô hình kit-based. Phần còn lại là **hardening + realtime (tùy chọn) + hoàn thiện test/demo/bàn giao**.
 
@@ -157,13 +157,22 @@ Hiện đã có sẵn (không phải làm lại): bảng `chat_conversations/mes
 
 **Done khi:** người khác theo hướng dẫn chạy được end-to-end; có script DB + báo cáo.
 
+**Trạng thái (13/06/2026): ✅ đã triển khai (còn screenshot manual):**
+- **Gỡ blocker mật khẩu seed:** `SeedData_Refactor.sql` nay nhúng **hash PBKDF2 thật của `Password123`** cho cả 7 tài khoản (thay 7 placeholder `PBKDF2-DEMO-HASH-...`). MERGE idempotent → chạy lại cũng sửa DB còn hash cũ. Đã áp vào DB live.
+- **Test tự động end-to-end:** thêm `SQL integration: seed accounts log in with Password123` vào `Phase6Verification` → login `admin/buyer/seller` qua `AccountService` + DB thật, sai mật khẩu → `InvalidCredentials`, `buyer_inactive` (banned) → `InactiveUser`. Runner **14/14 PASS**.
+- **Handover doc:** `Documents_Refactor/Phase10_Handover.md` — setup clean-machine từng bước (lưu ý CreateSchema chạy **không kèm `-d`** vì tự `CREATE DATABASE`), bảng tài khoản seed, hành vi DB rỗng vs seeded, gói bàn giao, troubleshooting.
+- **README:** thêm section "Cai Dat Clean Machine & Tai Khoan Demo" (quickstart + bảng seed) + cập nhật mô tả verification (14 checks).
+- **Còn lại:** chụp screenshot UI 3 role (manual GUI; checklist trong `Phase9_Demo_Script.md` — blocker mật khẩu đã gỡ nên giờ chụp được).
+
+**File ảnh hưởng:** `Documents_Refactor/SeedData_Refactor.sql`, `Phase6Verification/Program.cs`, `README.md`; mới: `Documents_Refactor/Phase10_Handover.md`.
+
 ---
 
 ## 4. Ma Trận Ưu Tiên (nếu thiếu thời gian)
 
 1. ~~**Phase 7** — hardening (email/phone format, logging, error UX).~~ ✅ **Done (13/06/2026).**
-2. **Phase 9** — test matrix + UI polish + demo script. *(bắt buộc để bảo vệ)*
-3. **Phase 10** — đóng gói/bàn giao. *(bắt buộc để chấm điểm máy khác)*
+2. ~~**Phase 9** — test matrix + demo script (UI polish nhẹ).~~ ✅ **Done (13/06/2026)** — còn screenshot manual.
+3. ~~**Phase 10** — đóng gói/bàn giao.~~ ✅ **Done (13/06/2026)** — seed hash thật + handover doc + 14/14; còn screenshot manual.
 4. **Phase 8A realtime (SignalR)** — nâng chat lên realtime. *(tùy chọn)*
 5. ~~**Phase 8 (MQTT)** — realtime notification.~~ ✅ **Done (13/06/2026).**
 
@@ -182,8 +191,8 @@ MVP lõi xem là hoàn thành khi (đã đạt ✅ trừ mục Phase 7 còn lạ
 - ✅ Mật khẩu không lưu plain text (PBKDF2); user bị ban không đăng nhập.
 - ✅ Chat buyer-seller & admin-seller (DB), chặn buyer-admin.
 - ✅ (Phase 7) Validation đầy đủ (email/phone format) + xử lý lỗi không crash + logging ra file.
-- 🟡 (Phase 9) Test matrix + demo.
-- 🟡 (Phase 10) Hướng dẫn bàn giao.
+- ✅ (Phase 9) Test matrix T01–T16 (14 pass + 1 partial + 1 defer) + demo script; còn screenshot manual.
+- ✅ (Phase 10) Seed hash thật `Password123` + handover clean-machine + verification 14/14; còn screenshot manual.
 
 Tùy chọn: ✅ MQTT (Phase 8) đã xong; SignalR realtime (Phase 8A) còn lại — không bắt buộc cho MVP lõi.
 

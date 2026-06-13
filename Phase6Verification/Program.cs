@@ -36,6 +36,7 @@ internal sealed class Phase6Runner
         await Run("AccountService login accepts valid and blocks wrong/banned (T01/T02)", UnitAccountServiceLoginAsync);
         await Run("AdminService writes audit entries for admin actions", UnitAdminServiceAuditActionsAsync);
         await Run("SQL integration covers build/request/chat CRUD", IntegrationSqlBuildRequestChatAsync);
+        await Run("SQL integration: seed accounts log in with Password123 (Phase 10)", IntegrationSqlSeedAccountLoginAsync);
         await Run("VerifyRefactor invariant queries return clean results", IntegrationSqlVerifyRefactorAsync);
 
         Console.WriteLine();
@@ -409,6 +410,38 @@ internal sealed class Phase6Runner
         {
             await CleanupSqlAsync(factory, buildId, requestId, conversationId);
         }
+    }
+
+    private static async Task IntegrationSqlSeedAccountLoginAsync()
+    {
+        var factory = new SqlConnectionFactory(new SqlServerSettings());
+        var userRepository = new SqlUserRepository(factory);
+        var accountService = new AccountService(userRepository, new Pbkdf2PasswordHasher());
+
+        // Phase 10 handover contract: every active seed account logs in with Password123.
+        var seedLogins = new (string Username, UserRole Role)[]
+        {
+            ("admin_refactor", UserRole.Admin),
+            ("buyer_refactor", UserRole.Buyer),
+            ("seller_soigear", UserRole.Seller)
+        };
+
+        foreach (var (username, role) in seedLogins)
+        {
+            var login = await accountService.LoginAsync(username, "Password123");
+            AssertTrue(login.Succeeded, $"seed login {username} succeeds");
+            AssertEqual(role, login.User!.Role, $"seed login {username} role");
+        }
+
+        // Wrong password is rejected against a real seed account.
+        var wrong = await accountService.LoginAsync("admin_refactor", "WrongPass1");
+        AssertFalse(wrong.Succeeded, "seed wrong password rejected");
+        AssertEqual(AccountOperationStatus.InvalidCredentials, wrong.Status, "seed wrong password status");
+
+        // The banned seed account (buyer_inactive, is_active = 0) cannot log in even with Password123.
+        var banned = await accountService.LoginAsync("buyer_inactive", "Password123");
+        AssertFalse(banned.Succeeded, "banned seed account cannot log in");
+        AssertEqual(AccountOperationStatus.InactiveUser, banned.Status, "banned seed account status");
     }
 
     private static async Task IntegrationSqlVerifyRefactorAsync()

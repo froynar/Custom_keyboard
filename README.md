@@ -19,6 +19,30 @@ dotnet build
 dotnet run --project Phase6Verification\Phase6Verification.csproj
 ```
 
+## Cai Dat Clean Machine & Tai Khoan Demo
+
+Huong dan setup day du (clean machine, troubleshooting, goi ban giao): **`Documents_Refactor/Phase10_Handover.md`**.
+
+Quickstart:
+
+1. Sua `Server` trong `Data/SqlServer/SqlServerSettings.cs` neu instance khac `KHOADZS1VN\SQLEXPRESS`.
+2. Tao schema (script tu `CREATE DATABASE`, chay **khong kem `-d`**): `CreateSchema_Refactor.sql`.
+3. Seed du lieu (da gom hash that cua `Password123`): `Documents_Refactor/SeedData_Refactor.sql`.
+4. `dotnet build` -> `dotnet run`.
+5. Verify: `dotnet run --project Phase6Verification\Phase6Verification.csproj` -> ky vong `Passed: 14`.
+
+Tai khoan seed (mat khau **`Password123`**, login bang username hoac email):
+
+| Username | Role | Ghi chu |
+|---|---|---|
+| `admin_refactor` | Admin | quan tri / audit |
+| `buyer_refactor` | Buyer | build + request + chat mau |
+| `buyer_second` | Buyer | buyer phu |
+| `buyer_inactive` | Buyer | **banned** (`is_active=0`) — login bi chan |
+| `seller_soigear` | Seller | **verified** |
+| `seller_keyboardlab` | Seller | **verified** |
+| `seller_unverified` | Seller | **chua verified** |
+
 ## Muc Tieu
 
 He thong tap trung vao phan mem quan ly build keyboard, khong di qua sau vao mo phong ky thuat ban phim. MVP can lam duoc:
@@ -362,12 +386,14 @@ Chay Phase 6 verification:
 dotnet run --project Phase6Verification\Phase6Verification.csproj
 ```
 
-Verification bao gom:
+Verification (14 checks, ky vong `Passed: 14`) bao gom:
 
-- Unit-style checks cho `BuildService`, `RequestService` (state machine, chan seller unverified, realtime best-effort), `ChatService`, `AccountService` (validate email/phone) va `AdminService` (audit log).
-- SQL integration flow tao build tam, gui request, tao chat, sau do cleanup.
-- DB invariant checks tu `VerifyRefactor.sql`: total snapshot, switch quantity, exactly-one-FK, seller verified, conversation XOR, FK orphan, requested build/request, chat sender participant.
+- Unit-style checks cho `BuildService`, `RequestService` (state machine, seller scoping T08/T09, chan seller unverified, realtime best-effort), `ChatService` (participant + admin-seller), `AccountService` (validate email/phone + login dung/sai/banned T01/T02) va `AdminService` (audit log).
+- SQL integration: tao build tam/gui request/tao chat roi cleanup; **seed accounts login `Password123`** (admin/buyer/seller) + banned seed account bi chan.
+- DB invariant checks tu `VerifyRefactor.sql`: total snapshot, switch quantity, exactly-one-FK, seller verified, conversation XOR, FK orphan, requested build/request, chat sender participant, password hash format.
 - UI smoke manual/automation da kiem buyer/seller/admin login khong con popup `Loi (UI thread)`.
+
+Ma tran test T01-T16: `Documents_Refactor/Phase9_Test_Matrix.md`. Kich ban demo 3 role: `Documents_Refactor/Phase9_Demo_Script.md`.
 
 ## Ghi Chu Thiet Ke
 
