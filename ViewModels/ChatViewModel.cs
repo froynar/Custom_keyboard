@@ -203,8 +203,8 @@ public sealed class ChatViewModel : ViewModelBase
         if (_currentUser.Role == UserRole.Seller)
         {
             var counterpart = conversation.BuyerId is not null
-                ? $"Buyer #{conversation.BuyerId}"
-                : $"Admin #{conversation.AdminUserId}";
+                ? TrFormat("Chat_BuyerFallback", conversation.BuyerId)
+                : TrFormat("Chat_AdminFallback", conversation.AdminUserId);
             return conversation.BuildRequestId is null
                 ? counterpart
                 : $"{counterpart} • {conversation.BuildRequestId}";
@@ -212,7 +212,7 @@ public sealed class ChatViewModel : ViewModelBase
 
         var sellerName = _sellerNames.TryGetValue(conversation.SellerUserId, out var name)
             ? name
-            : $"Seller #{conversation.SellerUserId}";
+            : TrFormat("Chat_SellerFallback", conversation.SellerUserId);
         return conversation.BuildRequestId is null ? sellerName : $"{sellerName} • {conversation.BuildRequestId}";
     }
 
@@ -266,7 +266,7 @@ public sealed class ChatMessageItemViewModel
         Text = message.MessageText;
         SentAt = message.SentAt;
         IsOwn = isOwn;
-        SenderLabel = isOwn ? Loc.Instance["Common_You"] : $"User #{message.SenderUserId}";
+        SenderLabel = isOwn ? Loc.Instance["Common_You"] : Loc.Instance.Format("Chat_UserFallback", message.SenderUserId);
     }
 
     public string Text { get; }

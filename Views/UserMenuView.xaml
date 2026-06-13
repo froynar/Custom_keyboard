@@ -338,12 +338,12 @@
                                        FontWeight="SemiBold"
                                        Foreground="{StaticResource TextPrimaryBrush}"
                                        Margin="0,0,0,8"/>
-                            <RadioButton Content="Tiếng Việt"
+                            <RadioButton Content="{loc:Tr UserMenu_LanguageVietnamese}"
                                          GroupName="appLanguage"
                                          AutomationProperties.AutomationId="LanguageVietnameseOption"
                                          Margin="0,2"
                                          IsChecked="{Binding Language, Source={x:Static loc:Loc.Instance}, Converter={StaticResource EnumToBool}, ConverterParameter=Vietnamese, Mode=TwoWay}"/>
-                            <RadioButton Content="English"
+                            <RadioButton Content="{loc:Tr UserMenu_LanguageEnglish}"
                                          GroupName="appLanguage"
                                          AutomationProperties.AutomationId="LanguageEnglishOption"
                                          Margin="0,2"

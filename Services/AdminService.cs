@@ -430,13 +430,13 @@ public sealed class AdminService : IAdminService
         if (component.ComponentType != AdminComponentType.Accessory
             && await _componentRepository.GetBrandByIdAsync(component.BrandId, cancellationToken) is null)
         {
-            throw new InvalidOperationException("Brand khong ton tai.");
+            throw new InvalidOperationException(Loc.Instance["Service_BrandNotExist"]);
         }
 
         if (component.ComponentType == AdminComponentType.Kit
             && await _componentRepository.GetLayoutByIdAsync(component.LayoutId.Trim(), cancellationToken) is null)
         {
-            throw new InvalidOperationException($"Layout khong ton tai: {component.LayoutId}");
+            throw new InvalidOperationException(Loc.Instance.Format("Service_LayoutNotExist", component.LayoutId));
         }
     }
 
@@ -449,7 +449,7 @@ public sealed class AdminService : IAdminService
     {
         if (string.IsNullOrWhiteSpace(value))
         {
-            throw new InvalidOperationException($"{fieldName} khong duoc rong.");
+            throw new InvalidOperationException(Loc.Instance.Format("Service_FieldRequired", fieldName));
         }
     }
 

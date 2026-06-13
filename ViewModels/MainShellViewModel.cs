@@ -48,7 +48,7 @@ public sealed class MainShellViewModel : ViewModelBase
         ShowLogin();
     }
 
-    public string CurrentEnvironmentLabel => "WPF + SQL Server + Auth";
+    public string CurrentEnvironmentLabel => Tr("Common_Environment");
 
     public User? CurrentUser
     {
@@ -67,7 +67,7 @@ public sealed class MainShellViewModel : ViewModelBase
     }
 
     public string CurrentUserLabel => CurrentUser is null
-        ? "Not signed in"
+        ? Tr("Common_NotSignedIn")
         : $"{CurrentUser.Username} - {CurrentUser.Role}";
 
     public ViewModelBase CurrentViewModel

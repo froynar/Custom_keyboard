@@ -81,7 +81,7 @@
                                        Foreground="White" FontSize="15"
                                        HorizontalAlignment="Center" VerticalAlignment="Center"/>
                         </Border>
-                        <TextBlock Text="CK Builder"
+                        <TextBlock Text="{loc:Tr Common_AppName}"
                                    Foreground="{StaticResource SidebarTextBrush}"
                                    FontSize="20" FontWeight="SemiBold"
                                    VerticalAlignment="Center"/>
@@ -287,19 +287,19 @@
                                     <TextBlock Text="{loc:Tr Buyer_ModPresets}" Style="{StaticResource FieldLabel}" Margin="0" VerticalAlignment="Center"/>
                                 </DockPanel>
                                 <WrapPanel Margin="0,0,0,8">
-                                    <Button Content="Switch lube" Command="{Binding AddModCommand}" CommandParameter="Switch|Lube"
+                                    <Button Content="{loc:Tr Buyer_ModPresetSwitchLube}" Command="{Binding AddModCommand}" CommandParameter="Switch|Lube"
                                             Style="{StaticResource SecondaryButton}" Margin="0,0,6,6"/>
-                                    <Button Content="Switch film" Command="{Binding AddModCommand}" CommandParameter="Switch|Film"
+                                    <Button Content="{loc:Tr Buyer_ModPresetSwitchFilm}" Command="{Binding AddModCommand}" CommandParameter="Switch|Film"
                                             Style="{StaticResource SecondaryButton}" Margin="0,0,6,6"/>
-                                    <Button Content="Spring swap" Command="{Binding AddModCommand}" CommandParameter="Switch|Spring_swap"
+                                    <Button Content="{loc:Tr Buyer_ModPresetSpringSwap}" Command="{Binding AddModCommand}" CommandParameter="Switch|Spring_swap"
                                             Style="{StaticResource SecondaryButton}" Margin="0,0,6,6"/>
-                                    <Button Content="Stab lube" Command="{Binding AddModCommand}" CommandParameter="Stabilizer|Lube"
+                                    <Button Content="{loc:Tr Buyer_ModPresetStabLube}" Command="{Binding AddModCommand}" CommandParameter="Stabilizer|Lube"
                                             Style="{StaticResource SecondaryButton}" Margin="0,0,6,6"/>
-                                    <Button Content="Stab tune" Command="{Binding AddModCommand}" CommandParameter="Stabilizer|Tune"
+                                    <Button Content="{loc:Tr Buyer_ModPresetStabTune}" Command="{Binding AddModCommand}" CommandParameter="Stabilizer|Tune"
                                             Style="{StaticResource SecondaryButton}" Margin="0,0,6,6"/>
-                                    <Button Content="Tape mod" Command="{Binding AddModCommand}" CommandParameter="Build|Tape_mod"
+                                    <Button Content="{loc:Tr Buyer_ModPresetTapeMod}" Command="{Binding AddModCommand}" CommandParameter="Build|Tape_mod"
                                             Style="{StaticResource SecondaryButton}" Margin="0,0,6,6"/>
-                                    <Button Content="Foam mod" Command="{Binding AddModCommand}" CommandParameter="Build|Foam_mod"
+                                    <Button Content="{loc:Tr Buyer_ModPresetFoamMod}" Command="{Binding AddModCommand}" CommandParameter="Build|Foam_mod"
                                             Style="{StaticResource SecondaryButton}" Margin="0,0,6,6"/>
                                 </WrapPanel>
                                 <ListBox ItemsSource="{Binding Mods}" SelectedItem="{Binding SelectedMod}" MaxHeight="240">
@@ -341,12 +341,38 @@
                                                         <StackPanel Margin="0,0,8,0">
                                                             <TextBlock Text="{loc:Tr Buyer_ModTarget}" Style="{StaticResource FieldLabel}"/>
                                                             <ComboBox ItemsSource="{x:Static vm:BuildModEditorViewModel.TargetComponents}"
-                                                                      SelectedItem="{Binding TargetComponent}"/>
+                                                                      SelectedItem="{Binding TargetComponent}">
+                                                                <ComboBox.ItemTemplate>
+                                                                    <DataTemplate>
+                                                                        <TextBlock>
+                                                                            <TextBlock.Text>
+                                                                                <MultiBinding Converter="{StaticResource LocalizedModToken}">
+                                                                                    <Binding/>
+                                                                                    <Binding Source="{x:Static loc:Loc.Instance}" Path="Language"/>
+                                                                                </MultiBinding>
+                                                                            </TextBlock.Text>
+                                                                        </TextBlock>
+                                                                    </DataTemplate>
+                                                                </ComboBox.ItemTemplate>
+                                                            </ComboBox>
                                                         </StackPanel>
                                                         <StackPanel Grid.Column="1" Margin="0,0,8,0">
                                                             <TextBlock Text="{loc:Tr Buyer_ModType}" Style="{StaticResource FieldLabel}"/>
                                                             <ComboBox ItemsSource="{Binding AvailableModTypes}"
-                                                                      SelectedItem="{Binding ModType}"/>
+                                                                      SelectedItem="{Binding ModType}">
+                                                                <ComboBox.ItemTemplate>
+                                                                    <DataTemplate>
+                                                                        <TextBlock>
+                                                                            <TextBlock.Text>
+                                                                                <MultiBinding Converter="{StaticResource LocalizedModToken}">
+                                                                                    <Binding/>
+                                                                                    <Binding Source="{x:Static loc:Loc.Instance}" Path="Language"/>
+                                                                                </MultiBinding>
+                                                                            </TextBlock.Text>
+                                                                        </TextBlock>
+                                                                    </DataTemplate>
+                                                                </ComboBox.ItemTemplate>
+                                                            </ComboBox>
                                                         </StackPanel>
                                                         <StackPanel Grid.Column="2"
                                                                     Margin="0,0,8,0"

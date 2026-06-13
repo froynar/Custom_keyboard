@@ -10,33 +10,33 @@ public sealed class MainViewModel : ViewModelBase
     {
         BuyerTasks =
         [
-            "Dang nhap/dang ky tai khoan buyer",
-            "Tra cuu danh muc linh kien va rule tuong thich",
-            "Tao cau hinh build keyboard",
-            "Tinh tong gia snapshot",
-            "Luu build va gui request cho seller",
-            "Theo doi trang thai request"
+            Tr("Main_BuyerTask1"),
+            Tr("Main_BuyerTask2"),
+            Tr("Main_BuyerTask3"),
+            Tr("Main_BuyerTask4"),
+            Tr("Main_BuyerTask5"),
+            Tr("Main_BuyerTask6")
         ];
 
         SellerTasks =
         [
-            "Dang nhap tai khoan seller",
-            "Xem danh sach request duoc gan",
-            "Mo chi tiet build snapshot",
-            "Cap nhat trang thai Accepted/In_progress/Completed/Cancelled"
+            Tr("Main_SellerTask1"),
+            Tr("Main_SellerTask2"),
+            Tr("Main_SellerTask3"),
+            Tr("Main_SellerTask4")
         ];
 
         AdminTasks =
         [
-            "Dang nhap tai khoan admin",
-            "Quan ly user va role",
-            "Quan ly seller profile va verify seller",
-            "Quan ly danh muc linh kien",
-            "Xem audit log"
+            Tr("Main_AdminTask1"),
+            Tr("Main_AdminTask2"),
+            Tr("Main_AdminTask3"),
+            Tr("Main_AdminTask4"),
+            Tr("Main_AdminTask5")
         ];
     }
 
-    public string CurrentEnvironmentLabel { get; } = "WPF + SQL Server ready structure";
+    public string CurrentEnvironmentLabel => Tr("Main_Environment");
 
     public int SelectedRoleIndex
     {

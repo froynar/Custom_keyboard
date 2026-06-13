@@ -132,7 +132,7 @@ public sealed partial class BuildModEditorViewModel : ViewModelBase
     public Visibility SpringWeightVisibility => IsSpringSwap ? Visibility.Visible : Visibility.Collapsed;
     public Visibility SwitchQuantityVisibility => UsesSwitchQuantity ? Visibility.Visible : Visibility.Collapsed;
 
-    public string DisplayTitle => $"{Humanize(TargetComponent)} - {Humanize(ModType)}";
+    public string DisplayTitle => $"{LocalizeToken(TargetComponent)} - {LocalizeToken(ModType)}";
 
     public string DisplaySummary
     {
@@ -141,7 +141,7 @@ public sealed partial class BuildModEditorViewModel : ViewModelBase
             var parts = new List<string>();
             if (UsesSwitchQuantity)
             {
-                parts.Add($"{ModQuantity} switch");
+                parts.Add(TrFormat("Buyer_ModSwitchQuantitySummary", ModQuantity));
             }
 
             if (IsSpringSwap)
@@ -280,8 +280,26 @@ public sealed partial class BuildModEditorViewModel : ViewModelBase
     private static string Normalize(string? value, string fallback)
         => string.IsNullOrWhiteSpace(value) ? fallback : value.Trim();
 
-    private static string Humanize(string value)
-        => value.Replace('_', ' ');
+    private static string LocalizeToken(string value)
+    {
+        var key = value.Trim() switch
+        {
+            SwitchTarget => "Buyer_ModTargetSwitch",
+            StabilizerTarget => "Buyer_ModTargetStabilizer",
+            BuildTarget => "Buyer_ModTargetBuild",
+            KitTarget => "Buyer_ModTargetKit",
+            "Lube" => "Buyer_ModTypeLube",
+            "Film" => "Buyer_ModTypeFilm",
+            SpringSwapType => "Buyer_ModTypeSpring_swap",
+            "Tune" => "Buyer_ModTypeTune",
+            "Holee_mod" => "Buyer_ModTypeHolee_mod",
+            "Tape_mod" => "Buyer_ModTypeTape_mod",
+            "Foam_mod" => "Buyer_ModTypeFoam_mod",
+            _ => null
+        };
+
+        return key is null ? value.Replace('_', ' ') : Tr(key);
+    }
 
     private static string RemoveMatch(string value, Match match)
     {

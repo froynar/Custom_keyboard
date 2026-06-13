@@ -1,4 +1,5 @@
 using System.Text.Json;
+using Custom_keyboard.Localization;
 using Custom_keyboard.Models.Accounts;
 using Custom_keyboard.Models.Admin;
 using Custom_keyboard.Models.Enums;
@@ -44,22 +45,22 @@ public sealed class SellerApplicationService : ISellerApplicationService
         var buyer = await RequireUserAsync(buyerUserId, cancellationToken);
         if (!buyer.IsActive)
         {
-            throw new InvalidOperationException("Tai khoan dang bi khoa, khong the nop don.");
+            throw new InvalidOperationException(Loc.Instance["Service_AccountLockedNoApply"]);
         }
 
         if (buyer.Role != UserRole.Buyer)
         {
-            throw new InvalidOperationException("Chi tai khoan Buyer moi duoc nop don len Seller.");
+            throw new InvalidOperationException(Loc.Instance["Service_OnlyBuyerApply"]);
         }
 
-        shopName = TrimRequired(shopName, "ten shop", 255);
-        phone = TrimRequired(phone, "so dien thoai", 30);
-        address = TrimRequired(address, "dia chi", 500);
-        note = TrimOptional(note, "ghi chu", 500);
+        shopName = TrimRequired(shopName, Loc.Instance["Common_ShopName"], 255);
+        phone = TrimRequired(phone, Loc.Instance["Common_Phone"], 30);
+        address = TrimRequired(address, Loc.Instance["Common_Address"], 500);
+        note = TrimOptional(note, Loc.Instance["Common_Notes"], 500);
 
         if (await _applicationRepository.HasPendingAsync(buyerUserId, cancellationToken))
         {
-            throw new InvalidOperationException("Ban da co mot don dang cho duyet.");
+            throw new InvalidOperationException(Loc.Instance["Service_AlreadyPendingApplication"]);
         }
 
         return await _applicationRepository.AddAsync(
@@ -86,24 +87,24 @@ public sealed class SellerApplicationService : ISellerApplicationService
         await EnsureAdminAsync(adminUserId, cancellationToken);
 
         var application = await _applicationRepository.GetByIdAsync(applicationId, cancellationToken)
-            ?? throw new InvalidOperationException("Khong tim thay don.");
+            ?? throw new InvalidOperationException(Loc.Instance["Service_ApplicationNotFound"]);
         if (application.Status != SellerApplicationStatus.Pending)
         {
-            throw new InvalidOperationException("Don da duoc xu ly.");
+            throw new InvalidOperationException(Loc.Instance["Service_ApplicationProcessed"]);
         }
 
         var buyer = await RequireUserAsync(application.BuyerUserId, cancellationToken);
         if (!buyer.IsActive)
         {
-            throw new InvalidOperationException("Khong the duyet: tai khoan nguoi nop dang bi khoa.");
+            throw new InvalidOperationException(Loc.Instance["Service_CannotApproveLocked"]);
         }
 
         if (buyer.Role != UserRole.Buyer)
         {
-            throw new InvalidOperationException("Khong the duyet: nguoi nop hien khong con la Buyer.");
+            throw new InvalidOperationException(Loc.Instance["Service_CannotApproveNotBuyer"]);
         }
 
-        reviewNote = TrimOptional(reviewNote, "ghi chu duyet", 500);
+        reviewNote = TrimOptional(reviewNote, Loc.Instance["Service_ReviewNoteField"], 500);
 
         if (_applicationRepository is ITransactionalSellerApplicationRepository transactionalRepository)
         {
@@ -148,13 +149,13 @@ public sealed class SellerApplicationService : ISellerApplicationService
         await EnsureAdminAsync(adminUserId, cancellationToken);
 
         var application = await _applicationRepository.GetByIdAsync(applicationId, cancellationToken)
-            ?? throw new InvalidOperationException("Khong tim thay don.");
+            ?? throw new InvalidOperationException(Loc.Instance["Service_ApplicationNotFound"]);
         if (application.Status != SellerApplicationStatus.Pending)
         {
-            throw new InvalidOperationException("Don da duoc xu ly.");
+            throw new InvalidOperationException(Loc.Instance["Service_ApplicationProcessed"]);
         }
 
-        reviewNote = TrimOptional(reviewNote, "ghi chu duyet", 500);
+        reviewNote = TrimOptional(reviewNote, Loc.Instance["Service_ReviewNoteField"], 500);
 
         if (_applicationRepository is ITransactionalSellerApplicationRepository transactionalRepository)
         {
@@ -171,7 +172,7 @@ public sealed class SellerApplicationService : ISellerApplicationService
             cancellationToken);
         if (!updated)
         {
-            throw new InvalidOperationException("Don da duoc xu ly.");
+            throw new InvalidOperationException(Loc.Instance["Service_ApplicationProcessed"]);
         }
 
         await AddAuditAsync(
@@ -188,25 +189,25 @@ public sealed class SellerApplicationService : ISellerApplicationService
         var admin = await RequireUserAsync(adminUserId, cancellationToken);
         if (admin.Role != UserRole.Admin || !admin.IsActive)
         {
-            throw new InvalidOperationException("Chi admin active moi duoc duyet don seller.");
+            throw new InvalidOperationException(Loc.Instance["Service_OnlyActiveAdminReview"]);
         }
     }
 
     private async Task<User> RequireUserAsync(int userId, CancellationToken cancellationToken)
         => await _userRepository.GetByIdAsync(userId, cancellationToken)
-           ?? throw new InvalidOperationException("Khong tim thay user.");
+           ?? throw new InvalidOperationException(Loc.Instance["Service_UserNotFound"]);
 
     private static string TrimRequired(string? value, string fieldName, int maxLength)
     {
         value = value?.Trim() ?? string.Empty;
         if (string.IsNullOrWhiteSpace(value))
         {
-            throw new InvalidOperationException("Nhap day du ten shop, so dien thoai va dia chi.");
+            throw new InvalidOperationException(Loc.Instance["Service_SellerProfileFieldsRequired"]);
         }
 
         if (value.Length > maxLength)
         {
-            throw new InvalidOperationException($"{fieldName} khong duoc vuot qua {maxLength} ky tu.");
+            throw new InvalidOperationException(Loc.Instance.Format("Service_FieldTooLong", fieldName, maxLength));
         }
 
         return value;
@@ -217,7 +218,7 @@ public sealed class SellerApplicationService : ISellerApplicationService
         value = string.IsNullOrWhiteSpace(value) ? null : value.Trim();
         if (value is not null && value.Length > maxLength)
         {
-            throw new InvalidOperationException($"{fieldName} khong duoc vuot qua {maxLength} ky tu.");
+            throw new InvalidOperationException(Loc.Instance.Format("Service_FieldTooLong", fieldName, maxLength));
         }
 
         return value;
@@ -230,9 +231,9 @@ public sealed class SellerApplicationService : ISellerApplicationService
             case SellerApplicationReviewOutcome.Success:
                 return;
             case SellerApplicationReviewOutcome.InvalidApplicant:
-                throw new InvalidOperationException("Khong the duyet: nguoi nop hien khong con la Buyer active.");
+                throw new InvalidOperationException(Loc.Instance["Service_CannotApproveNotActiveBuyer"]);
             default:
-                throw new InvalidOperationException("Don da duoc xu ly.");
+                throw new InvalidOperationException(Loc.Instance["Service_ApplicationProcessed"]);
         }
     }
 

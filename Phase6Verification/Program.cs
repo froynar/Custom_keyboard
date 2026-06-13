@@ -126,7 +126,7 @@ internal sealed class Phase6Runner
         var validation = await service.ValidateBuildAsync(build);
 
         AssertFalse(validation.IsValid, "oversized switch mods should fail");
-        AssertContains(validation.Errors, "Tong so switch cho mod 'Spring_swap'", "switch mod total error");
+        AssertContains(validation.Errors, "Tổng số switch cho mod 'Spring_swap'", "switch mod total error");
     }
 
     private static async Task UnitBuildServiceExcludesArchivedAsync()
@@ -333,7 +333,7 @@ internal sealed class Phase6Runner
         var badPhone = await service.RegisterBuyerAsync("newbuyer", "new@test.local", "12", "Password123");
         AssertFalse(badPhone.Succeeded, "invalid phone rejected");
         AssertEqual(AccountOperationStatus.ValidationError, badPhone.Status, "invalid phone status");
-        AssertContains(badPhone.Message, "dien thoai", "invalid phone message");
+        AssertContains(badPhone.Message, "điện thoại", "invalid phone message");
 
         // Separators are stripped before validation/storage.
         var ok = await service.RegisterBuyerAsync("newbuyer", "new@test.local", "090-123 4567", "Password123");

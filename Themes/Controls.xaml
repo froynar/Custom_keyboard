@@ -10,6 +10,7 @@
     <!-- Localization: status/bool badges resolve through Loc and refresh when the language changes -->
     <conv:LocalizedStatusConverter x:Key="LocalizedStatus"/>
     <conv:LocalizedBoolLabelConverter x:Key="LocalizedBoolLabel"/>
+    <conv:LocalizedModTokenConverter x:Key="LocalizedModToken"/>
     <conv:EnumToBoolConverter x:Key="EnumToBool"/>
 
     <Style TargetType="{x:Type TextBlock}">

@@ -41,6 +41,48 @@ public sealed class LocalizedBoolLabelConverter : IMultiValueConverter
 }
 
 /// <summary>
+/// Localizes stored build-mod tokens such as "Switch" and "Spring_swap" without changing the
+/// underlying value bound to the ViewModel or persisted to the database.
+/// </summary>
+public sealed class LocalizedModTokenConverter : IMultiValueConverter
+{
+    public object Convert(object[] values, Type targetType, object? parameter, CultureInfo culture)
+    {
+        var token = values is { Length: > 0 } ? values[0]?.ToString() : null;
+        return LocalizeToken(token);
+    }
+
+    public object[] ConvertBack(object value, Type[] targetTypes, object? parameter, CultureInfo culture)
+        => throw new NotSupportedException();
+
+    public static string LocalizeToken(string? token)
+    {
+        if (string.IsNullOrWhiteSpace(token))
+        {
+            return string.Empty;
+        }
+
+        var key = token.Trim() switch
+        {
+            "Switch" => "Buyer_ModTargetSwitch",
+            "Stabilizer" => "Buyer_ModTargetStabilizer",
+            "Build" => "Buyer_ModTargetBuild",
+            "Kit" => "Buyer_ModTargetKit",
+            "Lube" => "Buyer_ModTypeLube",
+            "Film" => "Buyer_ModTypeFilm",
+            "Spring_swap" => "Buyer_ModTypeSpring_swap",
+            "Tune" => "Buyer_ModTypeTune",
+            "Holee_mod" => "Buyer_ModTypeHolee_mod",
+            "Tape_mod" => "Buyer_ModTypeTape_mod",
+            "Foam_mod" => "Buyer_ModTypeFoam_mod",
+            _ => null
+        };
+
+        return key is null ? token.Replace('_', ' ') : Loc.Instance[key];
+    }
+}
+
+/// <summary>
 /// Two-way converter for binding a group of RadioButtons to an enum-valued property. The
 /// ConverterParameter is the enum member name; IsChecked is true when the bound value equals it,
 /// and checking a button writes that enum member back.
