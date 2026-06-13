@@ -23,7 +23,7 @@ dotnet run --project Phase6Verification\Phase6Verification.csproj
 
 ```text
 dotnet build: pass, 0 warnings, 0 errors
-Phase6Verification: pass, 10/10 checks
+Phase6Verification: pass, 14/14 checks (updated 2026-06-13; Phase 6 baseline 10/10, +4 added in Phase 9/10 — login T01/T02, seller scoping T08/T09, admin-seller chat T14, seed-account login)
 UI smoke: pass for buyer_refactor, seller_soigear, admin_refactor
 ```
 
@@ -40,6 +40,9 @@ UI smoke: pass for buyer_refactor, seller_soigear, admin_refactor
 - `ChatService` blocks unverified sellers and non-participant reads/sends.
 - `AccountService` rejects malformed email/phone on register and normalizes phone separators.
 - `AdminService` writes an audit entry for ban, seller verify, and catalog (brand) changes, and blocks non-admin actors.
+- `AccountService` logs in valid credentials, rejects a wrong password, and blocks a banned (inactive) user without creating a session (T01/T02, added Phase 9).
+- `RequestService` scopes requests to the owning seller — another seller cannot see or update them (T08/T09, added Phase 9).
+- `ChatService` supports admin-seller conversations persisted to and re-read from the DB (T14, added Phase 9).
 
 It also contains SQL integration checks using real SQL repositories:
 
@@ -48,6 +51,7 @@ It also contains SQL integration checks using real SQL repositories:
 - send a build request to a verified seller
 - create a buyer-seller conversation and send one message
 - cleanup temporary rows using the `P6_` data marker
+- (separate check, added Phase 10) log in every active seed account with `Password123` and confirm the banned seed account (`buyer_inactive`) is blocked
 
 ## Database Invariants
 

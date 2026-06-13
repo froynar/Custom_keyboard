@@ -69,7 +69,7 @@ dotnet run
 dotnet run --project Phase6Verification\Phase6Verification.csproj
 ```
 
-Kỳ vọng: **`Passed: 14` / `Failed: 0`** (8 unit + 1 realtime best-effort + 3 SQL integration + 1 invariant; gồm `SQL integration: seed accounts log in with Password123`). Cần SQL Server + DB đã seed.
+Kỳ vọng: **`Passed: 14` / `Failed: 0`** (10 unit + 1 realtime best-effort + 3 SQL: integration build/request/chat, `seed accounts log in with Password123`, invariant queries). Cần SQL Server + DB đã seed.
 
 ---
 

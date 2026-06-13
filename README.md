@@ -6,7 +6,7 @@ Du an hien tai la ung dung desktop WPF dung .NET va SQL Server database `CustomK
 
 ## Trang Thai Refactor Hien Tai
 
-- Refactor kit-based da duoc code den Phase 6.
+- Refactor kit-based da hoan thanh loi MVP (Phase 0-10): build/request/seller-status/chat-DB/admin/audit + validation & logging (Phase 7) + MQTT realtime tuy chon (Phase 8) + test matrix & handover (Phase 9-10). Chat SignalR (Phase 8A) con lai, tuy chon.
 - ERD refactor moi la source of truth: `Documents_Refactor/`.
 - Tai lieu cu trong `Documents/` chi de tham khao lich su.
 - Test/verification runner nam o `Phase6Verification/`.
@@ -112,7 +112,7 @@ WPF App
   -> SQL Server CustomKeyboard_Refactor
 ```
 
-Database la source of truth. Realtime/MQTT khong nam trong scope refactor hien tai.
+Database la source of truth. Realtime MQTT (Phase 8) la lop bo sung tuy chon: luu DB truoc, publish sau, best-effort — khong co broker thi app van chay DB-only. Chat realtime SignalR (Phase 8A) chua trien khai.
 
 Neu seller offline, request van duoc luu trong database. Khi seller mo dashboard, app lay lai danh sach request tu SQL Server.
 

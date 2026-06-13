@@ -418,12 +418,17 @@ internal sealed class Phase6Runner
         var userRepository = new SqlUserRepository(factory);
         var accountService = new AccountService(userRepository, new Pbkdf2PasswordHasher());
 
-        // Phase 10 handover contract: every active seed account logs in with Password123.
+        // Phase 10 handover contract: EVERY active seed account logs in with Password123.
+        // (seller_unverified is active but not verified -> login still works; verification only
+        //  gates request/chat targeting, not login.)
         var seedLogins = new (string Username, UserRole Role)[]
         {
             ("admin_refactor", UserRole.Admin),
             ("buyer_refactor", UserRole.Buyer),
-            ("seller_soigear", UserRole.Seller)
+            ("buyer_second", UserRole.Buyer),
+            ("seller_soigear", UserRole.Seller),
+            ("seller_keyboardlab", UserRole.Seller),
+            ("seller_unverified", UserRole.Seller)
         };
 
         foreach (var (username, role) in seedLogins)
