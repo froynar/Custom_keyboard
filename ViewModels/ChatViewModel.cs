@@ -33,8 +33,8 @@ public sealed class ChatViewModel : ViewModelBase
 
         RefreshConversationsCommand = new AsyncRelayCommand(_ => ExecuteSafeAsync(RefreshConversationsAsync, "Da refresh hoi thoai."));
         StartConversationCommand = new AsyncRelayCommand(_ => ExecuteSafeAsync(StartConversationAsync), _ => CanStartConversation && SelectedCounterpart is not null && !IsBusy);
-        SendMessageCommand = new AsyncRelayCommand(_ => ExecuteSafeAsync(SendMessageAsync), _ => SelectedConversation is not null && !string.IsNullOrWhiteSpace(MessageText) && !IsBusy);
-        RefreshMessagesCommand = new AsyncRelayCommand(_ => ExecuteSafeAsync(RefreshMessagesAsync), _ => SelectedConversation is not null && !IsBusy);
+        SendMessageCommand = new AsyncRelayCommand(_ => ExecuteSafeAsync(SendMessageAsync, "Da gui tin nhan."), _ => SelectedConversation is not null && !string.IsNullOrWhiteSpace(MessageText) && !IsBusy);
+        RefreshMessagesCommand = new AsyncRelayCommand(_ => ExecuteSafeAsync(RefreshMessagesAsync, "Da refresh tin nhan."), _ => SelectedConversation is not null && !IsBusy);
     }
 
     public ObservableCollection<ConversationItemViewModel> Conversations { get; } = [];

@@ -37,7 +37,7 @@ Kế hoạch gốc mô tả Buyer chọn **layout → case → PCB → plate →
 | **7** Audit/validation/hardening | làm chắc hệ thống | ✅ Done | Đã: audit log, role/active/verified checks, validate **format email/phone** khi đăng ký, **global handler UX-friendly + ghi log file** (`%LOCALAPPDATA%/CustomKeyboard/log.txt`, `Diagnostics/AppLog` + `ErrorReporter`), phân biệt **lỗi DB vs nghiệp vụ** trong `ExecuteSafeAsync`, invariant catalog (giá ≥ 0, kit switch qty) trong `Phase6Verification`. Còn lại (nice-to-have): polish thêm message admin |
 | **8** MQTT realtime | optional | ✅ Done | `Realtime/` (`IRealtimeNotifier`/`IRealtimeSubscriber` + `MqttRealtimeService`, MQTTnet v4). Buyer publish "request mới" → seller reload; seller publish "status update" → buyer reload. DB-first, publish-after, best-effort (broker tắt → app vẫn chạy DB-only). Round-trip đã verify trên broker thật |
 | **8A** SignalR chat realtime | chat realtime | 🟡 DB-only | Đã: `chat_conversations/messages`, `ChatService` (buyer-seller & admin-seller, chặn buyer-admin, participant check), `ChatView` nhúng 3 dashboard. **Thiếu: tầng SignalR realtime** (hiện phải refresh thủ công) |
-| **9** Testing & demo | test matrix + UI polish | 🟡 Một phần | Đã: `Phase6Verification` 9/9 (unit + SQL integration + DB invariants), gồm register validation, RequestService chặn seller unverified, AdminService audit. Thiếu: bảng test matrix T01–T16 chính thức, unit login, UI polish (DataGrid/screenshot), kịch bản demo |
+| **9** Testing & demo | test matrix + UI polish | 🟡 Một phần | Đã: `Phase6Verification` **13/13** (unit + SQL integration + DB invariants) — bổ sung **login T01/T02**, **seller scoping T08/T09**, **admin-seller chat T14**; **test matrix T01–T16 chính thức** (`Phase9_Test_Matrix.md`) + **demo script 3 role** (`Phase9_Demo_Script.md`). Còn lại: UI polish (DataGrid/chuẩn hóa), screenshot (chờ reset mật khẩu seed — Phase 10) |
 | **10** Packaging & handover | bàn giao | 🟡 Một phần | Đã: README/Architecture có lệnh chạy; `Phase6_Verification_Report` ghi tài khoản smoke test `Password123`. Thiếu: đưa tài khoản seed chính thức vào README/setup handover, checklist clean-machine, gói bàn giao hoàn chỉnh |
 
 **Tóm tắt:** Lõi nghiệp vụ MVP (Phase 0–6) **đã hoàn thành** trên mô hình kit-based. Phần còn lại là **hardening + realtime (tùy chọn) + hoàn thiện test/demo/bàn giao**.
@@ -132,6 +132,17 @@ Hiện đã có sẵn (không phải làm lại): bảng `chat_conversations/mes
 - **Demo script:** kịch bản 3 role + screenshot.
 
 **Done khi:** test matrix có kết quả rõ ràng; UI đủ chuyên nghiệp để demo; có ảnh minh họa.
+
+**Trạng thái (13/06/2026): 🟡 phần test + tài liệu đã xong, còn UI polish + screenshot:**
+- `Phase6Verification` nâng từ 10 → **13/13 PASS** (build 0 lỗi). Thêm 3 unit đóng đúng các lỗ test matrix:
+  - `AccountService login accepts valid and blocks wrong/banned` — **T01 login** (đúng → set session) + **T02** (user `is_active=0` → `InactiveUser`, mật khẩu sai → `InvalidCredentials`).
+  - `RequestService scopes requests to the owning seller` — **T08** (chủ sở hữu thấy request) + **T09** (seller khác không thấy / không update được).
+  - `ChatService supports admin-seller conversations` — **T14** (admin↔seller lưu DB + đọc lại lịch sử).
+- **Test matrix chính thức T01–T16** với cột trạng thái + cách chạy: `Documents_Refactor/Phase9_Test_Matrix.md` (**14 đạt + 1 một phần (T03) + 1 defer (T16)**; T16 defer theo Phase 8A; T03 ẩn/khôi phục component chưa có unit, kiểm manual UI).
+- **Demo script 3 role + screenshot checklist**: `Documents_Refactor/Phase9_Demo_Script.md` (dùng tài khoản seed; `buyer_inactive` cho T02, `seller_unverified` cho T07).
+- **Còn lại:** (a) UI polish — cân nhắc DataGrid cho list user/component/build/request + chuẩn hóa title/tab/thông báo (rủi ro regression XAML, làm có chủ đích); (b) screenshot UI phụ thuộc DB demo có hash mật khẩu thật — gắn với bước reset mật khẩu seed ở **Phase 10**; (c) tùy chọn: unit cho `SetComponentAvailabilityAsync` (T03 ẩn/khôi phục).
+
+**File ảnh hưởng:** `Phase6Verification/Program.cs`; mới: `Documents_Refactor/Phase9_Test_Matrix.md`, `Documents_Refactor/Phase9_Demo_Script.md`.
 
 ---
 

@@ -28,9 +28,12 @@ internal sealed class Phase6Runner
         await Run("BuildService rejects incompatible switch technology", UnitBuildServiceRejectsIncompatibleSwitchAsync);
         await Run("RequestService enforces request status state machine", UnitRequestServiceStateMachineAsync);
         await Run("RequestService rejects requests to unverified sellers", UnitRequestServiceRejectsUnverifiedSellerAsync);
+        await Run("RequestService scopes requests to the owning seller (T08/T09)", UnitRequestServiceSellerScopingAsync);
         await Run("RequestService publishes realtime after DB write (best-effort)", UnitRequestServiceRealtimeBestEffortAsync);
         await Run("ChatService enforces participants and verified sellers", UnitChatServiceParticipantsAsync);
+        await Run("ChatService supports admin-seller conversations (T14)", UnitChatServiceAdminConversationAsync);
         await Run("AccountService validates email/phone on register", UnitAccountServiceRegisterValidationAsync);
+        await Run("AccountService login accepts valid and blocks wrong/banned (T01/T02)", UnitAccountServiceLoginAsync);
         await Run("AdminService writes audit entries for admin actions", UnitAdminServiceAuditActionsAsync);
         await Run("SQL integration covers build/request/chat CRUD", IntegrationSqlBuildRequestChatAsync);
         await Run("VerifyRefactor invariant queries return clean results", IntegrationSqlVerifyRefactorAsync);
@@ -154,6 +157,25 @@ internal sealed class Phase6Runner
             "unverified seller cannot start chat");
     }
 
+    private static async Task UnitChatServiceAdminConversationAsync()
+    {
+        var chatRepository = new FakeChatRepository();
+        var service = new ChatService(chatRepository, FakeUserRepository.Standard(), FakeSellerRepository.Standard());
+
+        // T14: admin (30) opens a conversation with the verified seller (20) and exchanges a message.
+        var conversation = await service.StartAdminConversationAsync(20, 30);
+        AssertTrue(conversation.HasValidParticipants(), "admin conversation participant shape");
+        AssertEqual(30, conversation.AdminUserId ?? -1, "admin participant set");
+        AssertTrue(conversation.BuyerId is null, "admin conversation has no buyer");
+
+        var sent = await service.SendMessageAsync(conversation.ConversationId, 30, "admin to seller");
+        AssertEqual(30, sent.SenderUserId, "admin sender id");
+
+        // The message is persisted and readable from the seller's side (DB history).
+        var history = await service.GetMessagesAsync(conversation.ConversationId, 20);
+        AssertContains(history.Select(message => message.MessageText), "admin to seller", "seller reads admin message");
+    }
+
     private static async Task UnitRequestServiceRejectsUnverifiedSellerAsync()
     {
         var build = StandardBuild();
@@ -177,6 +199,34 @@ internal sealed class Phase6Runner
         var ok = await service.SendRequestAsync(build.BuildId, build.BuyerId, 20, "to verified seller");
         AssertEqual(RequestStatus.Pending, ok.Status, "verified seller request created");
         AssertEqual(20, ok.SellerUserId, "request targets verified seller");
+    }
+
+    private static async Task UnitRequestServiceSellerScopingAsync()
+    {
+        var build = StandardBuild();
+        var buildRepository = new FakeBuildRepository();
+        await buildRepository.SaveAsync(build);
+
+        var service = new RequestService(
+            buildRepository,
+            FakeSellerRepository.Standard(),
+            new FakeRequestRepository(),
+            new AlwaysValidBuildService(217.30m),
+            FakeCatalog.Standard(),
+            NullRealtimeNotifier.Instance);
+
+        var request = await service.SendRequestAsync(build.BuildId, build.BuyerId, 20, "scoping");
+
+        // T08: the owning seller sees the request in their own queue.
+        var ownerQueue = await service.GetSellerRequestsAsync(20);
+        AssertContains(ownerQueue.Select(item => item.RequestId), request.RequestId, "owner seller sees request");
+
+        // T09: a different seller neither sees the request nor can mutate its status.
+        var otherQueue = await service.GetSellerRequestsAsync(21);
+        AssertFalse(otherQueue.Any(item => item.RequestId == request.RequestId), "other seller cannot see request");
+        await AssertThrowsAsync<InvalidOperationException>(
+            () => service.UpdateStatusAsync(request.RequestId, 21, RequestStatus.Accepted),
+            "other seller cannot update request");
     }
 
     private static async Task UnitRequestServiceRealtimeBestEffortAsync()
@@ -239,6 +289,41 @@ internal sealed class Phase6Runner
         AssertTrue(ok.Succeeded, "valid registration succeeds");
         AssertEqual(UserRole.Buyer, ok.User!.Role, "registered as buyer");
         AssertEqual("0901234567", ok.User!.Phone, "phone normalized");
+    }
+
+    private static async Task UnitAccountServiceLoginAsync()
+    {
+        var users = FakeUserRepository.Standard();
+        var service = new AccountService(users, new Pbkdf2PasswordHasher());
+
+        // Register seeds a user with a real PBKDF2 hash so login exercises the real verifier (T01 login).
+        var registered = await service.RegisterBuyerAsync("login_user", "login@test.local", "0905550000", "Password123");
+        AssertTrue(registered.Succeeded, "registration for login test");
+        var userId = registered.User!.UserId;
+
+        // Wrong password is rejected with InvalidCredentials and establishes no session.
+        var wrong = await service.LoginAsync("login_user", "WrongPass1");
+        AssertFalse(wrong.Succeeded, "wrong password rejected");
+        AssertEqual(AccountOperationStatus.InvalidCredentials, wrong.Status, "wrong password status");
+        AssertTrue(service.CurrentUser is null, "wrong password establishes no session");
+
+        // Correct credentials succeed and set the current session (T01).
+        var good = await service.LoginAsync("login_user", "Password123");
+        AssertTrue(good.Succeeded, "correct login succeeds");
+        AssertEqual(UserRole.Buyer, good.User!.Role, "logged in as buyer");
+        AssertEqual("login_user", service.CurrentUser?.Username ?? "", "current user set after login");
+
+        // Clear the session first so the banned check proves a banned user cannot establish a NEW one
+        // (LoginAsync rejects an inactive user before touching CurrentUser, so we start from null).
+        service.Logout();
+        AssertTrue(service.CurrentUser is null, "logout clears the session");
+
+        // A banned (inactive) user cannot log in even with the right password, and no session is created (T02).
+        await users.SetActiveAsync(userId, false);
+        var banned = await service.LoginAsync("login_user", "Password123");
+        AssertFalse(banned.Succeeded, "banned user cannot log in");
+        AssertEqual(AccountOperationStatus.InactiveUser, banned.Status, "banned login status");
+        AssertTrue(service.CurrentUser is null, "banned user establishes no session");
     }
 
     private static async Task UnitAdminServiceAuditActionsAsync()
