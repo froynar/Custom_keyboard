@@ -1,5 +1,6 @@
 using System.Text.Json;
 using Custom_keyboard.Diagnostics;
+using Custom_keyboard.Localization;
 using Custom_keyboard.Models.Accounts;
 using Custom_keyboard.Models.Builds;
 using Custom_keyboard.Models.Components;
@@ -52,7 +53,7 @@ public sealed class RequestService : IRequestService
     {
         if (buyerId <= 0)
         {
-            throw new InvalidOperationException("Buyer khong hop le.");
+            throw new InvalidOperationException(Loc.Instance["Service_InvalidBuyer"]);
         }
 
         return _sellerRepository.GetVerifiedSellersAsync(cancellationToken);
@@ -67,33 +68,33 @@ public sealed class RequestService : IRequestService
     {
         if (buyerId <= 0)
         {
-            throw new InvalidOperationException("Buyer khong hop le.");
+            throw new InvalidOperationException(Loc.Instance["Service_InvalidBuyer"]);
         }
 
         if (sellerUserId <= 0)
         {
-            throw new InvalidOperationException("Chon seller truoc khi gui request.");
+            throw new InvalidOperationException(Loc.Instance["Buyer_SelectSellerFirst"]);
         }
 
         var build = await _buildRepository.GetByIdAsync(buildId, cancellationToken)
-            ?? throw new InvalidOperationException("Build khong ton tai.");
+            ?? throw new InvalidOperationException(Loc.Instance["Build_NotExist"]);
 
         if (build.BuyerId != buyerId)
         {
-            throw new InvalidOperationException("Build khong thuoc buyer hien tai.");
+            throw new InvalidOperationException(Loc.Instance["Build_NotOwned"]);
         }
 
         var validation = await _buildService.ValidateBuildAsync(build, cancellationToken);
         if (!validation.IsValid)
         {
             throw new InvalidOperationException(
-                "Build chua du cau hinh de gui request." + Environment.NewLine + string.Join(Environment.NewLine, validation.Errors));
+                Loc.Instance["Service_BuildNotReady"] + Environment.NewLine + string.Join(Environment.NewLine, validation.Errors));
         }
 
         await EnsureNoActiveRequestAsync(build, buyerId, cancellationToken);
 
         var seller = await GetAvailableSellerAsync(sellerUserId, cancellationToken)
-            ?? throw new InvalidOperationException("Seller chua verified hoac bi inactive.");
+            ?? throw new InvalidOperationException(Loc.Instance["Service_SellerNotVerifiedOrInactive"]);
 
         build.TotalCostSnapshot = validation.TotalCost;
         var payloadJson = await CreateSnapshotJsonAsync(build, seller, validation.TotalCost, cancellationToken);
@@ -133,16 +134,19 @@ public sealed class RequestService : IRequestService
         CancellationToken cancellationToken = default)
     {
         var request = await _requestRepository.GetByIdAsync(requestId, cancellationToken)
-            ?? throw new InvalidOperationException("Request khong ton tai.");
+            ?? throw new InvalidOperationException(Loc.Instance["Service_RequestNotExist"]);
 
         if (request.SellerUserId != sellerUserId)
         {
-            throw new InvalidOperationException("Request khong thuoc seller hien tai.");
+            throw new InvalidOperationException(Loc.Instance["Service_RequestNotOwned"]);
         }
 
         if (!CanTransition(request.Status, status))
         {
-            throw new InvalidOperationException($"Khong the chuyen request tu {request.Status} sang {status}.");
+            throw new InvalidOperationException(Loc.Instance.Format(
+                "Service_InvalidTransition",
+                Loc.Instance["Status_" + request.Status],
+                Loc.Instance["Status_" + status]));
         }
 
         request.Status = status;
@@ -202,7 +206,7 @@ public sealed class RequestService : IRequestService
 
         if (hasActive)
         {
-            throw new InvalidOperationException("Build nay dang co request active; khong the gui them.");
+            throw new InvalidOperationException(Loc.Instance["Service_BuildHasActiveRequest"]);
         }
     }
 

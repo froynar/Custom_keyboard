@@ -68,7 +68,7 @@ public sealed class RegisterViewModel : ViewModelBase
 
         if (!string.Equals(Password, ConfirmPassword, StringComparison.Ordinal))
         {
-            ErrorMessage = "Mat khau xac nhan khong khop.";
+            ErrorMessage = Tr("Validation_PasswordMismatch");
             return;
         }
 

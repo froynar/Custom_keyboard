@@ -19,7 +19,7 @@ flowchart TD
     B --> B1["1.1 Dang ky"]
     B --> B2["1.2 Dang nhap"]
     B --> B3["1.3 Dang xuat"]
-    B --> B4["1.4 Xem thong tin tai khoan"]
+    B --> B4["1.4 Xem profile tai khoan"]
 
     C --> C1["2.1 Xem dashboard buyer"]
     C --> C2["2.2 Xem danh sach build"]
@@ -90,7 +90,7 @@ flowchart TD
 | 1.1 | Dang ky | Nguoi dung nhap thong tin tai khoan va bam dang ky. |
 | 1.2 | Dang nhap | Nguoi dung nhap email/password va bam dang nhap. |
 | 1.3 | Dang xuat | Nguoi dung bam dang xuat khoi ung dung. |
-| 1.4 | Xem thong tin tai khoan | Nguoi dung xem ten, email, so dien thoai va vai tro hien tai. |
+| 1.4 | Xem profile tai khoan | Nguoi dung mo user menu goc tren phai va bam Profile settings de xem username, email, phone, role, status va user id cua chinh minh. |
 
 ### 2. Buyer - Tao va gui build
 

@@ -22,7 +22,7 @@ flowchart LR
 
     D3[("D3\nCatalog keyboard")]
 
-    Buyer -- "(1) Kit, item ids, quantity, mod notes" --> P221
+    Buyer -- "(1) Kit, item ids, quantity, mod presets/notes" --> P221
     P221 -- "(2) Kit id" --> P222
     P222 -- "(3) Yeu cau kit/layout/brand" --> D3
     D3 -- "(4) Kit, layout, price, technology, mount" --> P222
@@ -39,7 +39,7 @@ flowchart LR
 
 | So | Nguon | Dich | Luong du lieu |
 | --- | --- | --- | --- |
-| (1) | Buyer | 2.2.1 | Kit duoc chon, switch/keycap/stab/accessory, quantity va mod notes |
+| (1) | Buyer | 2.2.1 | Kit duoc chon, switch/keycap/stab/accessory, quantity, mod preset, switch mod quantity va spring weight neu la Spring swap |
 | (2) | 2.2.1 | 2.2.2 | Kit id can kiem tra |
 | (3) | 2.2.2 | D3 | Yeu cau lay keyboard kit, layout va brand |
 | (4) | D3 | 2.2.2 | Kit available, layout/form factor, required switch quantity, technology, mount, price |
@@ -47,7 +47,7 @@ flowchart LR
 | (6) | 2.2.1 | 2.2.3 | Danh sach build items da chon |
 | (7) | 2.2.3 | D3 | Yeu cau lay switch, keycap, stabilizer va accessory |
 | (8) | D3 | 2.2.3 | Available status, price va thuoc tinh can so voi kit |
-| (9) | 2.2.3 | 2.2.4 | Ket qua: switch technology/mount khop kit, keycap/stab support layout, accessory target hop le, quantity hop le |
+| (9) | 2.2.3 | 2.2.4 | Ket qua: switch technology/mount khop kit, keycap/stab support layout, accessory target hop le, quantity hop le, Spring swap 30-76g |
 | (10) | 2.2.4 | 2.3 | Cau hinh build hop le de tinh gia |
 | (11) | 2.2.4 | Buyer | Canh bao hoac loi tuong thich hien tren UI |
 
@@ -141,4 +141,3 @@ flowchart LR
 - Level 2 khong tach case, PCB, plate thanh tien trinh rieng; cac phan nay da nam trong keyboard kit.
 - Level 2 khong co seller inventory, stock hay seller price.
 - Khong dua API, DTO, controller, migration hoac chi tiet bang/cot vao so do.
-

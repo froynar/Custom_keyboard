@@ -1,7 +1,7 @@
 # Custom Keyboard Builder — Kế Hoạch Refactor Theo Phase
 
 **Ngày tạo:** 11/06/2026
-**Nguồn chuẩn:** `Documents_Refactor/` (ERD 17 bảng / 24 quan hệ)
+**Nguồn chuẩn:** `Documents_Refactor/` (ERD 18 bảng / 26 quan hệ)
 **Phạm vi:** Refactor toàn bộ project từ mô hình "case/PCB/plate riêng" sang mô hình "kit-based + BuildItem".
 
 > Nguyên tắc xuyên suốt: **ERD mới là nguồn sự thật duy nhất.** Không đưa lại `seller_inventory`, bảng case/PCB/plate riêng, compatibility chi tiết, hay cột switch-mod cũ (`lube_type`, `is_filmed`, `spring_weight_g`).
@@ -19,7 +19,7 @@
 | Build components | Cột trực tiếp trên `builds` | `build_items` (mỗi dòng đúng 1 FK sản phẩm) |
 | Accessory | Không có | `accessories` |
 | Chat | Không có | `chat_conversations`, `chat_messages` |
-| Tổng bảng | ~19 (gồm junction) | **17** |
+| Tổng bảng | ~19 (gồm junction) | **18** |
 
 **Bảng cần thêm:** `keyboard_kits`, `accessories`, `build_items`, `chat_conversations`, `chat_messages`.
 **Bảng cần bỏ:** `cases`, `pcbs`, `plates`, `case_layouts`, `pcb_layouts`, `plate_layouts`, `compatibility_rules`.
@@ -79,7 +79,7 @@
 
 ### Phase 1 — SQL Schema & Seed (nền tảng dữ liệu)
 
-**Mục tiêu:** Có schema mới 17 bảng + seed + query check pass. Đây là phase "khóa" thiết kế dữ liệu trước khi đụng code.
+**Mục tiêu:** Có schema mới 18 bảng + seed + query check pass. Đây là phase "khóa" thiết kế dữ liệu trước khi đụng code.
 
 1. Viết `Database/SqlServer/CreateSchema_Refactor.sql` từ `Custom_Keyboard_ERD_Realistic_Kit_Shop_Proposal.dbml`, tạo bảng đúng thứ tự FK (roles → users → seller_profiles → brands → layouts → keyboard_kits → switches → keycap_sets → stabilizers → accessories → builds → build_items → build_mods → build_requests → audit_log → chat_conversations → chat_messages).
 2. Thêm CHECK constraints quan trọng:
@@ -187,7 +187,7 @@ Không nên đảo thứ tự: schema chốt trước để models bám theo; re
 
 ## 4. Checklist Nguyên Tắc (chống lệch)
 
-- [ ] Không thêm bảng/quan hệ ngoài 17 bảng / 24 quan hệ nếu chưa cập nhật ERD + FHD + Use Cases + DFD + Class Diagram + seed.
+- [ ] Không thêm bảng/quan hệ ngoài 18 bảng / 26 quan hệ nếu chưa cập nhật ERD + FHD + Use Cases + DFD + Class Diagram + seed.
 - [ ] Không tái xuất hiện `case/pcb/plate` riêng, `compatibility_rules`, `seller_inventory`, cột switch-mod chi tiết.
 - [ ] Mỗi `build_items` đúng 1 FK sản phẩm; mỗi `chat_conversations` đúng 1 trong buyer/admin.
 - [ ] Giá luôn là snapshot tại thời điểm tạo/gửi request.

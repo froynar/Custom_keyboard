@@ -1,6 +1,7 @@
 <UserControl x:Class="Custom_keyboard.Views.ChatView"
              xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
-             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml">
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:loc="clr-namespace:Custom_keyboard.Localization">
     <Grid>
         <Grid.ColumnDefinitions>
             <ColumnDefinition Width="280"/>
@@ -9,7 +10,7 @@
         </Grid.ColumnDefinitions>
 
         <!-- Conversation list + start panel -->
-        <Border Background="White" BorderBrush="#DDE2E8" BorderThickness="1" Padding="14">
+        <Border Style="{StaticResource DashboardCard}">
             <Grid>
                 <Grid.RowDefinitions>
                     <RowDefinition Height="Auto"/>
@@ -18,42 +19,53 @@
                     <RowDefinition Height="Auto"/>
                 </Grid.RowDefinitions>
 
-                <TextBlock Grid.Row="0" Text="Hoi thoai" FontWeight="SemiBold" FontSize="15" Margin="0,0,0,10"/>
+                <TextBlock Grid.Row="0" Text="{loc:Tr Chat_Title}" Style="{StaticResource SectionTitle}"/>
 
                 <StackPanel Grid.Row="1" Visibility="{Binding StartConversationVisibility}" Margin="0,0,0,10">
-                    <TextBlock Text="{Binding CounterpartLabel}" Foreground="#687381" FontSize="12" Margin="0,0,0,4"/>
+                    <TextBlock Text="{Binding CounterpartLabel}" Style="{StaticResource FieldLabel}"/>
                     <ComboBox ItemsSource="{Binding Counterparts}"
                               SelectedItem="{Binding SelectedCounterpart}"
                               DisplayMemberPath="ShopName"/>
-                    <Button Content="Mo hoi thoai voi seller"
+                    <Button Content="{loc:Tr Chat_OpenWithSeller}"
                             Command="{Binding StartConversationCommand}"
-                            Margin="0,8,0,0" Padding="10,6"
-                            Background="#2F6FED" Foreground="White" BorderThickness="0"/>
+                            Margin="0,8,0,0"
+                            Style="{StaticResource PrimaryButton}"/>
                 </StackPanel>
 
-                <ListBox Grid.Row="2"
-                         ItemsSource="{Binding Conversations}"
-                         SelectedItem="{Binding SelectedConversation}"
-                         BorderThickness="0">
-                    <ListBox.ItemTemplate>
-                        <DataTemplate>
-                            <StackPanel Margin="0,4">
-                                <TextBlock Text="{Binding Title}" FontWeight="SemiBold"/>
-                                <TextBlock Text="{Binding Subtitle}" Foreground="#9098A1" FontSize="11"/>
-                            </StackPanel>
-                        </DataTemplate>
-                    </ListBox.ItemTemplate>
-                </ListBox>
+                <Grid Grid.Row="2">
+                    <ListBox x:Name="ConversationList"
+                             ItemsSource="{Binding Conversations}"
+                             SelectedItem="{Binding SelectedConversation}"
+                             BorderThickness="0">
+                        <ListBox.ItemTemplate>
+                            <DataTemplate>
+                                <StackPanel Margin="0,4">
+                                    <TextBlock Text="{Binding Title}" FontWeight="SemiBold"/>
+                                    <TextBlock Text="{Binding Subtitle}" Foreground="{StaticResource TextMutedBrush}" FontSize="11"/>
+                                </StackPanel>
+                            </DataTemplate>
+                        </ListBox.ItemTemplate>
+                    </ListBox>
 
-                <Button Grid.Row="3" Content="Refresh hoi thoai"
+                    <Border Style="{StaticResource EmptyStateCard}"
+                            Visibility="{Binding Items.Count, ElementName=ConversationList, Converter={StaticResource CountToVisibility}}">
+                        <StackPanel>
+                            <TextBlock Text="{loc:Tr Chat_EmptyConvTitle}" Style="{StaticResource EmptyStateTitle}"/>
+                            <TextBlock Text="{loc:Tr Chat_EmptyConvText}"
+                                       Style="{StaticResource EmptyStateText}"/>
+                        </StackPanel>
+                    </Border>
+                </Grid>
+
+                <Button Grid.Row="3" Content="{loc:Tr Chat_RefreshConversations}"
                         Command="{Binding RefreshConversationsCommand}"
-                        Margin="0,10,0,0" Padding="10,6"
-                        Background="#EEF2F6" BorderBrush="#DDE2E8"/>
+                        Margin="0,10,0,0"
+                        Style="{StaticResource SecondaryButton}"/>
             </Grid>
         </Border>
 
         <!-- Messages + composer -->
-        <Border Grid.Column="2" Background="White" BorderBrush="#DDE2E8" BorderThickness="1" Padding="14">
+        <Border Grid.Column="2" Style="{StaticResource DashboardCard}">
             <Grid>
                 <Grid.RowDefinitions>
                     <RowDefinition Height="*"/>
@@ -62,36 +74,47 @@
                 </Grid.RowDefinitions>
 
                 <ScrollViewer Grid.Row="0" VerticalScrollBarVisibility="Auto">
-                    <ItemsControl ItemsSource="{Binding Messages}">
-                        <ItemsControl.ItemTemplate>
-                            <DataTemplate>
-                                <Border Margin="0,4" Padding="10,6" CornerRadius="6"
-                                        MaxWidth="420"
-                                        HorizontalAlignment="{Binding Alignment}"
-                                        Background="#EEF2F6">
-                                    <StackPanel>
-                                        <TextBlock Text="{Binding SenderLabel}" FontSize="11" Foreground="#687381"/>
-                                        <TextBlock Text="{Binding Text}" TextWrapping="Wrap"/>
-                                        <TextBlock Text="{Binding SentAt, StringFormat=yyyy-MM-dd HH:mm}"
-                                                   FontSize="10" Foreground="#9098A1" HorizontalAlignment="Right"/>
-                                    </StackPanel>
-                                </Border>
-                            </DataTemplate>
-                        </ItemsControl.ItemTemplate>
-                    </ItemsControl>
+                    <Grid>
+                        <ItemsControl x:Name="MessageList" ItemsSource="{Binding Messages}">
+                            <ItemsControl.ItemTemplate>
+                                <DataTemplate>
+                                    <Border Margin="0,4" Padding="10,6" CornerRadius="6"
+                                            MaxWidth="420"
+                                            HorizontalAlignment="{Binding Alignment}"
+                                            Background="#EEF2F6">
+                                        <StackPanel>
+                                            <TextBlock Text="{Binding SenderLabel}" FontSize="11" Foreground="{StaticResource TextMutedBrush}"/>
+                                            <TextBlock Text="{Binding Text}" TextWrapping="Wrap"/>
+                                            <TextBlock Text="{Binding SentAt, StringFormat=yyyy-MM-dd HH:mm}"
+                                                       FontSize="10" Foreground="#9098A1" HorizontalAlignment="Right"/>
+                                        </StackPanel>
+                                    </Border>
+                                </DataTemplate>
+                            </ItemsControl.ItemTemplate>
+                        </ItemsControl>
+
+                        <Border Style="{StaticResource EmptyStateCard}"
+                                Visibility="{Binding Items.Count, ElementName=MessageList, Converter={StaticResource CountToVisibility}}">
+                            <StackPanel>
+                                <TextBlock Text="{loc:Tr Chat_EmptyMsgTitle}" Style="{StaticResource EmptyStateTitle}"/>
+                                <TextBlock Text="{loc:Tr Chat_EmptyMsgText}"
+                                           Style="{StaticResource EmptyStateText}"/>
+                            </StackPanel>
+                        </Border>
+                    </Grid>
                 </ScrollViewer>
 
                 <DockPanel Grid.Row="1" Margin="0,10,0,0">
-                    <Button DockPanel.Dock="Right" Content="Gui"
+                    <Button DockPanel.Dock="Right" Content="{loc:Tr Chat_Send}"
                             Command="{Binding SendMessageCommand}"
-                            Margin="8,0,0,0" Padding="16,8"
-                            Background="#2F6FED" Foreground="White" BorderThickness="0"/>
+                            Margin="8,0,0,0"
+                            Style="{StaticResource PrimaryButton}"/>
                     <TextBox Text="{Binding MessageText, UpdateSourceTrigger=PropertyChanged}"
-                             Padding="8" VerticalContentAlignment="Center"/>
+                             VerticalContentAlignment="Center"/>
                 </DockPanel>
 
                 <TextBlock Grid.Row="2" Text="{Binding StatusMessage}"
-                           Foreground="#687381" FontSize="12" Margin="0,8,0,0"/>
+                           Foreground="{StaticResource TextMutedBrush}" FontSize="12" Margin="0,8,0,0"/>
             </Grid>
         </Border>
     </Grid>

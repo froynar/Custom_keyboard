@@ -7,7 +7,7 @@ Tai lieu nay tao 3 use case chinh tu FHD muc nguoi dung cuoi:
 - Admin - Quan tri he thong.
 - Phase phu - Chat realtime Buyer-Seller va Seller-Admin.
 
-Nhom `1. Tai khoan` la chuc nang dung chung. Trong 3 use case rieng theo role, `Dang nhap`, `Dang xuat` va `Xem thong tin tai khoan` duoc gan cho ca Buyer, Seller, Admin. Rieng `Dang ky` duoc dua vao UC Buyer la luong nguoi dung tu tao tai khoan; Seller/Admin thuong duoc Admin phan quyen hoac cap san tai khoan nen khong dat trong luong chinh cua Seller/Admin.
+Nhom `1. Tai khoan` la chuc nang dung chung. Trong 3 use case rieng theo role, `Dang nhap`, `Dang xuat` va `Xem profile tai khoan` duoc gan cho ca Buyer, Seller, Admin. Rieng `Dang ky` duoc dua vao UC Buyer la luong nguoi dung tu tao tai khoan; Seller/Admin thuong duoc Admin phan quyen hoac cap san tai khoan nen khong dat trong luong chinh cua Seller/Admin.
 
 ## UC-01: Buyer Tao Va Gui Build Keyboard
 
@@ -19,7 +19,7 @@ flowchart LR
         UC11(("Dang ky"))
         UC12(("Dang nhap"))
         UC13(("Dang xuat"))
-        UC14(("Xem thong tin tai khoan"))
+        UC14(("Xem profile tai khoan"))
 
         UC21(("Xem dashboard buyer"))
         UC22(("Xem danh sach build"))
@@ -108,7 +108,7 @@ flowchart LR
 | 22 | Buyer chon seller trong danh sach seller kha dung. | 2.7 Chon seller |
 | 23 | Buyer nhap note neu co va bam gui request build. | 2.8 Gui request |
 | 24 | Buyer theo doi trang thai request trong danh sach request da gui. | 2.9 Theo doi request |
-| 25 | Buyer co the mo user menu de xem thong tin tai khoan hoac dang xuat khi ket thuc su dung. | 1.3, 1.4 |
+| 25 | Buyer co the mo user menu de xem profile tai khoan hoac dang xuat khi ket thuc su dung. | 1.3, 1.4 |
 
 ### Luong Phu / Ngoai Le
 
@@ -140,7 +140,7 @@ flowchart LR
     subgraph System["Custom Keyboard Builder"]
         UC12(("Dang nhap"))
         UC13(("Dang xuat"))
-        UC14(("Xem thong tin tai khoan"))
+        UC14(("Xem profile tai khoan"))
 
         UC31(("Xem dashboard seller"))
         UC32(("Xem danh sach request"))
@@ -171,7 +171,7 @@ flowchart LR
 | Buoc | Thao tac cua Seller | Chuc nang FHD |
 | --- | --- | --- |
 | 1 | Seller dang nhap vao ung dung. | 1.2 Dang nhap |
-| 2 | Seller xem thong tin tai khoan neu can kiem tra ho so ca nhan. | 1.4 Xem thong tin tai khoan |
+| 2 | Seller mo user menu de xem profile tai khoan neu can kiem tra ho so ca nhan. | 1.4 Xem profile tai khoan |
 | 3 | Seller vao dashboard seller. | 3.1 Xem dashboard seller |
 | 4 | Seller xem danh sach request duoc gui den. | 3.2 Xem danh sach request |
 | 5 | Seller mo mot request de xem chi tiet. | 3.3 Xem chi tiet request |
@@ -208,7 +208,7 @@ flowchart LR
     subgraph System["Custom Keyboard Builder"]
         UC12(("Dang nhap"))
         UC13(("Dang xuat"))
-        UC14(("Xem thong tin tai khoan"))
+        UC14(("Xem profile tai khoan"))
         UC41(("Xem dashboard admin"))
         UC42(("Quan ly user"))
         UC43(("Quan ly seller"))
@@ -238,7 +238,7 @@ flowchart LR
 | Buoc | Thao tac cua Admin | Chuc nang FHD |
 | --- | --- | --- |
 | 1 | Admin dang nhap vao ung dung. | 1.2 Dang nhap |
-| 2 | Admin xem thong tin tai khoan neu can kiem tra ho so ca nhan. | 1.4 Xem thong tin tai khoan |
+| 2 | Admin mo user menu de xem profile tai khoan neu can kiem tra ho so ca nhan. | 1.4 Xem profile tai khoan |
 | 3 | Admin vao dashboard admin. | 4.1 Xem dashboard admin |
 | 4 | Admin mo man hinh quan ly user. | 4.2 Quan ly user |
 | 5 | Admin xem danh sach user. | 4.2.1 Xem danh sach user |
@@ -364,7 +364,7 @@ flowchart LR
 | 1.1 | Dang ky | UC-01; Seller co the di qua dang ky tai khoan thong thuong truoc khi duoc Admin phan quyen; Admin thuong duoc cap san tai khoan |
 | 1.2 | Dang nhap | UC-01, UC-02, UC-03 |
 | 1.3 | Dang xuat | UC-01, UC-02, UC-03 |
-| 1.4 | Xem thong tin tai khoan | UC-01, UC-02, UC-03 |
+| 1.4 | Xem profile tai khoan | UC-01, UC-02, UC-03 |
 | 2.1 | Xem dashboard buyer | UC-01 |
 | 2.2 | Xem danh sach build | UC-01 |
 | 2.3 | Tao build moi | UC-01 |

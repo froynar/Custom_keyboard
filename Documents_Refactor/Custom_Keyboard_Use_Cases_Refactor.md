@@ -18,7 +18,7 @@ flowchart LR
         UC11(("Dang ky"))
         UC12(("Dang nhap"))
         UC13(("Dang xuat"))
-        UC14(("Xem thong tin tai khoan"))
+        UC14(("Xem profile tai khoan"))
 
         UC21(("Xem dashboard buyer"))
         UC22(("Xem danh sach build"))
@@ -32,6 +32,7 @@ flowchart LR
         UC210(("Gui request"))
         UC211(("Theo doi request"))
         UC212(("Luu tru build"))
+        UC213(("Dang ky tro thanh seller"))
         UC51(("Buyer chat voi seller"))
     end
 
@@ -51,6 +52,7 @@ flowchart LR
     Buyer --> UC210
     Buyer --> UC211
     Buyer --> UC212
+    Buyer --> UC213
     Buyer --> UC51
 
     UC23 -. include .-> UC24
@@ -79,7 +81,7 @@ flowchart LR
 | 3 | Buyer xem dashboard va danh sach build da tao. | 2.1, 2.2 |
 | 4 | Buyer tao build moi. | 2.3 |
 | 5 | Buyer chon keyboard kit. | 2.4 |
-| 6 | Buyer them switch, keycap, stabilizer package, accessory hoac mod note vao build. | 2.5 |
+| 6 | Buyer them switch, keycap, stabilizer package, accessory hoac mod preset vao build; neu chon Spring swap thi chon gram 30-76g va so switch can mod. | 2.5 |
 | 7 | Buyer xem canh bao tuong thich neu co. | 2.6 |
 | 8 | Buyer xem tong gia tam tinh. | 2.7 |
 | 9 | Buyer luu build. | 2.8 |
@@ -88,7 +90,7 @@ flowchart LR
 | 12 | Buyer theo doi trang thai request. | 2.11 |
 | 13 | Buyer co the luu tru build khong con can thao tac trong danh sach chinh. | 2.12 |
 | 14 | Buyer chat voi seller neu can trao doi them. | 5.1 |
-| 15 | Buyer xem thong tin tai khoan hoac dang xuat khi ket thuc. | 1.3, 1.4 |
+| 15 | Buyer mo user menu goc tren phai de xem profile tai khoan hoac dang xuat khi ket thuc. | 1.3, 1.4 |
 
 ### Chi Tiet Nghiep Vu
 
@@ -99,7 +101,7 @@ flowchart LR
 | Them keycap | Buyer chon keycap co form factor phu hop voi kit. |
 | Them stabilizer | Buyer chon stabilizer package phu hop layout/form factor. |
 | Them accessory | Buyer chon phu kien chung nhu lube, film, cable, foam hoac tool. |
-| Ghi chu mod | Buyer nhap yeu cau mod don gian trong notes, khong tach spring weight/lube type chi tiet. |
+| Ghi chu mod | Buyer chon mod preset theo target; mod Switch co so luong switch can mod, Spring swap co spring weight integer 30-76g; chi tiet lube/film/foam/tape them vao notes. |
 
 ### Luong Phu / Ngoai Le
 
@@ -131,7 +133,7 @@ flowchart LR
     subgraph System["Custom Keyboard Builder"]
         UC12(("Dang nhap"))
         UC13(("Dang xuat"))
-        UC14(("Xem thong tin tai khoan"))
+        UC14(("Xem profile tai khoan"))
 
         UC31(("Xem dashboard seller"))
         UC32(("Xem danh sach request"))
@@ -185,7 +187,7 @@ flowchart LR
 | 7 | Seller hoan thanh request khi xu ly xong. | 3.6 |
 | 8 | Seller chat voi buyer neu can lam ro build. | 5.2 |
 | 9 | Seller chat voi admin neu can ho tro profile/tai khoan. | 5.3 |
-| 10 | Seller xem thong tin tai khoan hoac dang xuat khi ket thuc. | 1.3, 1.4 |
+| 10 | Seller mo user menu goc tren phai de xem profile tai khoan hoac dang xuat khi ket thuc. | 1.3, 1.4 |
 
 ### Luong Phu / Ngoai Le
 
@@ -214,13 +216,14 @@ flowchart LR
     subgraph System["Custom Keyboard Builder"]
         UC12(("Dang nhap"))
         UC13(("Dang xuat"))
-        UC14(("Xem thong tin tai khoan"))
+        UC14(("Xem profile tai khoan"))
 
         UC41(("Xem dashboard admin"))
         UC42(("Quan ly user"))
         UC43(("Quan ly seller profile"))
         UC44(("Quan ly catalog"))
         UC45(("Xem audit log"))
+        UC46(("Duyet don xin lam seller"))
         UC54(("Admin chat voi seller"))
     end
 
@@ -232,7 +235,10 @@ flowchart LR
     Admin --> UC43
     Admin --> UC44
     Admin --> UC45
+    Admin --> UC46
     Admin --> UC54
+
+    UC46 -. extend .-> UC43
 
     UC41 -. include .-> UC42
     UC41 -. include .-> UC43
@@ -259,7 +265,7 @@ flowchart LR
 | 5 | Admin quan ly catalog: brand, layout, keyboard kit, switch, keycap, stabilizer, accessory. | 4.4 |
 | 6 | Admin xem audit log khi can kiem tra lich su thao tac. | 4.5 |
 | 7 | Admin chat voi seller neu can ho tro. | 5.4 |
-| 8 | Admin xem thong tin tai khoan hoac dang xuat khi ket thuc. | 1.3, 1.4 |
+| 8 | Admin mo user menu goc tren phai de xem profile tai khoan hoac dang xuat khi ket thuc. | 1.3, 1.4 |
 
 ### Chi Tiet Nghiep Vu
 
@@ -301,7 +307,7 @@ flowchart LR
 | 1.1 | Dang ky | UC-01 |
 | 1.2 | Dang nhap | UC-01, UC-02, UC-03 |
 | 1.3 | Dang xuat | UC-01, UC-02, UC-03 |
-| 1.4 | Xem thong tin tai khoan | UC-01, UC-02, UC-03 |
+| 1.4 | Xem profile tai khoan | UC-01, UC-02, UC-03 |
 | 2.1 | Xem dashboard buyer | UC-01 |
 | 2.2 | Xem danh sach build | UC-01 |
 | 2.3 | Tao build moi | UC-01 |

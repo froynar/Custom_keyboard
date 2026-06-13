@@ -16,7 +16,7 @@ Activity Diagram nay duoc trinh bay theo dang swimlane gom `Nguoi dung` va `He t
 - `1.1 Dang ky`
 - `1.2 Dang nhap`
 - `1.3 Dang xuat`
-- `1.4 Xem thong tin tai khoan`
+- `1.4 Xem profile tai khoan`
 
 ```mermaid
 flowchart LR
@@ -30,8 +30,9 @@ flowchart LR
         ChooseLogin[Chon Dang nhap]
         InputLogin[Nhap email va password]
         ClickLogin[Bam nut Dang nhap]
-        ChooseAccountInfo[Chon Xem thong tin tai khoan]
-        ReadAccountInfo[Xem thong tin tai khoan]
+        OpenUserMenu[Mo user menu goc tren phai]
+        ChooseAccountInfo[Bam Profile settings]
+        ReadAccountInfo[Xem profile tai khoan cua minh]
         ContinueUse[Tiep tuc su dung ung dung]
         ClickLogout[Bam Dang xuat]
         End((Ket thuc))
@@ -46,7 +47,7 @@ flowchart LR
         CheckLogin{Thong tin dang nhap hop le?}
         ShowLoginError[Hien thi loi dang nhap]
         ShowDashboard[Hien thi man hinh theo role]
-        ShowAccountInfo[Hien thi ten, email, so dien thoai va vai tro]
+        ShowAccountInfo[Hien thi username, email, phone, role, status va user id]
         ShowLoginAfterLogout[Quay ve man hinh dang nhap]
     end
 
@@ -61,7 +62,7 @@ flowchart LR
     CheckLogin -- Khong --> ShowLoginError --> InputLogin
     CheckLogin -- Co --> ShowDashboard
 
-    ShowDashboard --> ChooseAccountInfo
+    ShowDashboard --> OpenUserMenu --> ChooseAccountInfo
     ChooseAccountInfo --> ShowAccountInfo --> ReadAccountInfo --> ContinueUse
     ContinueUse --> ClickLogout --> ShowLoginAfterLogout --> End
 ```
@@ -79,8 +80,8 @@ flowchart LR
 | 7 | Nguoi dung nhap email/password va bam dang nhap. | 1.2 Dang nhap |
 | 8 | He thong kiem tra thong tin dang nhap; neu khong hop le thi hien thong bao loi. | 1.2 Dang nhap |
 | 9 | Neu dang nhap thanh cong, he thong hien thi man hinh theo role. | 1.2 Dang nhap |
-| 10 | Nguoi dung chon xem thong tin tai khoan. | 1.4 Xem thong tin tai khoan |
-| 11 | He thong hien thi ten, email, so dien thoai va vai tro. | 1.4 Xem thong tin tai khoan |
+| 10 | Nguoi dung mo user menu goc tren phai va bam Profile settings. | 1.4 Xem profile tai khoan |
+| 11 | He thong hien thi username, email, phone, role, status va user id cua chinh nguoi dung. | 1.4 Xem profile tai khoan |
 | 12 | Nguoi dung bam dang xuat. | 1.3 Dang xuat |
 | 13 | He thong quay ve man hinh dang nhap va ket thuc phien su dung. | 1.3 Dang xuat |
 

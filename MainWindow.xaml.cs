@@ -23,6 +23,7 @@ namespace Custom_keyboard
             var auditLogRepository = new SqlAuditLogRepository(connectionFactory);
             var chatRepository = new SqlChatRepository(connectionFactory);
             var statsRepository = new SqlStatsRepository(connectionFactory);
+            var sellerApplicationRepository = new SqlSellerApplicationRepository(connectionFactory);
             var passwordHasher = new Pbkdf2PasswordHasher();
             var realtimeService = new MqttRealtimeService();
             var accountService = new AccountService(userRepository, passwordHasher);
@@ -42,7 +43,12 @@ namespace Custom_keyboard
                 requestRepository,
                 auditLogRepository);
             var chatService = new ChatService(chatRepository, userRepository, sellerRepository);
-            var statsService = new StatsService(statsRepository);
+            var statsService = new StatsService(statsRepository, userRepository, sellerRepository);
+            var sellerApplicationService = new SellerApplicationService(
+                userRepository,
+                sellerRepository,
+                sellerApplicationRepository,
+                auditLogRepository);
 
             DataContext = new MainShellViewModel(
                 accountService,
@@ -52,6 +58,7 @@ namespace Custom_keyboard
                 requestService,
                 chatService,
                 statsService,
+                sellerApplicationService,
                 realtimeService);
 
             // Tear the realtime client down when the shell closes (best-effort).

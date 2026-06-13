@@ -51,6 +51,20 @@ classDiagram
         +DateTime? VerifiedAt
     }
 
+    class SellerApplication {
+        +int ApplicationId
+        +int BuyerUserId
+        +string ShopName
+        +string Phone
+        +string Address
+        +string? Note
+        +SellerApplicationStatus Status
+        +string? ReviewNote
+        +DateTime CreatedAt
+        +DateTime? ReviewedAt
+        +int? ReviewedBy
+    }
+
     class Brand {
         +int BrandId
         +string BrandName
@@ -148,6 +162,16 @@ classDiagram
         +string? Notes
     }
 
+    class BuildModEditorViewModel {
+        +string ModType
+        +string TargetComponent
+        +int ModQuantity
+        +int SpringWeightG
+        +string? Notes
+        +IReadOnlyList~string~ AvailableModTypes
+        +BuildMod ToBuildMod()
+    }
+
     class BuildRequest {
         +string RequestId
         +string BuildId
@@ -193,6 +217,7 @@ classDiagram
 
     Role "1" --> "0..*" User : has
     User "1" --> "0..1" SellerProfile : sellerProfile
+    User "1" --> "0..*" SellerApplication : applications
     User "1" --> "0..*" KeyboardBuild : buyerBuilds
     User "1" --> "0..*" BuildRequest : sellerRequests
     User "1" --> "0..*" AuditLogEntry : creates
@@ -293,6 +318,15 @@ classDiagram
         +SendMessageAsync()
     }
 
+    class ISellerApplicationService {
+        <<interface>>
+        +SubmitAsync()
+        +GetMyApplicationAsync()
+        +GetApplicationsAsync()
+        +ApproveAsync()
+        +RejectAsync()
+    }
+
     class IComponentRepository {
         <<interface>>
         +GetBrandsAsync()
@@ -358,6 +392,16 @@ classDiagram
         +AddMessageAsync()
     }
 
+    class ISellerApplicationRepository {
+        <<interface>>
+        +AddAsync()
+        +GetByIdAsync()
+        +GetLatestByBuyerAsync()
+        +HasPendingAsync()
+        +GetAdminRowsAsync()
+        +UpdateStatusAsync()
+    }
+
     class BuildValidationResult {
         +bool IsValid
         +List~string~ Errors
@@ -380,6 +424,10 @@ classDiagram
     IAdminService --> IAuditLogRepository
     IChatService --> IChatRepository
     IChatService --> IUserRepository
+    ISellerApplicationService --> ISellerApplicationRepository
+    ISellerApplicationService --> IUserRepository
+    ISellerApplicationService --> ISellerRepository
+    ISellerApplicationService --> IAuditLogRepository
     IChatService --> IRequestRepository
 ```
 
@@ -421,6 +469,7 @@ classDiagram
         +KeyboardBuild CurrentBuild
         +KeyboardKit? SelectedKit
         +ObservableCollection~BuildItem~ Items
+        +ObservableCollection~BuildModEditorViewModel~ Mods
         +AddSwitchCommand
         +AddKeycapCommand
         +AddStabilizerCommand
@@ -515,4 +564,3 @@ classDiagram
 - `BuildItem` dung nullable FK theo ERD, nhung trong code nen co helper `HasExactlyOneProduct()` de validation ro rang.
 - `BuildRequest` khong luu `BuyerId`; buyer lay qua `Build.BuyerId`.
 - Chat conversation luon co seller va dung mot trong `BuyerId` hoac `AdminUserId`.
-

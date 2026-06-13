@@ -1,4 +1,5 @@
 using System.Collections.ObjectModel;
+using System.ComponentModel;
 using System.Windows;
 using System.Windows.Input;
 using Custom_keyboard.Commands;
@@ -20,14 +21,21 @@ public sealed class BuyerDashboardViewModel : RoleDashboardViewModel
     private readonly IBuildService _buildService;
     private readonly IRequestService _requestService;
     private readonly IStatsService _statsService;
+    private readonly ISellerApplicationService _sellerApplicationService;
     private SellerPublicStats? _sellerStats;
+    private SellerApplication? _myApplication;
+    private string _sellerAppShopName = string.Empty;
+    private string _sellerAppPhone = string.Empty;
+    private string _sellerAppAddress = string.Empty;
+    private string? _sellerAppNote;
 
     private bool _hasLoaded;
     private bool _isBusy;
     private bool _suppressValidation;
+    private bool _refreshingModQuantityLimits;
     private bool _canSaveBuild;
     private int _validationVersion;
-    private string _statusMessage = "San sang.";
+    private string _statusMessage = Tr("Common_Ready");
     private string _buildName = string.Empty;
     private string? _buildNotes;
     private string? _editingBuildId;
@@ -52,27 +60,24 @@ public sealed class BuyerDashboardViewModel : RoleDashboardViewModel
         IBuildService buildService,
         IRequestService requestService,
         IStatsService statsService,
+        ISellerApplicationService sellerApplicationService,
         ChatViewModel chat)
         : base(
             currentUser,
             logoutCommand,
-            "Buyer dashboard",
-            "Chon kit, them linh kien va gui request cho seller.",
-            [
-                "Chon kit va them switch/keycap/stabilizer/accessory",
-                "Xem canh bao tuong thich va tong gia",
-                "Luu build va gui request cho seller",
-                "Theo doi trang thai request va chat"
-            ])
+            "Buyer_Title",
+            "Buyer_Subtitle",
+            ["Buyer_Task1", "Buyer_Task2", "Buyer_Task3", "Buyer_Task4"])
     {
         _catalogService = catalogService;
         _buildService = buildService;
         _requestService = requestService;
         _statsService = statsService;
+        _sellerApplicationService = sellerApplicationService;
         Chat = chat;
 
         LoadCommand = new AsyncRelayCommand(_ => ExecuteSafeAsync(LoadAsync));
-        RefreshAllCommand = new AsyncRelayCommand(_ => ExecuteSafeAsync(RefreshAllAsync, "Da refresh buyer dashboard."));
+        RefreshAllCommand = new AsyncRelayCommand(_ => ExecuteSafeAsync(RefreshAllAsync, Tr("Buyer_Refreshed")));
         ShowHomeCommand = new RelayCommand(_ => CurrentScreen = BuyerDashboardScreen.Home);
         ShowBuildListCommand = new RelayCommand(_ => CurrentScreen = BuyerDashboardScreen.BuildList);
         ShowSentRequestsCommand = new RelayCommand(_ => CurrentScreen = BuyerDashboardScreen.SentRequests);
@@ -80,11 +85,13 @@ public sealed class BuyerDashboardViewModel : RoleDashboardViewModel
         NewBuildCommand = new RelayCommand(_ => StartNewBuild());
         OpenBuildCommand = new AsyncRelayCommand(OpenBuildAsync, _ => !IsBusy);
         SaveBuildCommand = new AsyncRelayCommand(_ => ExecuteSafeAsync(SaveBuildAsync), _ => CanSaveBuild && !IsBusy);
-        ArchiveBuildCommand = new AsyncRelayCommand(_ => ExecuteSafeAsync(ArchiveBuildAsync, "Da archive build."), _ => SelectedBuild is not null && !IsBusy);
+        ArchiveBuildCommand = new AsyncRelayCommand(_ => ExecuteSafeAsync(ArchiveBuildAsync, Tr("Buyer_BuildArchived")), _ => SelectedBuild is not null && !IsBusy);
         SendRequestCommand = new AsyncRelayCommand(_ => ExecuteSafeAsync(SendRequestAsync), _ => SelectedBuild is not null && SelectedSeller is not null && !IsBusy);
-        AddModCommand = new RelayCommand(_ => AddMod());
+        AddModCommand = new RelayCommand(AddMod);
         RemoveModCommand = new RelayCommand(_ => RemoveSelectedMod(), _ => SelectedMod is not null);
         ApplyRequiredSwitchQuantityCommand = new RelayCommand(_ => ApplyRequiredSwitchQuantity(), _ => SelectedKit is not null);
+        ShowRegisterSellerCommand = new RelayCommand(_ => CurrentScreen = BuyerDashboardScreen.RegisterSeller);
+        SubmitSellerApplicationCommand = new AsyncRelayCommand(_ => ExecuteSafeAsync(SubmitSellerApplicationAsync), _ => CanSubmitSellerApplication && !IsBusy);
     }
 
     public ChatViewModel Chat { get; }
@@ -94,6 +101,7 @@ public sealed class BuyerDashboardViewModel : RoleDashboardViewModel
     public ObservableCollection<SellerProfile> AvailableSellers { get; } = [];
     public ObservableCollection<KeyboardKit> Kits { get; } = [];
     public ObservableCollection<KeyboardSwitch> Switches { get; } = [];
+    public ObservableCollection<KeyboardSwitch> CompatibleSwitches { get; } = [];
     public ObservableCollection<KeycapSet> Keycaps { get; } = [];
     public ObservableCollection<Stabilizer> Stabilizers { get; } = [];
     public ObservableCollection<AccessoryOptionViewModel> Accessories { get; } = [];
@@ -116,11 +124,13 @@ public sealed class BuyerDashboardViewModel : RoleDashboardViewModel
     public ICommand AddModCommand { get; }
     public ICommand RemoveModCommand { get; }
     public ICommand ApplyRequiredSwitchQuantityCommand { get; }
+    public ICommand ShowRegisterSellerCommand { get; }
+    public ICommand SubmitSellerApplicationCommand { get; }
 
     public string UserMenuHeader => $"{CurrentUser.Username} ({CurrentUser.Role})";
 
     public string SellerEmptyMessage => AvailableSellers.Count == 0
-        ? "Chua co seller active/verified de nhan request."
+        ? Tr("Buyer_NoSellers")
         : string.Empty;
 
     public Visibility HomeVisibility => Visible(BuyerDashboardScreen.Home);
@@ -128,6 +138,7 @@ public sealed class BuyerDashboardViewModel : RoleDashboardViewModel
     public Visibility ConfiguratorVisibility => Visible(BuyerDashboardScreen.Configurator);
     public Visibility SentRequestsVisibility => Visible(BuyerDashboardScreen.SentRequests);
     public Visibility ChatVisibility => Visible(BuyerDashboardScreen.Chat);
+    public Visibility RegisterSellerVisibility => Visible(BuyerDashboardScreen.RegisterSeller);
 
     public BuyerDashboardScreen CurrentScreen
     {
@@ -141,6 +152,7 @@ public sealed class BuyerDashboardViewModel : RoleDashboardViewModel
                 OnPropertyChanged(nameof(ConfiguratorVisibility));
                 OnPropertyChanged(nameof(SentRequestsVisibility));
                 OnPropertyChanged(nameof(ChatVisibility));
+                OnPropertyChanged(nameof(RegisterSellerVisibility));
             }
         }
     }
@@ -207,6 +219,7 @@ public sealed class BuyerDashboardViewModel : RoleDashboardViewModel
             if (SetProperty(ref _selectedKit, value))
             {
                 OnPropertyChanged(nameof(KitSummary));
+                RefreshCompatibleSwitches();
                 if (!_suppressValidation && value is not null && SwitchQuantity != value.RequiredSwitchQuantity)
                 {
                     SwitchQuantity = value.RequiredSwitchQuantity;
@@ -219,9 +232,9 @@ public sealed class BuyerDashboardViewModel : RoleDashboardViewModel
     }
 
     public string KitSummary => SelectedKit is null
-        ? "Chua chon kit."
-        : $"{SelectedKit.PcbTechnology} / mount {SelectedKit.SwitchMount} / can {SelectedKit.RequiredSwitchQuantity} switch"
-          + (string.IsNullOrWhiteSpace(SelectedKit.IncludedParts) ? string.Empty : $"\nGom: {SelectedKit.IncludedParts}");
+        ? Tr("Buyer_NoKitSelected")
+        : TrFormat("Buyer_KitSummaryFormat", SelectedKit.PcbTechnology, SelectedKit.SwitchMount, SelectedKit.RequiredSwitchQuantity)
+          + (string.IsNullOrWhiteSpace(SelectedKit.IncludedParts) ? string.Empty : TrFormat("Buyer_KitIncludes", SelectedKit.IncludedParts));
 
     public KeyboardSwitch? SelectedSwitch
     {
@@ -242,6 +255,7 @@ public sealed class BuyerDashboardViewModel : RoleDashboardViewModel
         {
             if (SetProperty(ref _switchQuantity, value))
             {
+                RefreshModQuantityLimits();
                 ScheduleValidation();
             }
         }
@@ -330,6 +344,60 @@ public sealed class BuyerDashboardViewModel : RoleDashboardViewModel
         set => SetProperty(ref _requestNote, value);
     }
 
+    // --- Seller application (buyer -> seller upgrade) ---
+
+    public string SellerAppShopName
+    {
+        get => _sellerAppShopName;
+        set { if (SetProperty(ref _sellerAppShopName, value)) RaiseCommandStatesChanged(); }
+    }
+
+    public string SellerAppPhone
+    {
+        get => _sellerAppPhone;
+        set { if (SetProperty(ref _sellerAppPhone, value)) RaiseCommandStatesChanged(); }
+    }
+
+    public string SellerAppAddress
+    {
+        get => _sellerAppAddress;
+        set { if (SetProperty(ref _sellerAppAddress, value)) RaiseCommandStatesChanged(); }
+    }
+
+    public string? SellerAppNote
+    {
+        get => _sellerAppNote;
+        set => SetProperty(ref _sellerAppNote, value);
+    }
+
+    public SellerApplication? MyApplication
+    {
+        get => _myApplication;
+        private set
+        {
+            if (SetProperty(ref _myApplication, value))
+            {
+                OnPropertyChanged(nameof(HasMyApplication));
+                OnPropertyChanged(nameof(MyApplicationStatusText));
+                RaiseCommandStatesChanged();
+            }
+        }
+    }
+
+    public bool HasMyApplication => MyApplication is not null;
+
+    public string MyApplicationStatusText => MyApplication is null
+        ? Tr("Buyer_NoApplication")
+        : TrFormat("Buyer_ApplicationStatusFormat", Tr("Status_" + MyApplication.Status))
+          + (string.IsNullOrWhiteSpace(MyApplication.ReviewNote) ? string.Empty : $" - {MyApplication.ReviewNote}");
+
+    public bool CanSubmitSellerApplication =>
+        !IsBusy
+        && (MyApplication is null || MyApplication.Status != SellerApplicationStatus.Pending)
+        && !string.IsNullOrWhiteSpace(SellerAppShopName)
+        && !string.IsNullOrWhiteSpace(SellerAppPhone)
+        && !string.IsNullOrWhiteSpace(SellerAppAddress);
+
     private async Task LoadAsync()
     {
         if (_hasLoaded)
@@ -348,7 +416,35 @@ public sealed class BuyerDashboardViewModel : RoleDashboardViewModel
         await RefreshBuildsAsync();
         await RefreshSellersAsync();
         await RefreshRequestsAsync();
+        await RefreshMyApplicationAsync();
         ScheduleValidation();
+    }
+
+    private async Task RefreshMyApplicationAsync()
+    {
+        MyApplication = await _sellerApplicationService.GetMyApplicationAsync(CurrentUser.UserId);
+
+        // Prefill the form from the latest application so a rejected buyer can edit + resubmit.
+        if (MyApplication is not null && string.IsNullOrWhiteSpace(_sellerAppShopName))
+        {
+            SellerAppShopName = MyApplication.ShopName;
+            SellerAppPhone = MyApplication.Phone;
+            SellerAppAddress = MyApplication.Address;
+            SellerAppNote = MyApplication.Note;
+        }
+    }
+
+    private async Task SubmitSellerApplicationAsync()
+    {
+        var application = await _sellerApplicationService.SubmitAsync(
+            CurrentUser.UserId,
+            SellerAppShopName,
+            SellerAppPhone,
+            SellerAppAddress,
+            SellerAppNote);
+
+        MyApplication = application;
+        StatusMessage = Tr("Buyer_ApplicationSubmitted");
     }
 
     private async Task RefreshCatalogAsync()
@@ -363,6 +459,7 @@ public sealed class BuyerDashboardViewModel : RoleDashboardViewModel
 
             ReplaceItems(Kits, await _catalogService.GetAvailableKitsAsync());
             ReplaceItems(Switches, await _catalogService.GetAvailableSwitchesAsync());
+            RefreshCompatibleSwitches();
             ReplaceItems(Keycaps, await _catalogService.GetAvailableKeycapSetsAsync());
             ReplaceItems(Stabilizers, await _catalogService.GetAvailableStabilizersAsync());
 
@@ -406,7 +503,7 @@ public sealed class BuyerDashboardViewModel : RoleDashboardViewModel
 
     /// <summary>Reload requests in response to a realtime "status update" event.</summary>
     public Task ReloadRequestsAsync()
-        => ExecuteSafeAsync(RefreshRequestsAsync, "Co cap nhat trang thai request (realtime).");
+        => ExecuteSafeAsync(RefreshRequestsAsync, Tr("Buyer_RealtimeUpdate"));
 
     private async Task RefreshSellersAsync()
     {
@@ -432,7 +529,7 @@ public sealed class BuyerDashboardViewModel : RoleDashboardViewModel
 
         try
         {
-            SellerStats = await _statsService.GetSellerPublicAsync(seller.UserId);
+            SellerStats = await _statsService.GetSellerPublicAsync(CurrentUser.UserId, seller.UserId);
         }
         catch (Exception ex)
         {
@@ -450,14 +547,14 @@ public sealed class BuyerDashboardViewModel : RoleDashboardViewModel
         _editingStatus = saved.Status;
         await RefreshBuildsAsync();
         SelectedBuild = Builds.FirstOrDefault(item => Same(item.BuildId, saved.BuildId));
-        StatusMessage = $"Da luu build '{saved.Name}' - tong {saved.TotalCostSnapshot:F2} USD.";
+        StatusMessage = TrFormat("Buyer_BuildSaved", saved.Name, saved.TotalCostSnapshot);
     }
 
     private async Task ArchiveBuildAsync()
     {
         if (SelectedBuild is null)
         {
-            throw new InvalidOperationException("Chon build truoc.");
+            throw new InvalidOperationException(Tr("Buyer_SelectBuildFirst"));
         }
 
         await _buildService.ArchiveBuildAsync(SelectedBuild.BuildId, CurrentUser.UserId);
@@ -468,12 +565,12 @@ public sealed class BuyerDashboardViewModel : RoleDashboardViewModel
     {
         if (SelectedBuild is null)
         {
-            throw new InvalidOperationException("Chon build da luu truoc khi gui request.");
+            throw new InvalidOperationException(Tr("Buyer_SelectSavedBuildFirst"));
         }
 
         if (SelectedSeller is null)
         {
-            throw new InvalidOperationException("Chon seller truoc khi gui request.");
+            throw new InvalidOperationException(Tr("Buyer_SelectSellerFirst"));
         }
 
         var seller = SelectedSeller;
@@ -485,7 +582,7 @@ public sealed class BuyerDashboardViewModel : RoleDashboardViewModel
 
         RequestNote = null;
         await RefreshRequestsAsync();
-        StatusMessage = $"Da gui request {request.RequestId} cho {seller.ShopName}.";
+        StatusMessage = TrFormat("Buyer_RequestSent", request.RequestId, seller.ShopName);
     }
 
     private async Task OpenBuildAsync(object? parameter)
@@ -497,11 +594,11 @@ public sealed class BuyerDashboardViewModel : RoleDashboardViewModel
 
         if (SelectedBuild is null)
         {
-            StatusMessage = "Chon build truoc.";
+            StatusMessage = Tr("Buyer_SelectBuildFirst");
             return;
         }
 
-        await ExecuteSafeAsync(() => LoadBuildIntoConfiguratorAsync(SelectedBuild), "Da nap build vao configurator.");
+        await ExecuteSafeAsync(() => LoadBuildIntoConfiguratorAsync(SelectedBuild), Tr("Buyer_BuildLoaded"));
     }
 
     private async Task LoadBuildIntoConfiguratorAsync(KeyboardBuild build)
@@ -550,15 +647,10 @@ public sealed class BuyerDashboardViewModel : RoleDashboardViewModel
                 }
             }
 
-            Mods.Clear();
+            ClearMods();
             foreach (var mod in full.Mods)
             {
-                Mods.Add(new BuildModEditorViewModel
-                {
-                    ModType = mod.ModType,
-                    TargetComponent = mod.TargetComponent,
-                    Notes = mod.Notes
-                });
+                AddMod(BuildModEditorViewModel.FromBuildMod(mod, SwitchQuantity));
             }
         }
         finally
@@ -591,7 +683,7 @@ public sealed class BuyerDashboardViewModel : RoleDashboardViewModel
                 accessory.SetSelectedSilently(false);
             }
 
-            Mods.Clear();
+            ClearMods();
         }
         finally
         {
@@ -599,7 +691,7 @@ public sealed class BuyerDashboardViewModel : RoleDashboardViewModel
         }
 
         CurrentScreen = BuyerDashboardScreen.Configurator;
-        StatusMessage = "Nhap cau hinh build moi.";
+        StatusMessage = Tr("Buyer_NewBuildPrompt");
         ScheduleValidation();
     }
 
@@ -611,11 +703,40 @@ public sealed class BuyerDashboardViewModel : RoleDashboardViewModel
         }
     }
 
-    private void AddMod()
+    private void RefreshCompatibleSwitches()
     {
-        var mod = new BuildModEditorViewModel();
+        var selectedKit = SelectedKit;
+        var compatible = selectedKit is null
+            ? Enumerable.Empty<KeyboardSwitch>()
+            : Switches.Where(sw => IsCompatibleSwitch(selectedKit, sw));
+
+        ReplaceItems(CompatibleSwitches, compatible);
+
+        if (SelectedSwitch is null || !CompatibleSwitches.Any(sw => Same(sw.SwitchId, SelectedSwitch.SwitchId)))
+        {
+            SelectedSwitch = CompatibleSwitches.FirstOrDefault();
+        }
+    }
+
+    private void AddMod(object? parameter)
+    {
+        var (targetComponent, modType) = ParseModPreset(parameter);
+        var switchQuantityLimit = GetAvailableSwitchModQuantity(targetComponent, modType);
+        if (UsesSwitchQuantity(targetComponent) && switchQuantityLimit <= 0)
+        {
+            StatusMessage = TrFormat("Buyer_ModQuantityFull", modType);
+            return;
+        }
+
+        AddMod(BuildModEditorViewModel.CreatePreset(targetComponent, modType, switchQuantityLimit));
+    }
+
+    private void AddMod(BuildModEditorViewModel mod)
+    {
+        mod.PropertyChanged += OnModPropertyChanged;
         Mods.Add(mod);
         SelectedMod = mod;
+        RefreshModQuantityLimits();
         ScheduleValidation();
     }
 
@@ -626,9 +747,86 @@ public sealed class BuyerDashboardViewModel : RoleDashboardViewModel
             return;
         }
 
+        SelectedMod.PropertyChanged -= OnModPropertyChanged;
         Mods.Remove(SelectedMod);
         SelectedMod = null;
+        RefreshModQuantityLimits();
         ScheduleValidation();
+    }
+
+    private void ClearMods()
+    {
+        foreach (var mod in Mods)
+        {
+            mod.PropertyChanged -= OnModPropertyChanged;
+        }
+
+        Mods.Clear();
+        SelectedMod = null;
+    }
+
+    private void OnModPropertyChanged(object? sender, PropertyChangedEventArgs e)
+    {
+        RefreshModQuantityLimits();
+        ScheduleValidation();
+    }
+
+    private void RefreshModQuantityLimits()
+    {
+        if (_refreshingModQuantityLimits)
+        {
+            return;
+        }
+
+        _refreshingModQuantityLimits = true;
+        try
+        {
+            foreach (var mod in Mods)
+            {
+                var max = mod.UsesSwitchQuantity
+                    ? GetAvailableSwitchModQuantity(mod.TargetComponent, mod.ModType, mod)
+                    : SwitchQuantity;
+                mod.SetSwitchQuantityLimit(max);
+            }
+        }
+        finally
+        {
+            _refreshingModQuantityLimits = false;
+        }
+    }
+
+    private int GetAvailableSwitchModQuantity(
+        string targetComponent,
+        string modType,
+        BuildModEditorViewModel? excluding = null)
+    {
+        if (!UsesSwitchQuantity(targetComponent))
+        {
+            return Math.Max(1, SwitchQuantity);
+        }
+
+        var usedBySameModType = Mods
+            .Where(mod => !ReferenceEquals(mod, excluding)
+                          && mod.UsesSwitchQuantity
+                          && Same(mod.ModType, modType))
+            .Sum(mod => mod.ModQuantity);
+
+        return Math.Max(0, SwitchQuantity - usedBySameModType);
+    }
+
+    private static bool UsesSwitchQuantity(string? targetComponent)
+        => Same(targetComponent, "Switch");
+
+    private static (string TargetComponent, string ModType) ParseModPreset(object? parameter)
+    {
+        var preset = parameter as string;
+        if (string.IsNullOrWhiteSpace(preset))
+        {
+            return ("Switch", "Lube");
+        }
+
+        var parts = preset.Split('|', StringSplitOptions.TrimEntries | StringSplitOptions.RemoveEmptyEntries);
+        return parts.Length >= 2 ? (parts[0], parts[1]) : ("Switch", preset.Trim());
     }
 
     private KeyboardBuild CreateBuildFromCurrentSelection()
@@ -713,7 +911,8 @@ public sealed class BuyerDashboardViewModel : RoleDashboardViewModel
     private async Task ExecuteSafeAsync(Func<Task> action, string? successMessage = null)
     {
         IsBusy = true;
-        StatusMessage = "Dang xu ly...";
+        var processing = Tr("Common_Processing");
+        StatusMessage = processing;
 
         try
         {
@@ -722,9 +921,9 @@ public sealed class BuyerDashboardViewModel : RoleDashboardViewModel
             {
                 StatusMessage = successMessage;
             }
-            else if (StatusMessage == "Dang xu ly...")
+            else if (StatusMessage == processing)
             {
-                StatusMessage = "Hoan tat.";
+                StatusMessage = Tr("Common_Done");
             }
         }
         catch (Exception ex)
@@ -746,6 +945,8 @@ public sealed class BuyerDashboardViewModel : RoleDashboardViewModel
         (OpenBuildCommand as AsyncRelayCommand)?.RaiseCanExecuteChanged();
         (RemoveModCommand as RelayCommand)?.RaiseCanExecuteChanged();
         (ApplyRequiredSwitchQuantityCommand as RelayCommand)?.RaiseCanExecuteChanged();
+        (SubmitSellerApplicationCommand as AsyncRelayCommand)?.RaiseCanExecuteChanged();
+        OnPropertyChanged(nameof(CanSubmitSellerApplication));
     }
 
     private Visibility Visible(BuyerDashboardScreen screen)
@@ -773,6 +974,10 @@ public sealed class BuyerDashboardViewModel : RoleDashboardViewModel
 
     private static bool Same(string? left, string? right)
         => string.Equals(left?.Trim(), right?.Trim(), StringComparison.OrdinalIgnoreCase);
+
+    private static bool IsCompatibleSwitch(KeyboardKit kit, KeyboardSwitch sw)
+        => Same(sw.SwitchTechnology, kit.PcbTechnology)
+           && Same(sw.MountType, kit.SwitchMount);
 }
 
 public enum BuyerDashboardScreen
@@ -781,7 +986,8 @@ public enum BuyerDashboardScreen
     BuildList,
     Configurator,
     SentRequests,
-    Chat
+    Chat,
+    RegisterSeller
 }
 
 // One accessory row with a checkbox; toggling it re-runs build validation.
@@ -799,7 +1005,7 @@ public sealed class AccessoryOptionViewModel : ViewModelBase
     public Accessory Accessory { get; }
     public string DisplayName => $"{Accessory.AccessoryName} ({Accessory.AccessoryType})";
     public string PriceText => $"{Accessory.PriceUsd:F2} USD";
-    public string Target => Accessory.TargetComponent ?? "General";
+    public string Target => Accessory.TargetComponent ?? Tr("Common_General");
     public string Label => $"{DisplayName} - {PriceText} ({Target})";
 
     public bool IsSelected

@@ -83,9 +83,9 @@ The `Realtime/` layer (Phase 8) adds optional MQTT notifications without changin
 
 ## Database Model
 
-The refactor targets 17 tables:
+The refactor targets 18 tables:
 
-- Account/admin: `roles`, `users`, `seller_profiles`, `audit_log`
+- Account/admin: `roles`, `users`, `seller_profiles`, `seller_applications`, `audit_log`
 - Catalog: `brands`, `layouts`, `keyboard_kits`, `switches`, `keycap_sets`, `stabilizers`, `accessories`
 - Build/request: `builds`, `build_items`, `build_mods`, `build_requests`
 - Chat: `chat_conversations`, `chat_messages`

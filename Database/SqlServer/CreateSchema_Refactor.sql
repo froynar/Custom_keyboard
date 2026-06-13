@@ -1,12 +1,12 @@
 -- Custom Keyboard Builder - Refactor schema (kit-based ERD)
 -- Source of truth: Documents_Refactor/Custom_Keyboard_ERD_Realistic_Kit_Shop_Proposal.dbml
--- Scope: 17 tables / 24 relationships. No cases/pcbs/plates, no compatibility_rules,
+-- Scope: 18 tables / 26 relationships. No cases/pcbs/plates, no compatibility_rules,
 --        no seller_inventory, no legacy switch-mod columns (lube_type/is_filmed/spring_weight_g).
 -- Target: dedicated refactor test database (CustomKeyboard_Refactor). Does NOT touch the legacy runtime DB.
--- Order: roles -> users -> seller_profiles -> brands -> layouts -> keyboard_kits -> switches
---        -> keycap_sets -> stabilizers -> accessories -> builds -> build_items -> build_mods
+-- Order: roles -> users -> seller_profiles -> seller_applications -> brands -> layouts -> keyboard_kits
+--        -> switches -> keycap_sets -> stabilizers -> accessories -> builds -> build_items -> build_mods
 --        -> build_requests -> audit_log -> chat_conversations -> chat_messages
--- This script is idempotent: it drops the 17 tables (reverse FK order) and recreates them.
+-- This script is idempotent: it drops the 18 tables (reverse FK order) and recreates them.
 
 IF DB_ID(N'CustomKeyboard_Refactor') IS NULL
 BEGIN
@@ -37,6 +37,7 @@ DROP TABLE IF EXISTS switches;
 DROP TABLE IF EXISTS keyboard_kits;
 DROP TABLE IF EXISTS layouts;
 DROP TABLE IF EXISTS brands;
+DROP TABLE IF EXISTS seller_applications;
 DROP TABLE IF EXISTS seller_profiles;
 DROP TABLE IF EXISTS users;
 DROP TABLE IF EXISTS roles;
@@ -79,6 +80,27 @@ CREATE TABLE seller_profiles (
     is_verified BIT NOT NULL DEFAULT 0,
     verified_at DATETIME2 NULL,
     CONSTRAINT FK_seller_profiles_user FOREIGN KEY (user_id) REFERENCES users(user_id)
+);
+GO
+
+-- ===========================================================================
+-- 3b. seller_applications  (buyer -> seller upgrade requests, reviewed by admin)
+-- ===========================================================================
+CREATE TABLE seller_applications (
+    application_id INT IDENTITY(1,1) PRIMARY KEY,
+    buyer_user_id INT NOT NULL,
+    shop_name VARCHAR(255) NOT NULL,
+    phone VARCHAR(30) NOT NULL,
+    address VARCHAR(500) NOT NULL,
+    note VARCHAR(500) NULL,
+    status VARCHAR(50) NOT NULL DEFAULT 'Pending',   -- Pending, Approved, Rejected
+    review_note VARCHAR(500) NULL,                   -- admin reason on approve/reject
+    created_at DATETIME2 NOT NULL DEFAULT SYSUTCDATETIME(),
+    reviewed_at DATETIME2 NULL,
+    reviewed_by INT NULL,
+    CONSTRAINT FK_seller_applications_buyer FOREIGN KEY (buyer_user_id) REFERENCES users(user_id),
+    CONSTRAINT FK_seller_applications_reviewer FOREIGN KEY (reviewed_by) REFERENCES users(user_id),
+    CONSTRAINT CK_seller_applications_status CHECK (status IN ('Pending', 'Approved', 'Rejected'))
 );
 GO
 
@@ -368,4 +390,10 @@ CREATE INDEX IX_chat_conversations_request ON chat_conversations(build_request_i
 
 CREATE INDEX IX_chat_messages_conversation ON chat_messages(conversation_id);
 CREATE INDEX IX_chat_messages_sender ON chat_messages(sender_user_id);
+
+CREATE INDEX IX_seller_applications_status ON seller_applications(status);
+CREATE INDEX IX_seller_applications_buyer ON seller_applications(buyer_user_id);
+CREATE UNIQUE INDEX UX_seller_applications_pending_buyer
+ON seller_applications(buyer_user_id)
+WHERE status = 'Pending';
 GO

@@ -1,3 +1,4 @@
+using Custom_keyboard.Commands;
 using Custom_keyboard.Data.SqlServer;
 using Custom_keyboard.Models.Accounts;
 using Custom_keyboard.Models.Admin;
@@ -10,6 +11,8 @@ using Custom_keyboard.Repositories;
 using Custom_keyboard.Repositories.SqlServer;
 using Custom_keyboard.Services;
 using Custom_keyboard.Services.Security;
+using Custom_keyboard.Services.Stats;
+using Custom_keyboard.ViewModels;
 using Microsoft.Data.SqlClient;
 
 var runner = new Phase6Runner();
@@ -26,6 +29,7 @@ internal sealed class Phase6Runner
 
         await Run("BuildService validates totals and applies snapshots", UnitBuildServiceValidTotalAsync);
         await Run("BuildService rejects incompatible switch technology", UnitBuildServiceRejectsIncompatibleSwitchAsync);
+        await Run("BuildService rejects switch mod quantities over selected switches", UnitBuildServiceRejectsOversizedSwitchModsAsync);
         await Run("BuildService hides archived builds from the buyer list", UnitBuildServiceExcludesArchivedAsync);
         await Run("RequestService enforces request status state machine", UnitRequestServiceStateMachineAsync);
         await Run("RequestService rejects requests to unverified sellers", UnitRequestServiceRejectsUnverifiedSellerAsync);
@@ -36,7 +40,12 @@ internal sealed class Phase6Runner
         await Run("AccountService validates email/phone on register", UnitAccountServiceRegisterValidationAsync);
         await Run("AccountService login accepts valid and blocks wrong/banned (T01/T02)", UnitAccountServiceLoginAsync);
         await Run("AdminService writes audit entries for admin actions", UnitAdminServiceAuditActionsAsync);
+        await Run("SellerApplicationService submit/approve/reject + guards", UnitSellerApplicationServiceAsync);
+        await Run("StatsService revalidates role/active boundaries", UnitStatsServiceAuthorizationAsync);
+        await Run("Buyer dashboard filters switches by selected kit", UnitBuyerDashboardFiltersCompatibleSwitchesAsync);
+        await Run("Build mod presets persist spring weight and switch quantity", UnitBuildModPresetMetadata);
         await Run("SQL integration covers build/request/chat CRUD", IntegrationSqlBuildRequestChatAsync);
+        await Run("SQL integration covers analytics aggregates", IntegrationSqlAnalyticsAsync);
         await Run("SQL integration: seed accounts log in with Password123 (Phase 10)", IntegrationSqlSeedAccountLoginAsync);
         await Run("VerifyRefactor invariant queries return clean results", IntegrationSqlVerifyRefactorAsync);
 
@@ -102,6 +111,22 @@ internal sealed class Phase6Runner
 
         AssertFalse(validation.IsValid, "invalid switch build should fail");
         AssertContains(validation.Errors, "Switch technology", "switch technology error");
+    }
+
+    private static async Task UnitBuildServiceRejectsOversizedSwitchModsAsync()
+    {
+        var service = new BuildService(new FakeBuildRepository(), FakeCatalog.Standard());
+        var build = StandardBuild();
+        build.Mods =
+        [
+            new BuildMod { ModType = "Spring_swap", TargetComponent = "Switch", Notes = "Quantity: 40 switches; Spring weight: 55g" },
+            new BuildMod { ModType = "Spring_swap", TargetComponent = "Switch", Notes = "Quantity: 40 switches; Spring weight: 63g" }
+        ];
+
+        var validation = await service.ValidateBuildAsync(build);
+
+        AssertFalse(validation.IsValid, "oversized switch mods should fail");
+        AssertContains(validation.Errors, "Tong so switch cho mod 'Spring_swap'", "switch mod total error");
     }
 
     private static async Task UnitBuildServiceExcludesArchivedAsync()
@@ -382,6 +407,217 @@ internal sealed class Phase6Runner
         AssertEqual(3, audit.Entries.Count, "rejected action writes no audit");
     }
 
+    private static async Task UnitStatsServiceAuthorizationAsync()
+    {
+        var users = FakeUserRepository.Standard();
+        await users.AddAsync(new User { UserId = 22, Role = UserRole.Seller, Username = "seller_inactive", Email = "seller_inactive@test.local", IsActive = false });
+        await users.SetActiveAsync(999, false);
+
+        var sellers = FakeSellerRepository.Standard();
+        await sellers.SaveAsync(new SellerProfile { UserId = 22, ShopName = "Inactive Shop", Phone = "092", Address = "DN", IsVerified = true });
+
+        var statsRepository = new FakeStatsRepository();
+        var service = new StatsService(statsRepository, users, sellers);
+
+        var sellerDashboard = await service.GetSellerDashboardAsync(20, StatsPeriod.Monthly);
+        AssertEqual(10m, sellerDashboard.TotalRevenue, "seller dashboard allowed");
+        AssertEqual(20, statsRepository.LastSellerDashboardId ?? -1, "seller dashboard scoped to actor");
+
+        await AssertThrowsAsync<InvalidOperationException>(
+            () => service.GetSellerDashboardAsync(10, StatsPeriod.Monthly),
+            "buyer cannot read seller dashboard");
+        await AssertThrowsAsync<InvalidOperationException>(
+            () => service.GetSellerDashboardAsync(30, StatsPeriod.Monthly),
+            "admin cannot read seller dashboard");
+        await AssertThrowsAsync<InvalidOperationException>(
+            () => service.GetSellerDashboardAsync(22, StatsPeriod.Monthly),
+            "inactive seller cannot read seller dashboard");
+
+        var publicStats = await service.GetSellerPublicAsync(10, 20);
+        AssertEqual(3, publicStats.ProductsMade, "buyer can read public seller stats");
+        AssertEqual(20, statsRepository.LastPublicSellerId ?? -1, "public stats target seller");
+
+        await AssertThrowsAsync<InvalidOperationException>(
+            () => service.GetSellerPublicAsync(999, 20),
+            "inactive requester cannot read public stats");
+        await AssertThrowsAsync<InvalidOperationException>(
+            () => service.GetSellerPublicAsync(10, 21),
+            "unverified seller public stats rejected");
+        await AssertThrowsAsync<InvalidOperationException>(
+            () => service.GetSellerPublicAsync(10, 22),
+            "inactive seller public stats rejected");
+
+        var overview = await service.GetAdminOverviewAsync(30, StatsPeriod.Yearly);
+        AssertEqual(7, overview.TotalUsers, "admin overview allowed");
+        await AssertThrowsAsync<InvalidOperationException>(
+            () => service.GetAdminOverviewAsync(10, StatsPeriod.Yearly),
+            "buyer cannot read admin overview");
+    }
+
+    private static Task UnitBuyerDashboardFiltersCompatibleSwitchesAsync()
+    {
+        var catalog = FakeCatalog.Standard();
+        catalog.Switches["SW_BAD"] = new KeyboardSwitch
+        {
+            SwitchId = "SW_BAD",
+            BrandId = 1,
+            SwitchName = "Wrong Mount Switch",
+            SwitchTechnology = "HE",
+            MountType = "HE",
+            PriceUsd = 0.55m,
+            IsAvailable = true
+        };
+
+        var buyer = FakeUserRepository.Standard().GetByIdAsync(10).GetAwaiter().GetResult()
+            ?? throw new InvalidOperationException("Missing fake buyer.");
+        var buildService = new BuildService(new FakeBuildRepository(), catalog);
+        var requestService = new RequestService(
+            new FakeBuildRepository(),
+            FakeSellerRepository.Standard(),
+            new FakeRequestRepository(),
+            buildService,
+            catalog,
+            NullRealtimeNotifier.Instance);
+        var chatService = new ChatService(new FakeChatRepository(), FakeUserRepository.Standard(), FakeSellerRepository.Standard());
+        var statsService = new StatsService(new FakeStatsRepository(), FakeUserRepository.Standard(), FakeSellerRepository.Standard());
+        var sellerApplicationService = new SellerApplicationService(
+            FakeUserRepository.Standard(),
+            FakeSellerRepository.Standard(),
+            new FakeSellerApplicationRepository(),
+            new FakeAuditLogRepository());
+        var chat = new ChatViewModel(chatService, requestService, buyer);
+        var viewModel = new BuyerDashboardViewModel(
+            buyer,
+            new RelayCommand(_ => { }),
+            catalog,
+            buildService,
+            requestService,
+            statsService,
+            sellerApplicationService,
+            chat);
+
+        foreach (var kit in catalog.Kits.Values)
+        {
+            viewModel.Kits.Add(kit);
+        }
+
+        foreach (var sw in catalog.Switches.Values)
+        {
+            viewModel.Switches.Add(sw);
+        }
+
+        viewModel.SelectedKit = catalog.Kits["KIT_TEST"];
+
+        AssertEqual(1, viewModel.CompatibleSwitches.Count, "compatible switch count");
+        AssertEqual("SW_TEST", viewModel.CompatibleSwitches.Single().SwitchId, "compatible switch id");
+        AssertEqual("SW_TEST", viewModel.SelectedSwitch?.SwitchId ?? "", "selected compatible switch");
+        AssertEqual(catalog.Kits["KIT_TEST"].RequiredSwitchQuantity, viewModel.SwitchQuantity, "switch quantity follows kit");
+
+        viewModel.AddModCommand.Execute("Switch|Spring_swap");
+        AssertEqual(1, viewModel.Mods.Count, "first spring mod added");
+        AssertEqual(70, viewModel.Mods[0].ModQuantity, "first spring mod uses all switches by default");
+
+        viewModel.AddModCommand.Execute("Switch|Spring_swap");
+        AssertEqual(1, viewModel.Mods.Count, "second spring mod blocked when no switch quota remains");
+
+        viewModel.Mods[0].ModQuantity = 40;
+        viewModel.AddModCommand.Execute("Switch|Spring_swap");
+        AssertEqual(2, viewModel.Mods.Count, "second spring mod added after freeing quota");
+        AssertEqual(30, viewModel.Mods[1].ModQuantity, "second spring mod uses remaining switches");
+
+        viewModel.Mods[0].ModQuantity = 50;
+        AssertEqual(40, viewModel.Mods[0].ModQuantity, "spring mod quantity clamps to shared quota");
+        return Task.CompletedTask;
+    }
+
+    private static Task UnitBuildModPresetMetadata()
+    {
+        var mod = BuildModEditorViewModel.CreatePreset("Switch", "Spring_swap", 70);
+        AssertEqual("Switch", mod.TargetComponent, "spring swap target");
+        AssertEqual("Spring_swap", mod.ModType, "spring swap type");
+        AssertEqual(70, mod.ModQuantity, "spring swap default quantity");
+
+        mod.SpringWeightG = 90;
+        AssertEqual(BuildModEditorViewModel.MaxSpringWeightG, mod.SpringWeightG, "spring weight clamps high");
+        mod.SpringWeightG = 20;
+        AssertEqual(BuildModEditorViewModel.MinSpringWeightG, mod.SpringWeightG, "spring weight clamps low");
+        mod.SpringWeightG = 63;
+        mod.ModQuantity = 55;
+        mod.Notes = "KTT long spring";
+
+        var persisted = mod.ToBuildMod();
+        AssertContains(persisted.Notes ?? "", "Quantity: 55 switches", "switch mod quantity persisted");
+        AssertContains(persisted.Notes ?? "", "Spring weight: 63g", "spring weight persisted");
+        AssertContains(persisted.Notes ?? "", "KTT long spring", "custom note persisted");
+
+        var loaded = BuildModEditorViewModel.FromBuildMod(persisted, 70);
+        AssertEqual(55, loaded.ModQuantity, "switch mod quantity round trip");
+        AssertEqual(63, loaded.SpringWeightG, "spring weight round trip");
+        AssertEqual("KTT long spring", loaded.Notes ?? "", "custom note round trip");
+
+        loaded.SetSwitchQuantityLimit(40);
+        AssertEqual(40, loaded.ModQuantity, "quantity clamps to selected switch count");
+        return Task.CompletedTask;
+    }
+
+    private static async Task UnitSellerApplicationServiceAsync()
+    {
+        var users = FakeUserRepository.Standard();
+        var sellers = FakeSellerRepository.Standard();
+        var applications = new FakeSellerApplicationRepository();
+        var audit = new FakeAuditLogRepository();
+        var service = new SellerApplicationService(users, sellers, applications, audit);
+
+        // Buyer (10) submits an application.
+        var app = await service.SubmitAsync(10, "My Shop", "0900000000", "123 Demo", "please");
+        AssertEqual(SellerApplicationStatus.Pending, app.Status, "application starts Pending");
+
+        // A second Pending application for the same buyer is blocked.
+        await AssertThrowsAsync<InvalidOperationException>(
+            () => service.SubmitAsync(10, "My Shop 2", "0900000001", "456 Demo", null),
+            "duplicate pending application blocked");
+
+        // A non-buyer (seller 20) cannot apply.
+        await AssertThrowsAsync<InvalidOperationException>(
+            () => service.SubmitAsync(20, "Shop", "090", "addr", null),
+            "non-buyer cannot apply");
+
+        await AssertThrowsAsync<InvalidOperationException>(
+            () => service.SubmitAsync(10, new string('S', 256), "090", "addr", null),
+            "seller application rejects overlong shop name");
+
+        // A non-admin (buyer 10) cannot review.
+        await AssertThrowsAsync<InvalidOperationException>(
+            () => service.ApproveAsync(app.ApplicationId, 10, null),
+            "non-admin cannot approve");
+
+        // Reject keeps the applicant's role unchanged.
+        await service.RejectAsync(app.ApplicationId, 30, "thieu thong tin");
+        AssertEqual(UserRole.Buyer, (await users.GetByIdAsync(10))!.Role, "rejected applicant stays Buyer");
+        AssertContains(audit.Entries.Select(entry => entry.Action), "SellerApplicationReject", "reject writes audit");
+
+        // After a reject the buyer can re-apply, and approval promotes them to a verified Seller.
+        var app2 = await service.SubmitAsync(10, "My Shop", "0900000000", "123 Demo", null);
+        await service.ApproveAsync(app2.ApplicationId, 30, "ok");
+
+        var promoted = await users.GetByIdAsync(10);
+        AssertEqual(UserRole.Seller, promoted!.Role, "approved applicant becomes Seller");
+        var profile = await sellers.GetBySellerUserIdAsync(10);
+        AssertTrue(profile is not null && profile.IsVerified, "approval creates a verified seller profile");
+        AssertContains(audit.Entries.Select(entry => entry.Action), "SellerApplicationApprove", "approve writes audit");
+
+        // An already-processed application cannot be approved again.
+        await AssertThrowsAsync<InvalidOperationException>(
+            () => service.ApproveAsync(app2.ApplicationId, 30, null),
+            "already-processed application cannot be re-approved");
+
+        var drifted = await service.SubmitAsync(999, "Drift Shop", "0900000002", "789 Demo", null);
+        await users.SetRoleAsync(999, UserRole.Admin);
+        await AssertThrowsAsync<InvalidOperationException>(
+            () => service.ApproveAsync(drifted.ApplicationId, 30, null),
+            "applicant must still be Buyer when approved");
+    }
+
     private static async Task IntegrationSqlBuildRequestChatAsync()
     {
         var settings = new SqlServerSettings();
@@ -434,6 +670,178 @@ internal sealed class Phase6Runner
         finally
         {
             await CleanupSqlAsync(factory, buildId, requestId, conversationId);
+        }
+    }
+
+    private static async Task IntegrationSqlAnalyticsAsync()
+    {
+        var factory = new SqlConnectionFactory(new SqlServerSettings());
+        var marker = DateTime.UtcNow.ToString("yyyyMMddHHmmssfff");
+
+        await CleanupSqlAnalyticsAsync(factory);
+
+        try
+        {
+            var userRepository = new SqlUserRepository(factory);
+            var sellerRepository = new SqlSellerRepository(factory);
+            var componentRepository = new SqlComponentRepository(factory);
+            var buildRepository = new SqlBuildRepository(factory);
+            var requestRepository = new SqlRequestRepository(factory);
+            var statsRepository = new SqlStatsRepository(factory);
+            var statsService = new StatsService(statsRepository, userRepository, sellerRepository);
+            var catalog = new ComponentCatalogService(componentRepository);
+            var buildService = new BuildService(buildRepository, catalog);
+            var hasher = new Pbkdf2PasswordHasher();
+
+            var admin = await userRepository.FindByUsernameAsync("admin_refactor")
+                ?? throw new InvalidOperationException("Missing seed admin_refactor.");
+            var baseline = await statsService.GetAdminOverviewAsync(admin.UserId, StatsPeriod.Monthly);
+
+            var buyerA = await userRepository.AddAsync(new User
+            {
+                Role = UserRole.Buyer,
+                Username = $"P6_ANALYTICS_BUYER_A_{marker}",
+                Email = $"p6.analytics.buyer.a.{marker}@test.local",
+                Phone = $"09{marker[^8..]}",
+                PasswordHash = hasher.HashPassword("Password123"),
+                IsActive = true
+            });
+            var buyerB = await userRepository.AddAsync(new User
+            {
+                Role = UserRole.Buyer,
+                Username = $"P6_ANALYTICS_BUYER_B_{marker}",
+                Email = $"p6.analytics.buyer.b.{marker}@test.local",
+                Phone = $"08{marker[^8..]}",
+                PasswordHash = hasher.HashPassword("Password123"),
+                IsActive = true
+            });
+            var sellerA = await userRepository.AddAsync(new User
+            {
+                Role = UserRole.Seller,
+                Username = $"P6_ANALYTICS_SELLER_A_{marker}",
+                Email = $"p6.analytics.seller.a.{marker}@test.local",
+                Phone = $"07{marker[^8..]}",
+                PasswordHash = hasher.HashPassword("Password123"),
+                IsActive = true
+            });
+            var sellerB = await userRepository.AddAsync(new User
+            {
+                Role = UserRole.Seller,
+                Username = $"P6_ANALYTICS_SELLER_B_{marker}",
+                Email = $"p6.analytics.seller.b.{marker}@test.local",
+                Phone = $"06{marker[^8..]}",
+                PasswordHash = hasher.HashPassword("Password123"),
+                IsActive = true
+            });
+
+            await sellerRepository.SaveAsync(new SellerProfile { UserId = sellerA.UserId, ShopName = "P6 Analytics Seller A", Phone = "070", Address = "HCM", IsVerified = true });
+            await sellerRepository.SaveAsync(new SellerProfile { UserId = sellerB.UserId, ShopName = "P6 Analytics Seller B", Phone = "071", Address = "HN", IsVerified = true });
+
+            var buildA1 = await buildService.SaveBuildAsync(await CreateSqlBuildAsync(catalog, buyerA.UserId, $"P6_BUILD_ANALYTICS_{marker}_A1"));
+            var buildA2 = await buildService.SaveBuildAsync(await CreateSqlBuildAsync(catalog, buyerB.UserId, $"P6_BUILD_ANALYTICS_{marker}_A2"));
+            var buildA3 = await buildService.SaveBuildAsync(await CreateSqlBuildAsync(catalog, buyerA.UserId, $"P6_BUILD_ANALYTICS_{marker}_A3"));
+            var buildA4 = await buildService.SaveBuildAsync(await CreateSqlBuildAsync(catalog, buyerA.UserId, $"P6_BUILD_ANALYTICS_{marker}_A4"));
+            var buildB1 = await buildService.SaveBuildAsync(await CreateSqlBuildAsync(catalog, buyerB.UserId, $"P6_BUILD_ANALYTICS_{marker}_B1"));
+
+            await requestRepository.SaveAsync(new BuildRequest
+            {
+                RequestId = $"REQ_P6_ANALYTICS_{marker}_A1",
+                BuildId = buildA1.BuildId,
+                SellerUserId = sellerA.UserId,
+                RequestPayloadJson = "{\"analytics\":\"A1\"}",
+                Status = RequestStatus.Completed,
+                Note = "analytics completed Jan",
+                RequestedAt = new DateTime(2026, 1, 3, 8, 0, 0, DateTimeKind.Utc),
+                AcceptedAt = new DateTime(2026, 1, 4, 8, 0, 0, DateTimeKind.Utc),
+                CompletedAt = new DateTime(2026, 1, 6, 8, 0, 0, DateTimeKind.Utc)
+            });
+            await requestRepository.SaveAsync(new BuildRequest
+            {
+                RequestId = $"REQ_P6_ANALYTICS_{marker}_A2",
+                BuildId = buildA2.BuildId,
+                SellerUserId = sellerA.UserId,
+                RequestPayloadJson = "{\"analytics\":\"A2\"}",
+                Status = RequestStatus.Completed,
+                Note = "analytics completed Feb",
+                RequestedAt = new DateTime(2026, 2, 9, 8, 0, 0, DateTimeKind.Utc),
+                AcceptedAt = new DateTime(2026, 2, 10, 8, 0, 0, DateTimeKind.Utc),
+                CompletedAt = new DateTime(2026, 2, 13, 8, 0, 0, DateTimeKind.Utc)
+            });
+            await requestRepository.SaveAsync(new BuildRequest
+            {
+                RequestId = $"REQ_P6_ANALYTICS_{marker}_A3",
+                BuildId = buildA3.BuildId,
+                SellerUserId = sellerA.UserId,
+                RequestPayloadJson = "{\"analytics\":\"A3\"}",
+                Status = RequestStatus.Pending,
+                Note = "analytics pending",
+                RequestedAt = new DateTime(2026, 3, 1, 8, 0, 0, DateTimeKind.Utc)
+            });
+            await requestRepository.SaveAsync(new BuildRequest
+            {
+                RequestId = $"REQ_P6_ANALYTICS_{marker}_A4",
+                BuildId = buildA4.BuildId,
+                SellerUserId = sellerA.UserId,
+                RequestPayloadJson = "{\"analytics\":\"A4\"}",
+                Status = RequestStatus.In_progress,
+                Note = "analytics in progress",
+                RequestedAt = new DateTime(2026, 3, 2, 8, 0, 0, DateTimeKind.Utc),
+                AcceptedAt = new DateTime(2026, 3, 3, 8, 0, 0, DateTimeKind.Utc)
+            });
+            await requestRepository.SaveAsync(new BuildRequest
+            {
+                RequestId = $"REQ_P6_ANALYTICS_{marker}_B1",
+                BuildId = buildB1.BuildId,
+                SellerUserId = sellerB.UserId,
+                RequestPayloadJson = "{\"analytics\":\"B1\"}",
+                Status = RequestStatus.Completed,
+                Note = "analytics second seller",
+                RequestedAt = new DateTime(2026, 1, 7, 8, 0, 0, DateTimeKind.Utc),
+                AcceptedAt = new DateTime(2026, 1, 8, 8, 0, 0, DateTimeKind.Utc),
+                CompletedAt = new DateTime(2026, 1, 11, 8, 0, 0, DateTimeKind.Utc)
+            });
+
+            var expectedSellerRevenue = buildA1.TotalCostSnapshot + buildA2.TotalCostSnapshot;
+            var sellerMonthly = await statsService.GetSellerDashboardAsync(sellerA.UserId, StatsPeriod.Monthly);
+            AssertEqual(expectedSellerRevenue, sellerMonthly.TotalRevenue, "analytics seller revenue");
+            AssertEqual(2, sellerMonthly.ProductsMade, "analytics seller products made");
+            AssertEqual(2, sellerMonthly.TotalCustomers, "analytics seller customers");
+            AssertEqual(2, sellerMonthly.InProgressOrders, "analytics seller in-progress orders");
+            AssertEqual(2.5, Math.Round(sellerMonthly.AvgCompletionDays ?? -1, 1), "analytics seller avg days");
+            AssertContains(sellerMonthly.TimeSeries.Select(bucket => bucket.Label), "2026-01", "monthly Jan bucket");
+            AssertContains(sellerMonthly.TimeSeries.Select(bucket => bucket.Label), "2026-02", "monthly Feb bucket");
+            AssertEqual(2, sellerMonthly.TimeSeries.Sum(bucket => bucket.Orders), "monthly completed orders");
+            AssertTrue(sellerMonthly.TopKits.Any(kit => kit.Orders == 2 && kit.Revenue == expectedSellerRevenue), "top kits include completed seller orders");
+
+            var sellerQuarterly = await statsService.GetSellerDashboardAsync(sellerA.UserId, StatsPeriod.Quarterly);
+            AssertContains(sellerQuarterly.TimeSeries.Select(bucket => bucket.Label), "2026 Q1", "quarterly Q1 bucket");
+            AssertEqual(2, sellerQuarterly.TimeSeries.Single(bucket => bucket.Label == "2026 Q1").Orders, "quarterly orders");
+
+            var sellerYearly = await statsService.GetSellerDashboardAsync(sellerA.UserId, StatsPeriod.Yearly);
+            AssertContains(sellerYearly.TimeSeries.Select(bucket => bucket.Label), "2026", "yearly bucket");
+            AssertEqual(2, sellerYearly.TimeSeries.Single(bucket => bucket.Label == "2026").Orders, "yearly orders");
+
+            var publicStats = await statsService.GetSellerPublicAsync(buyerA.UserId, sellerA.UserId);
+            AssertEqual(2, publicStats.ProductsMade, "public products made");
+            AssertEqual(4, publicStats.TotalOrders, "public total orders");
+            AssertEqual(2, publicStats.Customers, "public customers");
+            AssertTrue(publicStats.IsVerified, "public verified");
+            AssertEqual(2.5, Math.Round(publicStats.AvgCompletionDays ?? -1, 1), "public avg days");
+
+            var adminOverview = await statsService.GetAdminOverviewAsync(admin.UserId, StatsPeriod.Monthly);
+            AssertEqual(baseline.TotalUsers + 4, adminOverview.TotalUsers, "admin total users includes analytics users");
+            AssertEqual(baseline.VerifiedSellers + 2, adminOverview.VerifiedSellers, "admin verified sellers includes analytics sellers");
+            AssertEqual(baseline.TotalBuilds + 5, adminOverview.TotalBuilds, "admin total builds includes analytics builds");
+            AssertEqual(baseline.TotalRequests + 5, adminOverview.TotalRequests, "admin total requests includes analytics requests");
+            AssertEqual(baseline.CompletedOrders + 3, adminOverview.CompletedOrders, "admin completed orders includes analytics completed");
+            AssertTrue(adminOverview.TopSellers.Any(seller => seller.ShopName == "P6 Analytics Seller A" && seller.ProductsMade == 2), "admin top sellers includes seller A");
+            AssertTrue(adminOverview.TopSellers.Any(seller => seller.ShopName == "P6 Analytics Seller B" && seller.ProductsMade == 1), "admin top sellers includes seller B");
+            AssertTrue(adminOverview.UsersByRole.Any(role => role.Role == UserRole.Buyer.ToString() && role.Count >= 2), "admin users by buyer role");
+            AssertTrue(adminOverview.UsersByRole.Any(role => role.Role == UserRole.Seller.ToString() && role.Count >= 2), "admin users by seller role");
+        }
+        finally
+        {
+            await CleanupSqlAnalyticsAsync(factory);
         }
     }
 
@@ -499,9 +907,11 @@ internal sealed class Phase6Runner
             ["build_requests"] = 2,
             ["audit_log"] = 3,
             ["chat_conversations"] = 2,
-            ["chat_messages"] = 4
+            ["chat_messages"] = 4,
+            ["seller_applications"] = 1
         };
 
+        // Tables that accumulate rows with real use / demo data: assert at-least, not exact.
         var baselineMinimumTables = new HashSet<string>(StringComparer.OrdinalIgnoreCase)
         {
             "users",
@@ -509,8 +919,10 @@ internal sealed class Phase6Runner
             "build_items",
             "build_mods",
             "build_requests",
+            "audit_log",
             "chat_conversations",
-            "chat_messages"
+            "chat_messages",
+            "seller_applications"
         };
 
         foreach (var (table, expectedCount) in expected)
@@ -634,7 +1046,32 @@ internal sealed class Phase6Runner
                 UNION ALL SELECT 'chat_conversations.build_request_id' FROM chat_conversations c LEFT JOIN build_requests br ON br.request_id = c.build_request_id WHERE c.build_request_id IS NOT NULL AND br.request_id IS NULL
                 UNION ALL SELECT 'chat_messages.conversation_id' FROM chat_messages m LEFT JOIN chat_conversations c ON c.conversation_id = m.conversation_id WHERE c.conversation_id IS NULL
                 UNION ALL SELECT 'chat_messages.sender_user_id' FROM chat_messages m LEFT JOIN users u ON u.user_id = m.sender_user_id WHERE u.user_id IS NULL
+                UNION ALL SELECT 'seller_applications.buyer_user_id' FROM seller_applications sa LEFT JOIN users u ON u.user_id = sa.buyer_user_id WHERE u.user_id IS NULL
+                UNION ALL SELECT 'seller_applications.reviewed_by' FROM seller_applications sa LEFT JOIN users u ON u.user_id = sa.reviewed_by WHERE sa.reviewed_by IS NOT NULL AND u.user_id IS NULL
             ) errors;
+            """);
+
+        await AssertZeroRowsAsync(connection, "Seller application status domain", """
+            SELECT application_id
+            FROM seller_applications
+            WHERE status NOT IN ('Pending', 'Approved', 'Rejected');
+            """);
+
+        await AssertZeroRowsAsync(connection, "Seller application pending applicant/duplicate rule", """
+            SELECT application_id
+            FROM seller_applications sa
+            INNER JOIN users u ON u.user_id = sa.buyer_user_id
+            INNER JOIN roles r ON r.role_id = u.role_id
+            WHERE sa.status = 'Pending'
+              AND (u.is_active = 0 OR r.role_name <> 'Buyer')
+
+            UNION ALL
+
+            SELECT MIN(application_id)
+            FROM seller_applications
+            WHERE status = 'Pending'
+            GROUP BY buyer_user_id
+            HAVING COUNT(*) > 1;
             """);
 
         await AssertZeroRowsAsync(connection, "Catalog price non-negative", """
@@ -789,6 +1226,24 @@ internal sealed class Phase6Runner
             });
     }
 
+    private static async Task CleanupSqlAnalyticsAsync(SqlConnectionFactory factory)
+    {
+        await using var connection = factory.CreateConnection();
+        await connection.OpenAsync();
+
+        await ExecuteNonQueryAsync(connection, """
+            DELETE FROM build_requests WHERE build_id LIKE 'P6_BUILD_ANALYTICS_%';
+            DELETE FROM build_mods WHERE build_id LIKE 'P6_BUILD_ANALYTICS_%';
+            DELETE FROM build_items WHERE build_id LIKE 'P6_BUILD_ANALYTICS_%';
+            DELETE FROM builds WHERE build_id LIKE 'P6_BUILD_ANALYTICS_%';
+            DELETE sp
+            FROM seller_profiles AS sp
+            INNER JOIN users AS u ON u.user_id = sp.user_id
+            WHERE u.username LIKE 'P6_ANALYTICS_%';
+            DELETE FROM users WHERE username LIKE 'P6_ANALYTICS_%';
+            """);
+    }
+
     private static async Task<Dictionary<string, int>> QueryRowCountsAsync(SqlConnection connection)
     {
         var results = new Dictionary<string, int>(StringComparer.OrdinalIgnoreCase);
@@ -809,6 +1264,7 @@ internal sealed class Phase6Runner
             UNION ALL SELECT 'build_mods', COUNT(*) FROM build_mods
             UNION ALL SELECT 'build_requests', COUNT(*) FROM build_requests
             UNION ALL SELECT 'audit_log', COUNT(*) FROM audit_log
+            UNION ALL SELECT 'seller_applications', COUNT(*) FROM seller_applications
             UNION ALL SELECT 'chat_conversations', COUNT(*) FROM chat_conversations
             UNION ALL SELECT 'chat_messages', COUNT(*) FROM chat_messages;
             """;
@@ -1267,6 +1723,109 @@ internal sealed class FakeSellerRepository : ISellerRepository
     public Task<int> GetSellerCountAsync(CancellationToken cancellationToken = default) => Task.FromResult(_sellers.Count);
     public Task<SellerProfile> SaveAsync(SellerProfile sellerProfile, CancellationToken cancellationToken = default) { _sellers[sellerProfile.UserId] = sellerProfile; return Task.FromResult(sellerProfile); }
     public Task SetVerifiedAsync(int sellerUserId, bool isVerified, int adminUserId, CancellationToken cancellationToken = default) { _sellers[sellerUserId].IsVerified = isVerified; return Task.CompletedTask; }
+}
+
+internal sealed class FakeSellerApplicationRepository : ISellerApplicationRepository
+{
+    private readonly Dictionary<int, SellerApplication> _apps = new();
+    private int _nextId = 1;
+
+    public Task<SellerApplication> AddAsync(SellerApplication application, CancellationToken cancellationToken = default)
+    {
+        application.ApplicationId = _nextId++;
+        application.CreatedAt = DateTime.UtcNow;
+        _apps[application.ApplicationId] = application;
+        return Task.FromResult(application);
+    }
+
+    public Task<SellerApplication?> GetByIdAsync(int applicationId, CancellationToken cancellationToken = default)
+        => Task.FromResult(_apps.GetValueOrDefault(applicationId));
+
+    public Task<SellerApplication?> GetLatestByBuyerAsync(int buyerUserId, CancellationToken cancellationToken = default)
+        => Task.FromResult(_apps.Values.Where(app => app.BuyerUserId == buyerUserId).OrderByDescending(app => app.ApplicationId).FirstOrDefault());
+
+    public Task<bool> HasPendingAsync(int buyerUserId, CancellationToken cancellationToken = default)
+        => Task.FromResult(_apps.Values.Any(app => app.BuyerUserId == buyerUserId && app.Status == SellerApplicationStatus.Pending));
+
+    public Task<IReadOnlyList<Custom_keyboard.Models.Admin.AdminSellerApplicationRow>> GetAdminRowsAsync(CancellationToken cancellationToken = default)
+        => Task.FromResult<IReadOnlyList<Custom_keyboard.Models.Admin.AdminSellerApplicationRow>>(
+            _apps.Values.Select(app => new Custom_keyboard.Models.Admin.AdminSellerApplicationRow
+            {
+                ApplicationId = app.ApplicationId,
+                BuyerUserId = app.BuyerUserId,
+                ShopName = app.ShopName,
+                Phone = app.Phone,
+                Address = app.Address,
+                Note = app.Note,
+                Status = app.Status,
+                ReviewNote = app.ReviewNote,
+                CreatedAt = app.CreatedAt,
+                ReviewedAt = app.ReviewedAt
+            }).ToList());
+
+    public Task<int> GetCountAsync(CancellationToken cancellationToken = default) => Task.FromResult(_apps.Count);
+
+    public Task<bool> UpdateStatusAsync(int applicationId, SellerApplicationStatus status, string? reviewNote, int reviewedBy, CancellationToken cancellationToken = default)
+    {
+        var app = _apps[applicationId];
+        if (app.Status != SellerApplicationStatus.Pending)
+        {
+            return Task.FromResult(false);
+        }
+
+        app.Status = status;
+        app.ReviewNote = reviewNote;
+        app.ReviewedBy = reviewedBy;
+        app.ReviewedAt = DateTime.UtcNow;
+        return Task.FromResult(true);
+    }
+}
+
+internal sealed class FakeStatsRepository : IStatsRepository
+{
+    public int? LastSellerDashboardId { get; private set; }
+    public int? LastPublicSellerId { get; private set; }
+
+    public Task<SellerDashboardStats> GetSellerDashboardAsync(int sellerUserId, StatsPeriod period, CancellationToken cancellationToken = default)
+    {
+        LastSellerDashboardId = sellerUserId;
+        return Task.FromResult(new SellerDashboardStats
+        {
+            TotalRevenue = 10m,
+            ProductsMade = 1,
+            TotalCustomers = 1,
+            TimeSeries = [new TimeBucket("2026", 1, 10m)]
+        });
+    }
+
+    public Task<SellerPublicStats> GetSellerPublicAsync(int sellerUserId, CancellationToken cancellationToken = default)
+    {
+        LastPublicSellerId = sellerUserId;
+        return Task.FromResult(new SellerPublicStats
+        {
+            ProductsMade = 3,
+            TotalOrders = 4,
+            Customers = 2,
+            IsVerified = true,
+            AvgCompletionDays = 2.5
+        });
+    }
+
+    public Task<AdminOverviewStats> GetAdminOverviewAsync(StatsPeriod period, CancellationToken cancellationToken = default)
+    {
+        return Task.FromResult(new AdminOverviewStats
+        {
+            TotalUsers = 7,
+            UsersByRole =
+            [
+                new RoleUserCount(UserRole.Admin.ToString(), 1),
+                new RoleUserCount(UserRole.Buyer.ToString(), 3),
+                new RoleUserCount(UserRole.Seller.ToString(), 3)
+            ],
+            TotalRevenue = 99m,
+            CompletedOrders = 2
+        });
+    }
 }
 
 internal sealed class AlwaysValidBuildService : IBuildService

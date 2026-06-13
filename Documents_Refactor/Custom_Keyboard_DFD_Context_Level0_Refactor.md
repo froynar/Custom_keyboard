@@ -28,9 +28,9 @@ flowchart LR
 
 | Tac nhan | Vai tro |
 | --- | --- |
-| Buyer | Dang ky/dang nhap, tao build tu kit, them build items, luu build, gui request, theo doi request va chat voi seller. |
+| Buyer | Dang ky/dang nhap, tao build tu kit, them build items, luu build, gui request, theo doi request, nop don xin lam seller va chat voi seller. |
 | Seller | Dang nhap, xem request duoc gan, xem chi tiet build, cap nhat trang thai request va chat voi buyer/admin. |
-| Admin | Dang nhap, quan ly user, seller profile, catalog, audit log va chat voi seller. |
+| Admin | Dang nhap, quan ly user, seller profile, catalog, audit log, duyet don xin lam seller va chat voi seller. |
 
 ### Luong Du Lieu Muc Ngu Canh
 
@@ -52,7 +52,7 @@ flowchart LR
 | 1.0 | Quan ly tai khoan | Xu ly dang ky, dang nhap, dang xuat va tra cuu tai khoan. |
 | 2.0 | Quan ly build keyboard | Xu ly catalog, cau hinh build tu kit, kiem tra tuong thich, tinh tong gia va luu build. |
 | 3.0 | Quan ly request build | Xu ly buyer gui request cho seller va seller cap nhat trang thai. |
-| 4.0 | Quan tri he thong | Xu ly quan ly user, seller profile, catalog va audit log. |
+| 4.0 | Quan tri he thong | Xu ly quan ly user, seller profile, catalog, audit log va duyet don xin lam seller. |
 | 5.0 | Quan ly chat | Xu ly hoi thoai Buyer-Seller va Seller-Admin/Admin-Seller. |
 
 ### Cac Kho Du Lieu
@@ -66,6 +66,7 @@ flowchart LR
 | D5 | Request build | Build requests, payload snapshot, status va cac moc thoi gian. |
 | D6 | Audit log | Lich su thao tac quan trong. |
 | D7 | Chat | Chat conversations va chat messages. |
+| D8 | Don xin seller | Seller applications: don buyer xin len seller va trang thai duyet. |
 
 ### So Do Level 0
 
@@ -88,6 +89,7 @@ flowchart LR
     D5[("D5\nRequest build")]
     D6[("D6\nAudit log")]
     D7[("D7\nChat")]
+    D8[("D8\nDon xin seller")]
 
     Buyer -- "(1) Thong tin tai khoan" --> P1
     Seller -- "(1) Thong tin tai khoan" --> P1
@@ -134,6 +136,11 @@ flowchart LR
     P5 -- "(35) Tin nhan/lich su chat" --> Buyer
     P5 -- "(36) Tin nhan/lich su chat" --> Seller
     P5 -- "(37) Tin nhan/lich su chat" --> Admin
+
+    Buyer -- "(38) Nop don xin lam seller" --> P4
+    P4 -- "(39) Luu/cap nhat don" --> D8
+    D8 -- "(40) Don xin seller can duyet" --> P4
+    P4 -- "(41) Trang thai don (Pending/Approved/Rejected)" --> Buyer
 ```
 
 ### Chu Thich Luong Du Lieu Level 0
@@ -177,6 +184,10 @@ flowchart LR
 | (35) | 5.0 | Buyer | Lich su chat hoac tin nhan tu seller |
 | (36) | 5.0 | Seller | Lich su chat hoac tin nhan tu buyer/admin |
 | (37) | 5.0 | Admin | Lich su chat hoac tin nhan tu seller |
+| (38) | Buyer | 4.0 | Don xin lam seller: ten shop, phone, dia chi, ghi chu |
+| (39) | 4.0 | D8 | Tao don Pending hoac cap nhat trang thai duyet (khi duyet con ghi (23) role, (24) seller profile, (26) audit) |
+| (40) | D8 | 4.0 | Don xin seller va trang thai de admin duyet |
+| (41) | 4.0 | Buyer | Trang thai don (Pending/Approved/Rejected) |
 
 ## Ranh Gioi
 

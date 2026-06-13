@@ -101,12 +101,19 @@ public sealed class SqlStatsRepository : IStatsRepository
         var revenueSeries = await ReadTimeSeriesAsync(connection, period, sellerUserId: null, cancellationToken);
         var statusBreakdown = await ReadStatusBreakdownAsync(connection, sellerUserId: null, cancellationToken);
         var topSellers = await ReadTopSellersAsync(connection, cancellationToken);
+        var (totalUsers, usersByRole, verifiedSellers, totalBuilds, totalRequests) =
+            await ReadAdminKpisAsync(connection, cancellationToken);
 
         var totalRevenue = revenueSeries.Sum(b => b.Revenue);
         var completedOrders = revenueSeries.Sum(b => b.Orders);
 
         return new AdminOverviewStats
         {
+            TotalUsers = totalUsers,
+            UsersByRole = usersByRole,
+            VerifiedSellers = verifiedSellers,
+            TotalBuilds = totalBuilds,
+            TotalRequests = totalRequests,
             TotalRevenue = totalRevenue,
             CompletedOrders = completedOrders,
             RevenueSeries = revenueSeries,
@@ -281,6 +288,51 @@ public sealed class SqlStatsRepository : IStatsRepository
         }
 
         return results;
+    }
+
+    private static async Task<(int TotalUsers, IReadOnlyList<RoleUserCount> UsersByRole, int VerifiedSellers, int TotalBuilds, int TotalRequests)>
+        ReadAdminKpisAsync(SqlConnection connection, CancellationToken cancellationToken)
+    {
+        await using var summaryCommand = connection.CreateCommand();
+        summaryCommand.CommandText = """
+            SELECT
+                (SELECT COUNT(*) FROM users) AS total_users,
+                (SELECT COUNT(*) FROM seller_profiles WHERE is_verified = 1) AS verified_sellers,
+                (SELECT COUNT(*) FROM builds) AS total_builds,
+                (SELECT COUNT(*) FROM build_requests) AS total_requests;
+            """;
+
+        int totalUsers = 0, verifiedSellers = 0, totalBuilds = 0, totalRequests = 0;
+        await using (var reader = await summaryCommand.ExecuteReaderAsync(cancellationToken))
+        {
+            if (await reader.ReadAsync(cancellationToken))
+            {
+                totalUsers = GetInt(reader, 0);
+                verifiedSellers = GetInt(reader, 1);
+                totalBuilds = GetInt(reader, 2);
+                totalRequests = GetInt(reader, 3);
+            }
+        }
+
+        await using var roleCommand = connection.CreateCommand();
+        roleCommand.CommandText = """
+            SELECT r.role_name, COUNT(u.user_id) AS user_count
+            FROM roles AS r
+            LEFT JOIN users AS u ON u.role_id = r.role_id
+            GROUP BY r.role_name
+            ORDER BY r.role_name;
+            """;
+
+        var usersByRole = new List<RoleUserCount>();
+        await using (var reader = await roleCommand.ExecuteReaderAsync(cancellationToken))
+        {
+            while (await reader.ReadAsync(cancellationToken))
+            {
+                usersByRole.Add(new RoleUserCount(reader.GetString(0), GetInt(reader, 1)));
+            }
+        }
+
+        return (totalUsers, usersByRole, verifiedSellers, totalBuilds, totalRequests);
     }
 
     private static async Task<(bool IsVerified, DateTime? VerifiedAt)> ReadVerificationAsync(

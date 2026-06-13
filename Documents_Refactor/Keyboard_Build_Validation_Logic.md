@@ -69,8 +69,8 @@ Huong nay hop ly voi shop linh kien ban phim vi kit thuong da gom case, PCB, pla
 13. Toi gian accessory/mod.
     - Accessory chi can `accessory_type`, `accessory_name`, `target_component`, gia va trang thai.
     - Khong can `brand_id` cho accessory trong phase dau vi khong co relation brand va khong anh huong validation.
-    - Mod chi can `mod_type`, `target_component`, `notes`.
-    - Khong luu spring weight, film flag, lube type rieng trong ERD.
+    - Mod chi can `mod_type`, `target_component`, `notes` trong ERD.
+    - UI co preset mod; chi tiet nhu switch quantity va spring weight duoc chuan hoa trong `notes`, khong them cot rieng.
 
 ## Logic kiem tra tinh hoan thien cua build
 
@@ -120,8 +120,10 @@ Huong nay hop ly voi shop linh kien ban phim vi kit thuong da gom case, PCB, pla
 - Keycap va stabilizer thuong co `quantity = 1`; switch/accessory co the > 1.
 - Accessory ton tai va dang available.
 - `accessory.target_component` phai la Switch, Stabilizer, Kit hoac General.
-- Mod target component phai la Switch, Stabilizer, Kit hoac Build.
-- Khong kiem chi tiet spring weight, film hay lube type.
+- Mod target component phai la Switch, Stabilizer hoac Build.
+- Mod target Switch co so luong switch can mod, khong vuot qua switch quantity cua build.
+- `Spring_swap` chi ap dung cho Switch va spring weight la so nguyen trong khoang 30-76g.
+- Cac chi tiet lube/film/foam/tape cu the van la note tu do, khong tach thanh cot schema.
 
 ### 7. Kiem tra seller nhan request
 

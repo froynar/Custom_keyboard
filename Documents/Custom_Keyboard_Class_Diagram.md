@@ -29,7 +29,7 @@ classDiagram
         +email
         +phone
         +isActive
-        +viewAccountInfo()
+        +viewOwnProfile()
         +logout()
     }
 
@@ -101,7 +101,8 @@ classDiagram
     }
 
     class AccountMenu {
-        +showAccountInfo()
+        +showProfileSettings()
+        +showOwnProfile()
         +logout()
     }
 
@@ -313,7 +314,7 @@ classDiagram
 | 1.1 Dang ky | `AccountService`, `User` | Tao tai khoan nguoi dung. |
 | 1.2 Dang nhap | `AccountService`, `User` | Xac thuc nguoi dung va xac dinh role. |
 | 1.3 Dang xuat | `AccountService`, `User` | Ket thuc phien su dung. |
-| 1.4 Xem thong tin tai khoan | `User` | Hien thi thong tin ca nhan va role. |
+| 1.4 Xem profile tai khoan | `User`, `AccountMenu` | Hien thi username, email, phone, role, status va user id cua chinh nguoi dung. |
 
 ### 2. Buyer - Tao Va Gui Build
 

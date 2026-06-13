@@ -71,7 +71,7 @@ Nhung tai lieu cu van co gia tri de tham khao flow, nhung khong con la nguon sch
 
 Mo hinh moi trong `Documents_Refactor/` rut gon theo nguyen tac:
 
-- ERD khong vuot qua 25 lien ket. Hien tai link count la 24.
+- ERD giu gon, han che lien ket thua. Hien tai 18 bang / 26 lien ket (da them seller_applications cho luong buyer xin len seller).
 - Khong tach case, PCB, plate thanh bang rieng.
 - Khong dung seller inventory trong giai do refactor nay.
 - Keyboard kit la san pham nen tang, da gom case/PCB/plate/foam/cable neu co.
@@ -91,8 +91,8 @@ Documents_Refactor/Custom_Keyboard_ERD_Realistic_Kit_Shop_Proposal.dbml
 
 Thong tin chinh:
 
-- Tong bang: 17.
-- Tong lien ket: 24.
+- Tong bang: 18.
+- Tong lien ket: 26.
 - Khong co seller inventory.
 - Khong co case/PCB/plate rieng.
 - Build duoc tach thanh `builds` va `build_items`.
@@ -107,6 +107,7 @@ Thong tin chinh:
 | Account | `roles` | Dinh nghia Buyer, Seller, Admin |
 | Account | `users` | Tai khoan nguoi dung |
 | Account | `seller_profiles` | Ho so seller va trang thai verify |
+| Account | `seller_applications` | Don buyer xin nang cap len seller (Pending/Approved/Rejected) |
 | Catalog | `brands` | Thuong hieu |
 | Catalog | `layouts` | Layout/form factor/key count |
 | Catalog | `keyboard_kits` | Kit nen tang cua ban phim |
@@ -152,7 +153,7 @@ Nhom chuc nang chinh:
 | 1. Tai khoan | Dang ky, dang nhap, quan ly profile, seller profile |
 | 2. Buyer - Tao build tu kit | Xem catalog, chon kit, cau hinh build, tinh gia, luu build, gui request |
 | 3. Seller - Xu ly request | Xem request, cap nhat trang thai, chat voi buyer |
-| 4. Admin - Quan tri he thong | Quan ly user, seller, catalog, audit |
+| 4. Admin - Quan tri he thong | Quan ly user, seller, catalog, audit, duyet don xin lam seller |
 | 5. Chat | Tao conversation, gui/nhan tin nhan, link voi request neu can |
 
 FHD moi phai duoc dung de kiem tra xem code refactor co thieu man hinh/service nao khong.
@@ -200,7 +201,7 @@ DFD duoc chia thanh 3 file de de doc va de doi chieu.
 | 1.0 | Quan ly tai khoan | `roles`, `users`, `seller_profiles` |
 | 2.0 | Quan ly build keyboard | `brands`, `layouts`, `keyboard_kits`, `switches`, `keycap_sets`, `stabilizers`, `accessories`, `builds`, `build_items`, `build_mods` |
 | 3.0 | Quan ly request build | `build_requests`, `builds`, `users` |
-| 4.0 | Quan tri he thong | `users`, `seller_profiles`, catalog tables, `audit_log` |
+| 4.0 | Quan tri he thong | `users`, `seller_profiles`, `seller_applications`, catalog tables, `audit_log` |
 | 5.0 | Quan ly chat | `chat_conversations`, `chat_messages`, `build_requests` |
 
 ### 8.3 Level 2 quan trong
@@ -637,7 +638,7 @@ Du an da chuyen tu mo hinh custom keyboard qua chi tiet sang mo hinh realistic k
 
 Trang thai hien tai:
 
-- ERD refactor da co va giu duoi 25 lien ket.
+- ERD refactor giu gon, hien 18 bang / 26 lien ket.
 - FHD moi da rut gon den x.x.
 - Use cases da gom theo 3 role.
 - DFD da chia thanh context/level 0, level 1, level 2.

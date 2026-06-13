@@ -20,6 +20,9 @@ public sealed record KitSales(string KitId, string KitName, int Orders, decimal 
 /// <summary>A seller ranked by completed-order revenue (admin top-sellers).</summary>
 public sealed record SellerRank(int SellerUserId, string ShopName, int ProductsMade, decimal Revenue);
 
+/// <summary>User count in one role for admin overview.</summary>
+public sealed record RoleUserCount(string Role, int Count);
+
 /// <summary>Full analytics payload for a seller's own dashboard.</summary>
 public sealed class SellerDashboardStats
 {
@@ -47,6 +50,11 @@ public sealed class SellerPublicStats
 /// <summary>System-wide analytics payload for the admin overview.</summary>
 public sealed class AdminOverviewStats
 {
+    public int TotalUsers { get; init; }
+    public IReadOnlyList<RoleUserCount> UsersByRole { get; init; } = [];
+    public int VerifiedSellers { get; init; }
+    public int TotalBuilds { get; init; }
+    public int TotalRequests { get; init; }
     public decimal TotalRevenue { get; init; }
     public int CompletedOrders { get; init; }
     public IReadOnlyList<TimeBucket> RevenueSeries { get; init; } = [];

@@ -21,9 +21,12 @@ public sealed class AdminDashboardViewModel : RoleDashboardViewModel
 {
     private readonly IAdminService _adminService;
     private readonly IStatsService _statsService;
+    private readonly ISellerApplicationService _sellerApplicationService;
+    private AdminSellerApplicationRow? _selectedApplication;
+    private string? _applicationReviewNote;
     private bool _hasLoaded;
     private bool _isBusy;
-    private string _statusMessage = "San sang.";
+    private string _statusMessage = Tr("Common_Ready");
     private AdminDashboardSummary _summary = new();
     private AdminOverviewStats _overview = new();
     private StatsPeriod _selectedPeriod = StatsPeriod.Monthly;
@@ -53,47 +56,47 @@ public sealed class AdminDashboardViewModel : RoleDashboardViewModel
         ICommand logoutCommand,
         IAdminService adminService,
         IStatsService statsService,
+        ISellerApplicationService sellerApplicationService,
         ChatViewModel chat)
         : base(
             currentUser,
             logoutCommand,
-            "Admin dashboard",
-            "Quan ly user, seller va danh muc kit-based.",
-            [
-                "Quan ly user va trang thai active",
-                "Quan ly seller profile va verify",
-                "Quan ly kit/switch/keycap/stabilizer/accessory",
-                "Xem audit log va chat voi seller"
-            ])
+            "Admin_Title",
+            "Admin_Subtitle",
+            ["Admin_Task1", "Admin_Task2", "Admin_Task3", "Admin_Task4"])
     {
         _adminService = adminService;
         _statsService = statsService;
+        _sellerApplicationService = sellerApplicationService;
         Chat = chat;
 
         AvailableRoles = Enum.GetValues<UserRole>();
         ComponentTypes = Enum.GetValues<AdminComponentType>();
 
         LoadCommand = new AsyncRelayCommand(_ => ExecuteSafeAsync(LoadAsync));
-        RefreshAllCommand = new AsyncRelayCommand(_ => ExecuteSafeAsync(RefreshAllAsync, "Da refresh admin dashboard."));
-        RefreshUsersCommand = new AsyncRelayCommand(_ => ExecuteSafeAsync(RefreshUsersAsync, "Da refresh users."));
-        BanUserCommand = new AsyncRelayCommand(_ => ExecuteSafeAsync(() => SetSelectedUserActiveAsync(false), "Da ban user."));
-        UnbanUserCommand = new AsyncRelayCommand(_ => ExecuteSafeAsync(() => SetSelectedUserActiveAsync(true), "Da mo ban user."));
-        ChangeUserRoleCommand = new AsyncRelayCommand(_ => ExecuteSafeAsync(ChangeSelectedUserRoleAsync, "Da doi role user."));
-        RefreshSellersCommand = new AsyncRelayCommand(_ => ExecuteSafeAsync(RefreshSellersAsync, "Da refresh sellers."));
-        SaveSellerProfileCommand = new AsyncRelayCommand(_ => ExecuteSafeAsync(SaveSellerProfileAsync, "Da luu seller profile."));
-        VerifySellerCommand = new AsyncRelayCommand(_ => ExecuteSafeAsync(() => SetSelectedSellerVerifiedAsync(true), "Da verify seller."));
-        UnverifySellerCommand = new AsyncRelayCommand(_ => ExecuteSafeAsync(() => SetSelectedSellerVerifiedAsync(false), "Da unverify seller."));
-        RefreshCatalogCommand = new AsyncRelayCommand(_ => ExecuteSafeAsync(RefreshCatalogAsync, "Da refresh brand/layout."));
+        RefreshAllCommand = new AsyncRelayCommand(_ => ExecuteSafeAsync(RefreshAllAsync, Tr("Admin_RefreshedDashboard")));
+        RefreshUsersCommand = new AsyncRelayCommand(_ => ExecuteSafeAsync(RefreshUsersAsync, Tr("Admin_RefreshedUsers")));
+        BanUserCommand = new AsyncRelayCommand(_ => ExecuteSafeAsync(() => SetSelectedUserActiveAsync(false), Tr("Admin_UserBanned")));
+        UnbanUserCommand = new AsyncRelayCommand(_ => ExecuteSafeAsync(() => SetSelectedUserActiveAsync(true), Tr("Admin_UserUnbanned")));
+        ChangeUserRoleCommand = new AsyncRelayCommand(_ => ExecuteSafeAsync(ChangeSelectedUserRoleAsync, Tr("Admin_RoleChanged")));
+        RefreshSellersCommand = new AsyncRelayCommand(_ => ExecuteSafeAsync(RefreshSellersAsync, Tr("Admin_RefreshedSellers")));
+        SaveSellerProfileCommand = new AsyncRelayCommand(_ => ExecuteSafeAsync(SaveSellerProfileAsync, Tr("Admin_SellerProfileSaved")));
+        VerifySellerCommand = new AsyncRelayCommand(_ => ExecuteSafeAsync(() => SetSelectedSellerVerifiedAsync(true), Tr("Admin_SellerVerified")));
+        UnverifySellerCommand = new AsyncRelayCommand(_ => ExecuteSafeAsync(() => SetSelectedSellerVerifiedAsync(false), Tr("Admin_SellerUnverified")));
+        RefreshCatalogCommand = new AsyncRelayCommand(_ => ExecuteSafeAsync(RefreshCatalogAsync, Tr("Admin_RefreshedCatalog")));
         NewBrandCommand = new RelayCommand(_ => NewBrandEditor());
-        SaveBrandCommand = new AsyncRelayCommand(_ => ExecuteSafeAsync(SaveBrandAsync, "Da luu brand."));
+        SaveBrandCommand = new AsyncRelayCommand(_ => ExecuteSafeAsync(SaveBrandAsync, Tr("Admin_BrandSaved")));
         NewLayoutCommand = new RelayCommand(_ => NewLayoutEditor());
-        SaveLayoutCommand = new AsyncRelayCommand(_ => ExecuteSafeAsync(SaveLayoutAsync, "Da luu layout."));
-        RefreshComponentsCommand = new AsyncRelayCommand(_ => ExecuteSafeAsync(RefreshComponentsAsync, "Da refresh linh kien."));
+        SaveLayoutCommand = new AsyncRelayCommand(_ => ExecuteSafeAsync(SaveLayoutAsync, Tr("Admin_LayoutSaved")));
+        RefreshComponentsCommand = new AsyncRelayCommand(_ => ExecuteSafeAsync(RefreshComponentsAsync, Tr("Admin_RefreshedComponents")));
         NewComponentCommand = new RelayCommand(_ => NewComponentEditor());
-        SaveComponentCommand = new AsyncRelayCommand(_ => ExecuteSafeAsync(SaveComponentAsync, "Da luu linh kien."));
-        HideComponentCommand = new AsyncRelayCommand(_ => ExecuteSafeAsync(() => SetSelectedComponentAvailabilityAsync(false), "Da an linh kien."));
-        RestoreComponentCommand = new AsyncRelayCommand(_ => ExecuteSafeAsync(() => SetSelectedComponentAvailabilityAsync(true), "Da khoi phuc linh kien."));
-        RefreshAuditCommand = new AsyncRelayCommand(_ => ExecuteSafeAsync(RefreshAuditAsync, "Da refresh audit log."));
+        SaveComponentCommand = new AsyncRelayCommand(_ => ExecuteSafeAsync(SaveComponentAsync, Tr("Admin_ComponentSaved")));
+        HideComponentCommand = new AsyncRelayCommand(_ => ExecuteSafeAsync(() => SetSelectedComponentAvailabilityAsync(false), Tr("Admin_ComponentHidden")));
+        RestoreComponentCommand = new AsyncRelayCommand(_ => ExecuteSafeAsync(() => SetSelectedComponentAvailabilityAsync(true), Tr("Admin_ComponentRestored")));
+        RefreshAuditCommand = new AsyncRelayCommand(_ => ExecuteSafeAsync(RefreshAuditAsync, Tr("Admin_RefreshedAudit")));
+        RefreshApplicationsCommand = new AsyncRelayCommand(_ => ExecuteSafeAsync(RefreshApplicationsAsync, Tr("Admin_RefreshedApplications")));
+        ApproveApplicationCommand = new AsyncRelayCommand(_ => ExecuteSafeAsync(ApproveSelectedApplicationAsync, Tr("Admin_ApplicationApproved")), _ => CanReviewSelectedApplication);
+        RejectApplicationCommand = new AsyncRelayCommand(_ => ExecuteSafeAsync(RejectSelectedApplicationAsync, Tr("Admin_ApplicationRejected")), _ => CanReviewSelectedApplication);
     }
 
     public ChatViewModel Chat { get; }
@@ -107,6 +110,7 @@ public sealed class AdminDashboardViewModel : RoleDashboardViewModel
     public ObservableCollection<Layout> Layouts { get; } = [];
     public ObservableCollection<AdminComponentRecord> Components { get; } = [];
     public ObservableCollection<AuditLogEntry> AuditLogs { get; } = [];
+    public ObservableCollection<AdminSellerApplicationRow> Applications { get; } = [];
     public ObservableCollection<SellerRank> TopSellers { get; } = [];
 
     public StatsPeriod[] Periods { get; } = Enum.GetValues<StatsPeriod>();
@@ -132,11 +136,45 @@ public sealed class AdminDashboardViewModel : RoleDashboardViewModel
     public ICommand HideComponentCommand { get; }
     public ICommand RestoreComponentCommand { get; }
     public ICommand RefreshAuditCommand { get; }
+    public ICommand RefreshApplicationsCommand { get; }
+    public ICommand ApproveApplicationCommand { get; }
+    public ICommand RejectApplicationCommand { get; }
+
+    public AdminSellerApplicationRow? SelectedApplication
+    {
+        get => _selectedApplication;
+        set
+        {
+            if (SetProperty(ref _selectedApplication, value))
+            {
+                OnPropertyChanged(nameof(CanReviewSelectedApplication));
+                (ApproveApplicationCommand as AsyncRelayCommand)?.RaiseCanExecuteChanged();
+                (RejectApplicationCommand as AsyncRelayCommand)?.RaiseCanExecuteChanged();
+            }
+        }
+    }
+
+    public string? ApplicationReviewNote
+    {
+        get => _applicationReviewNote;
+        set => SetProperty(ref _applicationReviewNote, value);
+    }
+
+    public bool CanReviewSelectedApplication =>
+        !IsBusy && SelectedApplication is { Status: SellerApplicationStatus.Pending };
 
     public bool IsBusy
     {
         get => _isBusy;
-        private set => SetProperty(ref _isBusy, value);
+        private set
+        {
+            if (SetProperty(ref _isBusy, value))
+            {
+                OnPropertyChanged(nameof(CanReviewSelectedApplication));
+                (ApproveApplicationCommand as AsyncRelayCommand)?.RaiseCanExecuteChanged();
+                (RejectApplicationCommand as AsyncRelayCommand)?.RaiseCanExecuteChanged();
+            }
+        }
     }
 
     public string StatusMessage
@@ -155,6 +193,13 @@ public sealed class AdminDashboardViewModel : RoleDashboardViewModel
 
     public decimal TotalRevenue => _overview.TotalRevenue;
     public int CompletedOrders => _overview.CompletedOrders;
+    public int AnalyticsTotalUsers => _overview.TotalUsers;
+    public string UsersByRoleText => _overview.UsersByRole.Count == 0
+        ? "-"
+        : string.Join(" / ", _overview.UsersByRole.Select(item => $"{item.Role}: {item.Count}"));
+    public int VerifiedSellers => _overview.VerifiedSellers;
+    public int TotalBuilds => _overview.TotalBuilds;
+    public int TotalRequests => _overview.TotalRequests;
 
     public StatsPeriod SelectedPeriod
     {
@@ -163,7 +208,7 @@ public sealed class AdminDashboardViewModel : RoleDashboardViewModel
         {
             if (SetProperty(ref _selectedPeriod, value) && _hasLoaded)
             {
-                _ = ExecuteSafeAsync(LoadOverviewAsync, "Da cap nhat bieu do.");
+                _ = ExecuteSafeAsync(LoadOverviewAsync, Tr("Admin_ChartUpdated"));
             }
         }
     }
@@ -360,12 +405,18 @@ public sealed class AdminDashboardViewModel : RoleDashboardViewModel
         await RefreshCatalogAsync();
         await RefreshComponentsAsync();
         await RefreshAuditAsync();
+        await RefreshApplicationsAsync();
     }
 
     private async Task LoadOverviewAsync()
     {
-        var overview = await _statsService.GetAdminOverviewAsync(SelectedPeriod);
+        var overview = await _statsService.GetAdminOverviewAsync(CurrentUser.UserId, SelectedPeriod);
         _overview = overview;
+        OnPropertyChanged(nameof(AnalyticsTotalUsers));
+        OnPropertyChanged(nameof(UsersByRoleText));
+        OnPropertyChanged(nameof(VerifiedSellers));
+        OnPropertyChanged(nameof(TotalBuilds));
+        OnPropertyChanged(nameof(TotalRequests));
         OnPropertyChanged(nameof(TotalRevenue));
         OnPropertyChanged(nameof(CompletedOrders));
 
@@ -443,11 +494,53 @@ public sealed class AdminDashboardViewModel : RoleDashboardViewModel
         }
     }
 
+    private async Task RefreshApplicationsAsync()
+    {
+        var previousId = SelectedApplication?.ApplicationId;
+        Applications.Clear();
+        foreach (var application in await _sellerApplicationService.GetApplicationsAsync())
+        {
+            Applications.Add(application);
+        }
+
+        SelectedApplication = Applications.FirstOrDefault(item => item.ApplicationId == previousId)
+            ?? Applications.FirstOrDefault();
+    }
+
+    private async Task ApproveSelectedApplicationAsync()
+    {
+        if (SelectedApplication is null)
+        {
+            throw new InvalidOperationException(Tr("Admin_SelectApplicationFirst"));
+        }
+
+        await _sellerApplicationService.ApproveAsync(SelectedApplication.ApplicationId, CurrentUser.UserId, ApplicationReviewNote);
+        ApplicationReviewNote = null;
+        Summary = await _adminService.GetSummaryAsync();
+        await RefreshApplicationsAsync();
+        await RefreshUsersAsync();
+        await RefreshSellersAsync();
+        await RefreshAuditAsync();
+    }
+
+    private async Task RejectSelectedApplicationAsync()
+    {
+        if (SelectedApplication is null)
+        {
+            throw new InvalidOperationException(Tr("Admin_SelectApplicationFirst"));
+        }
+
+        await _sellerApplicationService.RejectAsync(SelectedApplication.ApplicationId, CurrentUser.UserId, ApplicationReviewNote);
+        ApplicationReviewNote = null;
+        await RefreshApplicationsAsync();
+        await RefreshAuditAsync();
+    }
+
     private async Task SetSelectedUserActiveAsync(bool isActive)
     {
         if (SelectedUser is null)
         {
-            throw new InvalidOperationException("Chon user truoc.");
+            throw new InvalidOperationException(Tr("Admin_SelectUserFirst"));
         }
 
         await _adminService.SetUserActiveAsync(SelectedUser.UserId, isActive, CurrentUser.UserId);
@@ -459,7 +552,7 @@ public sealed class AdminDashboardViewModel : RoleDashboardViewModel
     {
         if (SelectedUser is null)
         {
-            throw new InvalidOperationException("Chon user truoc.");
+            throw new InvalidOperationException(Tr("Admin_SelectUserFirst"));
         }
 
         await _adminService.SetUserRoleAsync(SelectedUser.UserId, SelectedUserRole, CurrentUser.UserId);
@@ -473,7 +566,7 @@ public sealed class AdminDashboardViewModel : RoleDashboardViewModel
     {
         if (SellerEditorUserId <= 0)
         {
-            throw new InvalidOperationException("Chon seller user truoc.");
+            throw new InvalidOperationException(Tr("Admin_SelectSellerUserFirst"));
         }
 
         await _adminService.SaveSellerProfileAsync(
@@ -494,7 +587,7 @@ public sealed class AdminDashboardViewModel : RoleDashboardViewModel
     {
         if (SelectedSellerProfile is null)
         {
-            throw new InvalidOperationException("Chon seller truoc.");
+            throw new InvalidOperationException(Tr("Admin_SelectSellerFirst"));
         }
 
         await _adminService.SetSellerVerifiedAsync(SelectedSellerProfile.UserId, isVerified, CurrentUser.UserId);
@@ -552,7 +645,7 @@ public sealed class AdminDashboardViewModel : RoleDashboardViewModel
     {
         if (SelectedComponent is null)
         {
-            throw new InvalidOperationException("Chon linh kien truoc.");
+            throw new InvalidOperationException(Tr("Admin_SelectComponentFirst"));
         }
 
         await _adminService.SetComponentAvailabilityAsync(
@@ -602,12 +695,12 @@ public sealed class AdminDashboardViewModel : RoleDashboardViewModel
     private async Task ExecuteSafeAsync(Func<Task> action, string? successMessage = null)
     {
         IsBusy = true;
-        StatusMessage = "Dang xu ly...";
+        StatusMessage = Tr("Common_Processing");
 
         try
         {
             await action();
-            StatusMessage = successMessage ?? "Hoan tat.";
+            StatusMessage = successMessage ?? Tr("Common_Done");
         }
         catch (Exception ex)
         {

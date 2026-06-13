@@ -31,6 +31,7 @@
     </Window.Resources>
 
     <Grid Background="{StaticResource BodyBgBrush}">
-        <ContentControl Content="{Binding CurrentViewModel}"/>
+        <ContentControl AutomationProperties.AutomationId="ShellContent"
+                        Content="{Binding CurrentViewModel}"/>
     </Grid>
 </Window>

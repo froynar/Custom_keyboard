@@ -1,3 +1,6 @@
+using System.Globalization;
+using System.Text.RegularExpressions;
+using Custom_keyboard.Localization;
 using Custom_keyboard.Models.Builds;
 using Custom_keyboard.Models.Components;
 using Custom_keyboard.Models.Enums;
@@ -11,6 +14,9 @@ namespace Custom_keyboard.Services;
 public sealed class BuildService : IBuildService
 {
     private const int NotesMaxLength = 500;
+    private static readonly Regex ModQuantityRegex = new(
+        @"(?:^|;\s*)Quantity:\s*(?<value>\d+)\s*switch(?:es)?",
+        RegexOptions.IgnoreCase | RegexOptions.Compiled);
 
     private readonly IBuildRepository _buildRepository;
     private readonly IComponentCatalogService _catalogService;
@@ -53,11 +59,11 @@ public sealed class BuildService : IBuildService
     public async Task ArchiveBuildAsync(string buildId, int buyerId, CancellationToken cancellationToken = default)
     {
         var build = await _buildRepository.GetByIdAsync(buildId, cancellationToken)
-            ?? throw new InvalidOperationException("Build khong ton tai.");
+            ?? throw new InvalidOperationException(Loc.Instance["Build_NotExist"]);
 
         if (build.BuyerId != buyerId)
         {
-            throw new InvalidOperationException("Build khong thuoc buyer hien tai.");
+            throw new InvalidOperationException(Loc.Instance["Build_NotOwned"]);
         }
 
         await _buildRepository.ArchiveAsync(buildId, cancellationToken);
@@ -86,17 +92,17 @@ public sealed class BuildService : IBuildService
         // 1. Metadata
         if (build.BuyerId <= 0)
         {
-            result.AddError("Buyer khong hop le.");
+            result.AddError(Loc.Instance["Build_InvalidBuyer"]);
         }
 
         if (string.IsNullOrWhiteSpace(build.Name))
         {
-            result.AddError("Nhap ten build truoc khi luu.");
+            result.AddError(Loc.Instance["Build_NameRequired"]);
         }
 
         if (build.Notes is { Length: > NotesMaxLength })
         {
-            result.AddError($"Ghi chu khong duoc vuot qua {NotesMaxLength} ky tu.");
+            result.AddError(Loc.Instance.Format("Build_NotesTooLong", NotesMaxLength));
         }
 
         // 2. Kit
@@ -106,7 +112,7 @@ public sealed class BuildService : IBuildService
             : await _catalogService.GetLayoutByIdAsync(kit.LayoutId, cancellationToken);
         if (kit is not null && layout is null)
         {
-            result.AddWarning("Khong tim thay layout cua kit; bo qua kiem tra form factor.");
+            result.AddWarning(Loc.Instance["Build_LayoutMissing"]);
         }
 
         var requiredSwitchQuantity = kit?.RequiredSwitchQuantity ?? 0;
@@ -123,14 +129,14 @@ public sealed class BuildService : IBuildService
         {
             if (!item.HasExactlyOneProduct())
             {
-                result.AddError("Moi build item phai chon dung mot san pham (switch/keycap/stab/accessory).");
+                result.AddError(Loc.Instance["Build_ItemOneProduct"]);
                 resolvedItems.Add(new ResolvedItem(item, 0m));
                 continue;
             }
 
             if (item.Quantity <= 0)
             {
-                result.AddError("So luong build item phai lon hon 0.");
+                result.AddError(Loc.Instance["Build_ItemQuantityPositive"]);
             }
 
             var unitPrice = await ResolveItemAsync(
@@ -151,18 +157,20 @@ public sealed class BuildService : IBuildService
         if (kit is not null && requiredSwitchQuantity > 0 && switchQuantityTotal < requiredSwitchQuantity)
         {
             result.AddError(
-                $"Kit can it nhat {requiredSwitchQuantity} switch, hien chi co {switchQuantityTotal}.");
+                Loc.Instance.Format("Build_SwitchQuantityShort", requiredSwitchQuantity, switchQuantityTotal));
         }
+
+        ValidateSwitchModQuantities(build.Mods, switchQuantityTotal, result);
 
         // 4-5. Completeness advisories
         if (kit is not null && !hasKeycap)
         {
-            result.AddWarning("Build chua co keycap set.");
+            result.AddWarning(Loc.Instance["Build_NoKeycap"]);
         }
 
         if (kit is not null && !hasStabilizer)
         {
-            result.AddWarning("Build chua co stabilizer.");
+            result.AddWarning(Loc.Instance["Build_NoStabilizer"]);
         }
 
         // 8. Price snapshot
@@ -170,11 +178,11 @@ public sealed class BuildService : IBuildService
         result.TotalCost = total;
         if (kit is not null)
         {
-            result.AddInfo($"Tong tien: {total:0.00} USD.");
-            result.AddInfo($"So switch can mua: {requiredSwitchQuantity}.");
+            result.AddInfo(Loc.Instance.Format("Build_TotalInfo", total));
+            result.AddInfo(Loc.Instance.Format("Build_SwitchToBuyInfo", requiredSwitchQuantity));
             if (!string.IsNullOrWhiteSpace(kit.IncludedParts))
             {
-                result.AddInfo($"Kit da gom: {kit.IncludedParts}.");
+                result.AddInfo(Loc.Instance.Format("Build_KitIncludesInfo", kit.IncludedParts));
             }
         }
 
@@ -188,30 +196,30 @@ public sealed class BuildService : IBuildService
     {
         if (string.IsNullOrWhiteSpace(kitId))
         {
-            result.AddError("Chon kit truoc khi luu build.");
+            result.AddError(Loc.Instance["Build_KitRequired"]);
             return null;
         }
 
         var kit = await _catalogService.GetKitByIdAsync(kitId.Trim(), cancellationToken);
         if (kit is null)
         {
-            result.AddError("Kit da chon khong ton tai.");
+            result.AddError(Loc.Instance["Build_KitNotExist"]);
             return null;
         }
 
         if (!kit.IsAvailable)
         {
-            result.AddError("Kit da chon khong con kha dung.");
+            result.AddError(Loc.Instance["Build_KitUnavailable"]);
         }
 
         if (string.IsNullOrWhiteSpace(kit.PcbTechnology) || string.IsNullOrWhiteSpace(kit.SwitchMount))
         {
-            result.AddError("Kit thieu thong tin pcb technology / switch mount.");
+            result.AddError(Loc.Instance["Build_KitMissingInfo"]);
         }
 
         if (kit.PriceUsd < 0)
         {
-            result.AddError("Gia kit khong hop le.");
+            result.AddError(Loc.Instance["Build_KitPriceInvalid"]);
         }
 
         return kit;
@@ -232,13 +240,13 @@ public sealed class BuildService : IBuildService
             var selectedSwitch = await _catalogService.GetSwitchByIdAsync(item.SwitchId, cancellationToken);
             if (selectedSwitch is null)
             {
-                result.AddError($"Switch '{item.SwitchId}' khong ton tai.");
+                result.AddError(Loc.Instance.Format("Build_SwitchNotExist", item.SwitchId));
                 return 0m;
             }
 
             if (!selectedSwitch.IsAvailable)
             {
-                result.AddError($"Switch '{selectedSwitch.SwitchName}' khong con kha dung.");
+                result.AddError(Loc.Instance.Format("Build_SwitchUnavailable", selectedSwitch.SwitchName));
             }
 
             if (kit is not null)
@@ -246,13 +254,13 @@ public sealed class BuildService : IBuildService
                 if (!Same(selectedSwitch.SwitchTechnology, kit.PcbTechnology))
                 {
                     result.AddError(
-                        $"Switch technology '{selectedSwitch.SwitchTechnology}' khong khop kit '{kit.PcbTechnology}'.");
+                        Loc.Instance.Format("Build_SwitchTechMismatch", selectedSwitch.SwitchTechnology, kit.PcbTechnology));
                 }
 
                 if (!Same(selectedSwitch.MountType, kit.SwitchMount))
                 {
                     result.AddError(
-                        $"Switch mount '{selectedSwitch.MountType}' khong khop kit '{kit.SwitchMount}'.");
+                        Loc.Instance.Format("Build_SwitchMountMismatch", selectedSwitch.MountType, kit.SwitchMount));
                 }
             }
 
@@ -265,19 +273,19 @@ public sealed class BuildService : IBuildService
             var keycap = await _catalogService.GetKeycapSetByIdAsync(item.KeycapId, cancellationToken);
             if (keycap is null)
             {
-                result.AddError($"Keycap '{item.KeycapId}' khong ton tai.");
+                result.AddError(Loc.Instance.Format("Build_KeycapNotExist", item.KeycapId));
                 return 0m;
             }
 
             if (!keycap.IsAvailable)
             {
-                result.AddError($"Keycap '{keycap.KeycapName}' khong con kha dung.");
+                result.AddError(Loc.Instance.Format("Build_KeycapUnavailable", keycap.KeycapName));
             }
 
             if (layout is not null && !SupportsFormFactor(keycap.SupportedFormFactor, layout.FormFactor))
             {
                 result.AddWarning(
-                    $"Keycap '{keycap.KeycapName}' co the khong phu hop form factor '{layout.FormFactor}'.");
+                    Loc.Instance.Format("Build_KeycapFormFactorWarn", keycap.KeycapName, layout.FormFactor));
             }
 
             recordKeycap();
@@ -289,19 +297,19 @@ public sealed class BuildService : IBuildService
             var stabilizer = await _catalogService.GetStabilizerByIdAsync(item.StabilizerId, cancellationToken);
             if (stabilizer is null)
             {
-                result.AddError($"Stabilizer '{item.StabilizerId}' khong ton tai.");
+                result.AddError(Loc.Instance.Format("Build_StabilizerNotExist", item.StabilizerId));
                 return 0m;
             }
 
             if (!stabilizer.IsAvailable)
             {
-                result.AddError($"Stabilizer '{stabilizer.StabilizerName}' khong con kha dung.");
+                result.AddError(Loc.Instance.Format("Build_StabilizerUnavailable", stabilizer.StabilizerName));
             }
 
             if (layout is not null && !SupportsFormFactor(stabilizer.SupportedLayouts, layout.FormFactor))
             {
                 result.AddWarning(
-                    $"Stabilizer '{stabilizer.StabilizerName}' co the khong phu hop layout '{layout.FormFactor}'.");
+                    Loc.Instance.Format("Build_StabilizerLayoutWarn", stabilizer.StabilizerName, layout.FormFactor));
             }
 
             recordStabilizer();
@@ -312,18 +320,18 @@ public sealed class BuildService : IBuildService
         var accessory = await _catalogService.GetAccessoryByIdAsync(item.AccessoryId!, cancellationToken);
         if (accessory is null)
         {
-            result.AddError($"Accessory '{item.AccessoryId}' khong ton tai.");
+            result.AddError(Loc.Instance.Format("Build_AccessoryNotExist", item.AccessoryId));
             return 0m;
         }
 
         if (!accessory.IsAvailable)
         {
-            result.AddError($"Accessory '{accessory.AccessoryName}' khong con kha dung.");
+            result.AddError(Loc.Instance.Format("Build_AccessoryUnavailable", accessory.AccessoryName));
         }
 
         if (!IsValidAccessoryTarget(accessory.TargetComponent))
         {
-            result.AddWarning($"Accessory '{accessory.AccessoryName}' co target component khong xac dinh.");
+            result.AddWarning(Loc.Instance.Format("Build_AccessoryTargetUnknown", accessory.AccessoryName));
         }
 
         return accessory.PriceUsd;
@@ -355,6 +363,48 @@ public sealed class BuildService : IBuildService
                 Notes = NormalizeNullable(mod.Notes)
             })
             .ToList();
+    }
+
+    private static void ValidateSwitchModQuantities(
+        IEnumerable<BuildMod> mods,
+        int selectedSwitchQuantity,
+        BuildValidationResult result)
+    {
+        if (selectedSwitchQuantity <= 0)
+        {
+            return;
+        }
+
+        var switchModQuantityByType = new Dictionary<string, int>(StringComparer.OrdinalIgnoreCase);
+        foreach (var mod in mods.Where(mod => Same(mod.TargetComponent, "Switch")))
+        {
+            var modType = string.IsNullOrWhiteSpace(mod.ModType) ? "General" : mod.ModType.Trim();
+            var quantity = TryReadSwitchModQuantity(mod.Notes) ?? selectedSwitchQuantity;
+            switchModQuantityByType[modType] = switchModQuantityByType.GetValueOrDefault(modType) + quantity;
+        }
+
+        foreach (var (modType, quantity) in switchModQuantityByType)
+        {
+            if (quantity > selectedSwitchQuantity)
+            {
+                result.AddError(
+                    Loc.Instance.Format("Build_ModSwitchExceed", modType, quantity, selectedSwitchQuantity));
+            }
+        }
+    }
+
+    private static int? TryReadSwitchModQuantity(string? notes)
+    {
+        if (string.IsNullOrWhiteSpace(notes))
+        {
+            return null;
+        }
+
+        var match = ModQuantityRegex.Match(notes);
+        return match.Success
+               && int.TryParse(match.Groups["value"].Value, NumberStyles.Integer, CultureInfo.InvariantCulture, out var quantity)
+            ? quantity
+            : null;
     }
 
     private static bool IsValidAccessoryTarget(string? targetComponent)

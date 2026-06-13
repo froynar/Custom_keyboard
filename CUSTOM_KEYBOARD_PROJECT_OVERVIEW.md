@@ -72,7 +72,7 @@ Gọn gàng, thực tế, chuẩn bị refactor:
 
 ## 📊 ERD Refactor (Mô Hình Dữ Liệu Mới)
 
-**Tổng số:** 17 bảng, 24 relationships (gọn gàng, có thể quản lý)
+**Tổng số:** 18 bảng, 26 relationships (gọn gàng, có thể quản lý)
 
 ### Nhóm Bảng & Mục Đích
 
@@ -309,7 +309,7 @@ Custom_keyboard/
 | **Seller Inventory** | Quản lý stock riêng | **Không có** (request-based) |
 | **Switch Mods** | Trường riêng (lube_type, is_filmed) | **Build_mods table** (ghi chú) |
 | **Accessory** | Tách riêng `accessories` | Vẫn tồn tại nhưng qua `build_items` |
-| **ERD Complexity** | ~30+ relationships | **24 relationships** |
+| **ERD Complexity** | ~30+ relationships | **26 relationships** |
 | **Code Scope** | Quá lớn để bắt đầu | **Có thể quản lý** |
 
 ---
@@ -334,20 +334,20 @@ Custom_keyboard/
 
 ### Phase 1: SQL Schema & Database
 1. [ ] Tạo file SQL migration từ ERD DBML mới
-2. [ ] Verify schema: 17 bảng, 24 relationships
+2. [ ] Verify schema: 18 bảng, 26 relationships
 3. [ ] Tạo database test riêng
 4. [ ] Chạy schema
 5. [ ] Chạy SeedData_Refactor.sql
 6. [ ] Validate dữ liệu (queries check)
 
 ### Phase 2: Domain Models
-1. [ ] Tạo classes mới theo ERD (17 bảng)
+1. [ ] Tạo classes mới theo ERD (18 bảng)
 2. [ ] Xóa classes cũ không dùng (Case, PCB, Plate, old BuildItem columns)
 3. [ ] Thêm BuildItem class
 4. [ ] Thêm validation attributes
 
 ### Phase 3: Data Access (Repository & DbContext)
-1. [ ] Tạo DbContext mới với 17 DbSet
+1. [ ] Tạo DbContext mới với 18 DbSet
 2. [ ] Tạo repositories cho mỗi entity
 3. [ ] Implement interfaces (CRUD operations)
 
@@ -410,10 +410,10 @@ Custom_keyboard/
 | **Mục tiêu** | Refactor từ mô hình phức tạp → mô hình gọn, kit-based |
 | **Nền tảng chính** | Keyboard Kit (thay vì Case+PCB+Plate) |
 | **Pattern chính** | BuildItem (thay vì trực tiếp trên Build) |
-| **Database** | 17 bảng, 24 relationships (dễ quản lý) |
+| **Database** | 18 bảng, 26 relationships (dễ quản lý) |
 | **Validation** | 10 checks chính, phân chia Error/Warning/Info |
 | **Tài liệu** | ERD, FHD, Use Cases, DFD, Class Diagram, Validation Logic sẵn sàng |
-| **Dataset** | Seed data đầy đủ, tất cả 17 bảng, giá tính sẵn |
+| **Dataset** | Seed data đầy đủ, tất cả 18 bảng, giá tính sẵn |
 | **Bước tiếp theo** | Tạo SQL migration → Test database → Refactor code từ Models |
 
 ---

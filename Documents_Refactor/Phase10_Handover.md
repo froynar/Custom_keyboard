@@ -35,7 +35,7 @@ public bool IntegratedSecurity { get; set; } = true; // Windows auth
 
 ### B2. Tạo schema (tự tạo database)
 
-`CreateSchema_Refactor.sql` **tự tạo** DB `CustomKeyboard_Refactor` nếu chưa có (`IF DB_ID(...) IS NULL CREATE DATABASE` + `USE`), rồi drop+create 17 bảng (idempotent). Vì DB có thể chưa tồn tại, chạy script này **không kèm `-d`**:
+`CreateSchema_Refactor.sql` **tự tạo** DB `CustomKeyboard_Refactor` nếu chưa có (`IF DB_ID(...) IS NULL CREATE DATABASE` + `USE`), rồi drop+create 18 bảng (idempotent). Vì DB có thể chưa tồn tại, chạy script này **không kèm `-d`**:
 
 ```powershell
 $sqlcmd = "C:\Program Files\Microsoft SQL Server\Client SDK\ODBC\180\Tools\Binn\SQLCMD.EXE"
@@ -69,7 +69,7 @@ dotnet run
 dotnet run --project Phase6Verification\Phase6Verification.csproj
 ```
 
-Kỳ vọng: **`Passed: 14` / `Failed: 0`** (10 unit + 1 realtime best-effort + 3 SQL: integration build/request/chat, `seed accounts log in with Password123`, invariant queries). Cần SQL Server + DB đã seed.
+Kỳ vọng: **`Passed: 18` / `Failed: 0`** (unit service guard, buyer dashboard switch filtering, realtime best-effort, SQL build/request/chat, SQL analytics aggregates, seed-account login, invariant queries). Cần SQL Server + DB đã seed.
 
 ---
 
@@ -103,7 +103,7 @@ Kỳ vọng: **`Passed: 14` / `Failed: 0`** (10 unit + 1 realtime best-effort + 
 - [ ] Source (repo nhánh `refactor/kit-based-erd`).
 - [ ] Scripts DB: `Database/SqlServer/CreateSchema_Refactor.sql`, `Documents_Refactor/SeedData_Refactor.sql`, `Database/SqlServer/VerifyRefactor.sql`.
 - [ ] Tài liệu: roadmap, `Phase9_Test_Matrix.md`, `Phase9_Demo_Script.md`, file này.
-- [ ] Ảnh chụp: runner `14/14 PASS` + screenshot 3 role (xem checklist trong `Phase9_Demo_Script.md`).
+- [ ] Ảnh chụp: runner `18/18 PASS` + screenshot 3 role/analytics (xem checklist trong `Phase9_Demo_Script.md`).
 - [ ] Báo cáo (nếu yêu cầu nộp).
 
 ---

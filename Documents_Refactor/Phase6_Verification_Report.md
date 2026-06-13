@@ -23,7 +23,7 @@ dotnet run --project Phase6Verification\Phase6Verification.csproj
 
 ```text
 dotnet build: pass, 0 warnings, 0 errors
-Phase6Verification: pass, 14/14 checks (updated 2026-06-13; Phase 6 baseline 10/10, +4 added in Phase 9/10 — login T01/T02, seller scoping T08/T09, admin-seller chat T14, seed-account login)
+Phase6Verification: pass, 18/18 checks (updated 2026-06-13; Phase 6 baseline 10/10, +8 added in Phase 9/10/frontend review — login T01/T02, seller scoping T08/T09, admin-seller chat T14, seed-account login, stats service role/active guard, buyer dashboard switch filtering, SQL analytics aggregates, requested-build invariant/archive visibility)
 UI smoke: pass for buyer_refactor, seller_soigear, admin_refactor
 ```
 

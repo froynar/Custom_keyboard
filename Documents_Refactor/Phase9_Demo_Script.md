@@ -13,7 +13,7 @@
    ```powershell
    dotnet run --project Custom_keyboard.csproj
    ```
-4. (Khuyến nghị) chạy `dotnet run --project Phase6Verification/Phase6Verification.csproj` trước, chụp màn hình **14/14 PASS** làm bằng chứng test.
+4. (Khuyến nghị) chạy `dotnet run --project Phase6Verification/Phase6Verification.csproj` trước, chụp màn hình **18/18 PASS** làm bằng chứng test.
 
 ### Tài khoản seed (mật khẩu `Password123`)
 
@@ -85,17 +85,20 @@ Mở 2 instance (vd Buyer máy này, Seller máy khác / cửa sổ khác), bậ
 
 Chụp tối thiểu các ảnh sau (đặt trong `Documents_Refactor/screenshots/` đề xuất):
 
-- [ ] `00-tests-14pass.png` — runner 14/14 PASS.
+- [ ] `00-tests-18pass.png` — runner 18/18 PASS.
 - [ ] `01-login.png` — màn login.
-- [ ] `02-admin-audit.png` — Audit Log sau khi verify/ban.
-- [ ] `03-admin-catalog.png` — quản lý catalog.
-- [ ] `04-buyer-build-valid.png` — build hợp lệ + tổng giá.
-- [ ] `05-buyer-build-error.png` — cảnh báo compatibility (T05).
-- [ ] `06-buyer-send-request.png` — gửi request thành công.
-- [ ] `07-buyer-blocked-unverified.png` — chặn seller unverified (T07).
-- [ ] `08-seller-requests.png` — seller xem request.
-- [ ] `09-seller-status.png` — chuyển status.
-- [ ] `10-chat.png` — chat buyer↔seller / admin↔seller.
-- [ ] `11-banned-login.png` — `buyer_inactive` bị chặn (T02).
+- [ ] `02-admin-overview-analytics.png` — Admin Overview: KPI + doanh thu + status + top sellers.
+- [ ] `03-admin-audit.png` — Audit Log sau khi verify/ban.
+- [ ] `04-admin-catalog.png` — quản lý catalog.
+- [ ] `05-buyer-build-valid.png` — build hợp lệ + tổng giá.
+- [ ] `06-buyer-build-error.png` — cảnh báo compatibility (T05).
+- [ ] `07-buyer-seller-stats.png` — thẻ stats công khai của seller khi buyer chọn seller.
+- [ ] `08-buyer-send-request.png` — gửi request thành công.
+- [ ] `09-buyer-blocked-unverified.png` — chặn seller unverified (T07).
+- [ ] `10-seller-requests.png` — seller xem request.
+- [ ] `11-seller-analytics.png` — Seller Analytics: KPI + biểu đồ doanh thu/đơn + top kit.
+- [ ] `12-seller-status.png` — chuyển status.
+- [ ] `13-chat.png` — chat buyer↔seller / admin↔seller.
+- [ ] `14-banned-login.png` — `buyer_inactive` bị chặn (T02).
 
-> Blocker mật khẩu đã gỡ (mục 0) nên login chụp được ngay sau khi seed. Ảnh `00-tests-14pass.png` (runner) là bằng chứng test tự động; phần ảnh UI chụp khi chạy GUI demo.
+> Blocker mật khẩu đã gỡ (mục 0) nên login chụp được ngay sau khi seed. Ảnh `00-tests-18pass.png` (runner) là bằng chứng test tự động; phần ảnh UI chụp khi chạy GUI demo.

@@ -6,7 +6,7 @@ public interface IStatsService
 {
     Task<SellerDashboardStats> GetSellerDashboardAsync(int sellerUserId, StatsPeriod period, CancellationToken cancellationToken = default);
 
-    Task<SellerPublicStats> GetSellerPublicAsync(int sellerUserId, CancellationToken cancellationToken = default);
+    Task<SellerPublicStats> GetSellerPublicAsync(int requesterUserId, int sellerUserId, CancellationToken cancellationToken = default);
 
-    Task<AdminOverviewStats> GetAdminOverviewAsync(StatsPeriod period, CancellationToken cancellationToken = default);
+    Task<AdminOverviewStats> GetAdminOverviewAsync(int adminUserId, StatsPeriod period, CancellationToken cancellationToken = default);
 }

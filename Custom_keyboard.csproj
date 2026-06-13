@@ -6,10 +6,13 @@
     <Nullable>enable</Nullable>
     <ImplicitUsings>enable</ImplicitUsings>
     <UseWPF>true</UseWPF>
+    <!-- Accepted transitive WPF/Skia chart compatibility warning after build + verification pass. -->
+    <NoWarn>$(NoWarn);NU1701</NoWarn>
   </PropertyGroup>
 
   <ItemGroup>
     <Compile Remove="Phase6Verification\**\*.cs" />
+    <Compile Remove="WpfUiVerification\**\*.cs" />
   </ItemGroup>
 
   <ItemGroup>

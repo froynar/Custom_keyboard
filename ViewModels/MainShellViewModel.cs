@@ -16,6 +16,7 @@ public sealed class MainShellViewModel : ViewModelBase
     private readonly IRequestService _requestService;
     private readonly IChatService _chatService;
     private readonly IStatsService _statsService;
+    private readonly ISellerApplicationService _sellerApplicationService;
     private readonly IRealtimeSubscriber _realtime;
     private ViewModelBase _currentViewModel = null!;
     private User? _currentUser;
@@ -29,6 +30,7 @@ public sealed class MainShellViewModel : ViewModelBase
         IRequestService requestService,
         IChatService chatService,
         IStatsService statsService,
+        ISellerApplicationService sellerApplicationService,
         IRealtimeSubscriber realtime)
     {
         _accountService = accountService;
@@ -38,6 +40,7 @@ public sealed class MainShellViewModel : ViewModelBase
         _requestService = requestService;
         _chatService = chatService;
         _statsService = statsService;
+        _sellerApplicationService = sellerApplicationService;
         _realtime = realtime;
         _realtime.SellerRequestsChanged += OnRealtimeReloadAsync;
         _realtime.BuyerRequestsChanged += OnRealtimeReloadAsync;
@@ -104,7 +107,7 @@ public sealed class MainShellViewModel : ViewModelBase
                 break;
             case UserRole.Admin:
                 _realtimeReload = null;
-                CurrentViewModel = new AdminDashboardViewModel(user, LogoutCommand, _adminService, _statsService, chat);
+                CurrentViewModel = new AdminDashboardViewModel(user, LogoutCommand, _adminService, _statsService, _sellerApplicationService, chat);
                 break;
             default:
                 var buyer = new BuyerDashboardViewModel(
@@ -114,6 +117,7 @@ public sealed class MainShellViewModel : ViewModelBase
                     _buildService,
                     _requestService,
                     _statsService,
+                    _sellerApplicationService,
                     chat);
                 _realtimeReload = buyer.ReloadRequestsAsync;
                 CurrentViewModel = buyer;
@@ -130,7 +134,7 @@ public sealed class MainShellViewModel : ViewModelBase
         _realtimeReload = null;
         _ = _realtime.StopAsync();
         CurrentUser = null;
-        ShowLogin("Da dang xuat.");
+        ShowLogin(Tr("Account_LoggedOut"));
     }
 
     // Realtime events arrive on a background thread; marshal the dashboard reload to the UI.

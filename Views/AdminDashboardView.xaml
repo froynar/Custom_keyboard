@@ -3,6 +3,8 @@
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
              xmlns:views="clr-namespace:Custom_keyboard.Views"
              xmlns:lvc="clr-namespace:LiveChartsCore.SkiaSharpView.WPF;assembly=LiveChartsCore.SkiaSharpView.WPF"
+             xmlns:loc="clr-namespace:Custom_keyboard.Localization"
+             AutomationProperties.AutomationId="AdminDashboardRoot"
              Loaded="OnLoaded">
     <Grid Background="{StaticResource BodyBgBrush}">
         <Grid.ColumnDefinitions>
@@ -26,24 +28,26 @@
                                    FontSize="20" FontWeight="SemiBold"
                                    VerticalAlignment="Center"/>
                     </StackPanel>
-                    <TextBlock Text="Admin workspace"
+                    <TextBlock Text="{loc:Tr Admin_Workspace}"
                                Foreground="#AFC1D0"
                                FontSize="12"
                                Margin="0,0,0,24"/>
 
-                    <RadioButton x:Name="NavOverview" Content="Tong quan" GroupName="adminNav"
+                    <RadioButton x:Name="NavOverview" Content="{loc:Tr Admin_NavOverview}" GroupName="adminNav"
                                  Style="{StaticResource SidebarNav}" IsChecked="True"/>
-                    <RadioButton x:Name="NavUser" Content="Nguoi dung" GroupName="adminNav"
+                    <RadioButton x:Name="NavUser" Content="{loc:Tr Admin_NavUsers}" GroupName="adminNav"
                                  Style="{StaticResource SidebarNav}"/>
-                    <RadioButton x:Name="NavSeller" Content="Seller" GroupName="adminNav"
+                    <RadioButton x:Name="NavSeller" Content="{loc:Tr Admin_NavSeller}" GroupName="adminNav"
                                  Style="{StaticResource SidebarNav}"/>
-                    <RadioButton x:Name="NavBrand" Content="Brand &amp; Layout" GroupName="adminNav"
+                    <RadioButton x:Name="NavApplications" Content="{loc:Tr Admin_NavApplications}" GroupName="adminNav"
                                  Style="{StaticResource SidebarNav}"/>
-                    <RadioButton x:Name="NavComponent" Content="Linh kien" GroupName="adminNav"
+                    <RadioButton x:Name="NavBrand" Content="{loc:Tr Admin_NavBrandLayout}" GroupName="adminNav"
                                  Style="{StaticResource SidebarNav}"/>
-                    <RadioButton x:Name="NavAudit" Content="Audit log" GroupName="adminNav"
+                    <RadioButton x:Name="NavComponent" Content="{loc:Tr Admin_NavComponents}" GroupName="adminNav"
                                  Style="{StaticResource SidebarNav}"/>
-                    <RadioButton x:Name="NavChat" Content="Chat" GroupName="adminNav"
+                    <RadioButton x:Name="NavAudit" Content="{loc:Tr Admin_NavAudit}" GroupName="adminNav"
+                                 Style="{StaticResource SidebarNav}"/>
+                    <RadioButton x:Name="NavChat" Content="{loc:Tr Nav_Chat}" GroupName="adminNav"
                                  Style="{StaticResource SidebarNav}"/>
                 </StackPanel>
 
@@ -76,9 +80,8 @@
 
             <!-- Topbar -->
             <DockPanel Margin="0,0,0,16">
-                <Button DockPanel.Dock="Right" Content="Dang xuat" Command="{Binding LogoutCommand}"
-                        Style="{StaticResource SecondaryButton}"/>
-                <Button DockPanel.Dock="Right" Content="Refresh" Command="{Binding RefreshAllCommand}"
+                <views:UserMenuView DockPanel.Dock="Right"/>
+                <Button DockPanel.Dock="Right" Content="{loc:Tr Common_Refresh}" Command="{Binding RefreshAllCommand}"
                         Style="{StaticResource SecondaryButton}" Margin="0,0,8,0"/>
                 <StackPanel>
                     <TextBlock Text="{Binding Title}" FontSize="24" FontWeight="SemiBold" Foreground="{StaticResource TextPrimaryBrush}"/>
@@ -90,25 +93,25 @@
             <UniformGrid Grid.Row="1" Rows="1" Columns="4" Margin="0,0,0,14">
                 <Border Style="{StaticResource KpiCard}">
                     <StackPanel>
-                        <TextBlock Text="Users" Style="{StaticResource MutedText}"/>
+                        <TextBlock Text="{loc:Tr Admin_KpiUsers}" Style="{StaticResource MutedText}"/>
                         <TextBlock Text="{Binding Summary.TotalUsers}" FontSize="22" FontWeight="SemiBold" Foreground="{StaticResource TextPrimaryBrush}"/>
                     </StackPanel>
                 </Border>
                 <Border Style="{StaticResource KpiCard}">
                     <StackPanel>
-                        <TextBlock Text="Sellers" Style="{StaticResource MutedText}"/>
+                        <TextBlock Text="{loc:Tr Admin_KpiSellers}" Style="{StaticResource MutedText}"/>
                         <TextBlock Text="{Binding Summary.TotalSellers}" FontSize="22" FontWeight="SemiBold" Foreground="{StaticResource TextPrimaryBrush}"/>
                     </StackPanel>
                 </Border>
                 <Border Style="{StaticResource KpiCard}">
                     <StackPanel>
-                        <TextBlock Text="Linh kien" Style="{StaticResource MutedText}"/>
+                        <TextBlock Text="{loc:Tr Admin_KpiComponents}" Style="{StaticResource MutedText}"/>
                         <TextBlock Text="{Binding Summary.TotalComponents}" FontSize="22" FontWeight="SemiBold" Foreground="{StaticResource TextPrimaryBrush}"/>
                     </StackPanel>
                 </Border>
                 <Border Style="{StaticResource KpiCard}" Margin="0">
                     <StackPanel>
-                        <TextBlock Text="Requests" Style="{StaticResource MutedText}"/>
+                        <TextBlock Text="{loc:Tr Admin_KpiRequests}" Style="{StaticResource MutedText}"/>
                         <TextBlock Text="{Binding Summary.TotalRequests}" FontSize="22" FontWeight="SemiBold" Foreground="{StaticResource TextPrimaryBrush}"/>
                     </StackPanel>
                 </Border>
@@ -124,24 +127,59 @@
                             <Grid.ColumnDefinitions>
                                 <ColumnDefinition Width="Auto"/>
                                 <ColumnDefinition Width="Auto"/>
+                                <ColumnDefinition Width="Auto"/>
+                                <ColumnDefinition Width="Auto"/>
+                                <ColumnDefinition Width="Auto"/>
                                 <ColumnDefinition Width="*"/>
                                 <ColumnDefinition Width="Auto"/>
                             </Grid.ColumnDefinitions>
                             <Border Style="{StaticResource KpiCard}">
                                 <StackPanel>
-                                    <TextBlock Text="Doanh thu toan san (USD)" Style="{StaticResource MutedText}"/>
+                                    <TextBlock Text="{loc:Tr Admin_RevenueAllPlatform}" Style="{StaticResource MutedText}"/>
                                     <TextBlock Text="{Binding TotalRevenue, StringFormat=N2}" FontSize="22" FontWeight="SemiBold" Foreground="{StaticResource AccentBrush}"/>
                                 </StackPanel>
                             </Border>
                             <Border Grid.Column="1" Style="{StaticResource KpiCard}">
                                 <StackPanel>
-                                    <TextBlock Text="Don hoan thanh" Style="{StaticResource MutedText}"/>
+                                    <TextBlock Text="{loc:Tr Admin_CompletedOrders}" Style="{StaticResource MutedText}"/>
                                     <TextBlock Text="{Binding CompletedOrders}" FontSize="22" FontWeight="SemiBold" Foreground="{StaticResource TextPrimaryBrush}"/>
                                 </StackPanel>
                             </Border>
-                            <ComboBox Grid.Column="3" Width="130" VerticalAlignment="Center"
+                            <Border Grid.Column="2" Style="{StaticResource KpiCard}">
+                                <StackPanel>
+                                    <TextBlock Text="{loc:Tr Admin_VerifiedSellers}" Style="{StaticResource MutedText}"/>
+                                    <TextBlock Text="{Binding VerifiedSellers}" FontSize="22" FontWeight="SemiBold" Foreground="{StaticResource TextPrimaryBrush}"/>
+                                </StackPanel>
+                            </Border>
+                            <Border Grid.Column="3" Style="{StaticResource KpiCard}">
+                                <StackPanel>
+                                    <TextBlock Text="{loc:Tr Admin_Builds}" Style="{StaticResource MutedText}"/>
+                                    <TextBlock Text="{Binding TotalBuilds}" FontSize="22" FontWeight="SemiBold" Foreground="{StaticResource TextPrimaryBrush}"/>
+                                </StackPanel>
+                            </Border>
+                            <Border Grid.Column="4" Style="{StaticResource KpiCard}">
+                                <StackPanel>
+                                    <TextBlock Text="{loc:Tr Admin_KpiRequests}" Style="{StaticResource MutedText}"/>
+                                    <TextBlock Text="{Binding TotalRequests}" FontSize="22" FontWeight="SemiBold" Foreground="{StaticResource TextPrimaryBrush}"/>
+                                </StackPanel>
+                            </Border>
+                            <ComboBox Grid.Column="6" Width="130" VerticalAlignment="Center"
                                       ItemsSource="{Binding Periods}" SelectedItem="{Binding SelectedPeriod}"/>
                         </Grid>
+
+                        <Border Style="{StaticResource DashboardCard}" Padding="12" Margin="0,0,0,14">
+                            <DockPanel>
+                                <TextBlock DockPanel.Dock="Right" Text="{Binding UsersByRoleText}" FontWeight="SemiBold" Foreground="{StaticResource TextPrimaryBrush}"/>
+                                <TextBlock Foreground="{StaticResource TextMutedBrush}">
+                                    <TextBlock.Text>
+                                        <MultiBinding StringFormat="{}{0} {1}">
+                                            <Binding Path="[Admin_TotalUsersLabel]" Source="{x:Static loc:Loc.Instance}"/>
+                                            <Binding Path="AnalyticsTotalUsers"/>
+                                        </MultiBinding>
+                                    </TextBlock.Text>
+                                </TextBlock>
+                            </DockPanel>
+                        </Border>
 
                         <!-- Revenue line + status donut -->
                         <Grid Margin="0,0,0,14">
@@ -152,7 +190,7 @@
                             </Grid.ColumnDefinitions>
                             <Border Style="{StaticResource DashboardCard}">
                                 <StackPanel>
-                                    <TextBlock Text="Doanh thu theo thoi gian" Style="{StaticResource SectionTitle}"/>
+                                    <TextBlock Text="{loc:Tr Admin_RevenueOverTime}" Style="{StaticResource SectionTitle}"/>
                                     <lvc:CartesianChart Height="280"
                                                         Series="{Binding RevenueSeries}"
                                                         XAxes="{Binding RevenueXAxes}"
@@ -163,7 +201,7 @@
                             </Border>
                             <Border Grid.Column="2" Style="{StaticResource DashboardCard}">
                                 <StackPanel>
-                                    <TextBlock Text="Don theo trang thai" Style="{StaticResource SectionTitle}"/>
+                                    <TextBlock Text="{loc:Tr Admin_OrdersByStatus}" Style="{StaticResource SectionTitle}"/>
                                     <lvc:PieChart Height="280"
                                                   Series="{Binding StatusSeries}"
                                                   LegendPosition="Bottom"/>
@@ -174,7 +212,7 @@
                         <!-- Top sellers -->
                         <Border Style="{StaticResource DashboardCard}">
                             <StackPanel>
-                                <TextBlock Text="Top seller theo doanh thu" Style="{StaticResource SectionTitle}"/>
+                                <TextBlock Text="{loc:Tr Admin_TopSellersByRevenue}" Style="{StaticResource SectionTitle}"/>
                                 <lvc:CartesianChart Height="260"
                                                     Series="{Binding TopSellersSeries}"
                                                     XAxes="{Binding TopSellersXAxes}"
@@ -199,35 +237,51 @@
                                 <RowDefinition Height="Auto"/>
                                 <RowDefinition Height="*"/>
                             </Grid.RowDefinitions>
-                            <TextBlock Text="Nguoi dung" Style="{StaticResource SectionTitle}"/>
-                            <DataGrid Grid.Row="1" ItemsSource="{Binding Users}" SelectedItem="{Binding SelectedUser}" AlternationCount="2">
+                            <TextBlock Text="{loc:Tr Admin_NavUsers}" Style="{StaticResource SectionTitle}"/>
+                            <Grid Grid.Row="1">
+                            <DataGrid x:Name="AdminUsersGrid" ItemsSource="{Binding Users}" SelectedItem="{Binding SelectedUser}" AlternationCount="2">
                                 <DataGrid.Columns>
-                                    <DataGridTextColumn Header="USERNAME" Binding="{Binding Username}" Width="*"/>
-                                    <DataGridTextColumn Header="EMAIL" Binding="{Binding Email}" Width="*"/>
-                                    <DataGridTextColumn Header="ROLE" Binding="{Binding Role}" Width="90"/>
-                                    <DataGridTemplateColumn Header="TRANG THAI" Width="110">
+                                    <DataGridTextColumn Header="{loc:Tr Common_ColUsername}" Binding="{Binding Username}" Width="*"/>
+                                    <DataGridTextColumn Header="{loc:Tr Common_ColEmail}" Binding="{Binding Email}" Width="*"/>
+                                    <DataGridTextColumn Header="{loc:Tr Common_ColRole}" Binding="{Binding Role}" Width="90"/>
+                                    <DataGridTemplateColumn Header="{loc:Tr Common_ColStatus}" Width="110">
                                         <DataGridTemplateColumn.CellTemplate>
                                             <DataTemplate>
                                                 <Border Style="{StaticResource BadgeChrome}" Background="{Binding IsActive, Converter={StaticResource BoolToBadgeBrush}}">
-                                                    <TextBlock Style="{StaticResource StatusBadgeText}"
-                                                               Text="{Binding IsActive, Converter={StaticResource BoolToLabel}, ConverterParameter='Active|Banned'}"/>
+                                                    <TextBlock Style="{StaticResource StatusBadgeText}">
+                                                        <TextBlock.Text>
+                                                            <MultiBinding Converter="{StaticResource LocalizedBoolLabel}" ConverterParameter="Common_Active|Common_Banned">
+                                                                <Binding Path="IsActive"/>
+                                                                <Binding Path="Language" Source="{x:Static loc:Loc.Instance}"/>
+                                                            </MultiBinding>
+                                                        </TextBlock.Text>
+                                                    </TextBlock>
                                                 </Border>
                                             </DataTemplate>
                                         </DataGridTemplateColumn.CellTemplate>
                                     </DataGridTemplateColumn>
                                 </DataGrid.Columns>
                             </DataGrid>
+                            <Border Style="{StaticResource EmptyStateCard}"
+                                    Visibility="{Binding Items.Count, ElementName=AdminUsersGrid, Converter={StaticResource CountToVisibility}}">
+                                <StackPanel>
+                                    <TextBlock Text="{loc:Tr Admin_EmptyUsersTitle}" Style="{StaticResource EmptyStateTitle}"/>
+                                    <TextBlock Text="{loc:Tr Admin_EmptyUsersText}"
+                                               Style="{StaticResource EmptyStateText}"/>
+                                </StackPanel>
+                            </Border>
+                            </Grid>
                         </Grid>
                     </Border>
 
                     <Border Grid.Column="2" Style="{StaticResource DashboardCard}" VerticalAlignment="Top">
                         <StackPanel>
-                            <TextBlock Text="Thao tac" Style="{StaticResource SectionTitle}"/>
-                            <TextBlock Text="Role" Style="{StaticResource FieldLabel}"/>
+                            <TextBlock Text="{loc:Tr Admin_Actions}" Style="{StaticResource SectionTitle}"/>
+                            <TextBlock Text="{loc:Tr Common_Role}" Style="{StaticResource FieldLabel}"/>
                             <ComboBox ItemsSource="{Binding AvailableRoles}" SelectedItem="{Binding SelectedUserRole}" Margin="0,0,0,12"/>
-                            <Button Content="Doi role" Command="{Binding ChangeUserRoleCommand}" Style="{StaticResource PrimaryButton}" HorizontalAlignment="Stretch" Margin="0,0,0,8"/>
-                            <Button Content="Ban user" Command="{Binding BanUserCommand}" Style="{StaticResource DangerButton}" HorizontalAlignment="Stretch" Margin="0,0,0,8"/>
-                            <Button Content="Mo ban" Command="{Binding UnbanUserCommand}" Style="{StaticResource SuccessButton}" HorizontalAlignment="Stretch"/>
+                            <Button Content="{loc:Tr Admin_ChangeRole}" Command="{Binding ChangeUserRoleCommand}" Style="{StaticResource PrimaryButton}" HorizontalAlignment="Stretch" Margin="0,0,0,8"/>
+                            <Button Content="{loc:Tr Admin_BanUser}" Command="{Binding BanUserCommand}" Style="{StaticResource DangerButton}" HorizontalAlignment="Stretch" Margin="0,0,0,8"/>
+                            <Button Content="{loc:Tr Admin_UnbanUser}" Command="{Binding UnbanUserCommand}" Style="{StaticResource SuccessButton}" HorizontalAlignment="Stretch"/>
                         </StackPanel>
                     </Border>
                 </Grid>
@@ -246,38 +300,54 @@
                                 <RowDefinition Height="Auto"/>
                                 <RowDefinition Height="*"/>
                             </Grid.RowDefinitions>
-                            <TextBlock Text="Seller" Style="{StaticResource SectionTitle}"/>
-                            <DataGrid Grid.Row="1" ItemsSource="{Binding SellerProfiles}" SelectedItem="{Binding SelectedSellerProfile}" AlternationCount="2">
+                            <TextBlock Text="{loc:Tr Admin_NavSeller}" Style="{StaticResource SectionTitle}"/>
+                            <Grid Grid.Row="1">
+                            <DataGrid x:Name="AdminSellersGrid" ItemsSource="{Binding SellerProfiles}" SelectedItem="{Binding SelectedSellerProfile}" AlternationCount="2">
                                 <DataGrid.Columns>
-                                    <DataGridTextColumn Header="USERNAME" Binding="{Binding Username}" Width="*"/>
-                                    <DataGridTextColumn Header="SHOP" Binding="{Binding ShopName}" Width="*"/>
-                                    <DataGridTemplateColumn Header="VERIFY" Width="130">
+                                    <DataGridTextColumn Header="{loc:Tr Common_ColUsername}" Binding="{Binding Username}" Width="*"/>
+                                    <DataGridTextColumn Header="{loc:Tr Common_ColShop}" Binding="{Binding ShopName}" Width="*"/>
+                                    <DataGridTemplateColumn Header="{loc:Tr Admin_ColVerify}" Width="130">
                                         <DataGridTemplateColumn.CellTemplate>
                                             <DataTemplate>
                                                 <Border Style="{StaticResource BadgeChrome}" Background="{Binding IsVerified, Converter={StaticResource BoolToBadgeBrush}}">
-                                                    <TextBlock Style="{StaticResource StatusBadgeText}"
-                                                               Text="{Binding IsVerified, Converter={StaticResource BoolToLabel}, ConverterParameter='Verified|Chua verify'}"/>
+                                                    <TextBlock Style="{StaticResource StatusBadgeText}">
+                                                        <TextBlock.Text>
+                                                            <MultiBinding Converter="{StaticResource LocalizedBoolLabel}" ConverterParameter="Common_Verified|Common_Unverified">
+                                                                <Binding Path="IsVerified"/>
+                                                                <Binding Path="Language" Source="{x:Static loc:Loc.Instance}"/>
+                                                            </MultiBinding>
+                                                        </TextBlock.Text>
+                                                    </TextBlock>
                                                 </Border>
                                             </DataTemplate>
                                         </DataGridTemplateColumn.CellTemplate>
                                     </DataGridTemplateColumn>
                                 </DataGrid.Columns>
                             </DataGrid>
+                            <Border Style="{StaticResource EmptyStateCard}"
+                                    Visibility="{Binding Items.Count, ElementName=AdminSellersGrid, Converter={StaticResource CountToVisibility}}">
+                                <StackPanel>
+                                    <TextBlock Text="{loc:Tr Admin_EmptySellersTitle}" Style="{StaticResource EmptyStateTitle}"/>
+                                    <TextBlock Text="{loc:Tr Admin_EmptySellersText}"
+                                               Style="{StaticResource EmptyStateText}"/>
+                                </StackPanel>
+                            </Border>
+                            </Grid>
                         </Grid>
                     </Border>
 
                     <Border Grid.Column="2" Style="{StaticResource DashboardCard}" VerticalAlignment="Top">
                         <StackPanel>
-                            <TextBlock Text="Profile seller" Style="{StaticResource SectionTitle}"/>
-                            <TextBlock Text="Shop name" Style="{StaticResource FieldLabel}"/>
+                            <TextBlock Text="{loc:Tr Admin_SellerProfile}" Style="{StaticResource SectionTitle}"/>
+                            <TextBlock Text="{loc:Tr Common_ShopName}" Style="{StaticResource FieldLabel}"/>
                             <TextBox Text="{Binding SellerShopName, UpdateSourceTrigger=PropertyChanged}" Margin="0,0,0,10"/>
-                            <TextBlock Text="Phone" Style="{StaticResource FieldLabel}"/>
+                            <TextBlock Text="{loc:Tr Common_Phone}" Style="{StaticResource FieldLabel}"/>
                             <TextBox Text="{Binding SellerPhone, UpdateSourceTrigger=PropertyChanged}" Margin="0,0,0,10"/>
-                            <TextBlock Text="Address" Style="{StaticResource FieldLabel}"/>
+                            <TextBlock Text="{loc:Tr Common_Address}" Style="{StaticResource FieldLabel}"/>
                             <TextBox Text="{Binding SellerAddress, UpdateSourceTrigger=PropertyChanged}" Margin="0,0,0,12" TextWrapping="Wrap" AcceptsReturn="True" MinHeight="44"/>
-                            <Button Content="Luu profile" Command="{Binding SaveSellerProfileCommand}" Style="{StaticResource PrimaryButton}" HorizontalAlignment="Stretch" Margin="0,0,0,8"/>
-                            <Button Content="Verify" Command="{Binding VerifySellerCommand}" Style="{StaticResource SuccessButton}" HorizontalAlignment="Stretch" Margin="0,0,0,8"/>
-                            <Button Content="Unverify" Command="{Binding UnverifySellerCommand}" Style="{StaticResource SecondaryButton}" HorizontalAlignment="Stretch"/>
+                            <Button Content="{loc:Tr Admin_SaveProfile}" Command="{Binding SaveSellerProfileCommand}" Style="{StaticResource PrimaryButton}" HorizontalAlignment="Stretch" Margin="0,0,0,8"/>
+                            <Button Content="{loc:Tr Admin_Verify}" Command="{Binding VerifySellerCommand}" Style="{StaticResource SuccessButton}" HorizontalAlignment="Stretch" Margin="0,0,0,8"/>
+                            <Button Content="{loc:Tr Admin_Unverify}" Command="{Binding UnverifySellerCommand}" Style="{StaticResource SecondaryButton}" HorizontalAlignment="Stretch"/>
                         </StackPanel>
                     </Border>
                 </Grid>
@@ -292,34 +362,54 @@
 
                     <Border Style="{StaticResource DashboardCard}">
                         <StackPanel>
-                            <TextBlock Text="Brands" Style="{StaticResource SectionTitle}"/>
-                            <ListBox ItemsSource="{Binding Brands}" SelectedItem="{Binding SelectedBrand}" Height="180" DisplayMemberPath="BrandName"/>
-                            <TextBlock Text="Ten brand" Style="{StaticResource FieldLabel}" Margin="0,10,0,3"/>
+                            <TextBlock Text="{loc:Tr Admin_Brands}" Style="{StaticResource SectionTitle}"/>
+                            <Grid Height="180">
+                                <ListBox x:Name="AdminBrandsList" ItemsSource="{Binding Brands}" SelectedItem="{Binding SelectedBrand}" DisplayMemberPath="BrandName"/>
+                                <Border Style="{StaticResource EmptyStateCard}"
+                                        Visibility="{Binding Items.Count, ElementName=AdminBrandsList, Converter={StaticResource CountToVisibility}}">
+                                    <StackPanel>
+                                        <TextBlock Text="{loc:Tr Admin_EmptyBrandsTitle}" Style="{StaticResource EmptyStateTitle}"/>
+                                        <TextBlock Text="{loc:Tr Admin_EmptyBrandsText}"
+                                                   Style="{StaticResource EmptyStateText}"/>
+                                    </StackPanel>
+                                </Border>
+                            </Grid>
+                            <TextBlock Text="{loc:Tr Admin_BrandName}" Style="{StaticResource FieldLabel}" Margin="0,10,0,3"/>
                             <TextBox Text="{Binding BrandEditor.BrandName, UpdateSourceTrigger=PropertyChanged}" Margin="0,0,0,10"/>
-                            <TextBlock Text="Quoc gia" Style="{StaticResource FieldLabel}"/>
+                            <TextBlock Text="{loc:Tr Admin_Country}" Style="{StaticResource FieldLabel}"/>
                             <TextBox Text="{Binding BrandEditor.Country, UpdateSourceTrigger=PropertyChanged}" Margin="0,0,0,12"/>
                             <WrapPanel>
-                                <Button Content="Moi" Command="{Binding NewBrandCommand}" Style="{StaticResource SecondaryButton}" Margin="0,0,8,0"/>
-                                <Button Content="Luu brand" Command="{Binding SaveBrandCommand}" Style="{StaticResource PrimaryButton}"/>
+                                <Button Content="{loc:Tr Common_New}" Command="{Binding NewBrandCommand}" Style="{StaticResource SecondaryButton}" Margin="0,0,8,0"/>
+                                <Button Content="{loc:Tr Admin_SaveBrand}" Command="{Binding SaveBrandCommand}" Style="{StaticResource PrimaryButton}"/>
                             </WrapPanel>
                         </StackPanel>
                     </Border>
 
                     <Border Grid.Column="2" Style="{StaticResource DashboardCard}">
                         <StackPanel>
-                            <TextBlock Text="Layouts" Style="{StaticResource SectionTitle}"/>
-                            <ListBox ItemsSource="{Binding Layouts}" SelectedItem="{Binding SelectedLayout}" Height="180" DisplayMemberPath="LayoutName"/>
-                            <TextBlock Text="Layout id" Style="{StaticResource FieldLabel}" Margin="0,10,0,3"/>
+                            <TextBlock Text="{loc:Tr Admin_Layouts}" Style="{StaticResource SectionTitle}"/>
+                            <Grid Height="180">
+                                <ListBox x:Name="AdminLayoutsList" ItemsSource="{Binding Layouts}" SelectedItem="{Binding SelectedLayout}" DisplayMemberPath="LayoutName"/>
+                                <Border Style="{StaticResource EmptyStateCard}"
+                                        Visibility="{Binding Items.Count, ElementName=AdminLayoutsList, Converter={StaticResource CountToVisibility}}">
+                                    <StackPanel>
+                                        <TextBlock Text="{loc:Tr Admin_EmptyLayoutsTitle}" Style="{StaticResource EmptyStateTitle}"/>
+                                        <TextBlock Text="{loc:Tr Admin_EmptyLayoutsText}"
+                                                   Style="{StaticResource EmptyStateText}"/>
+                                    </StackPanel>
+                                </Border>
+                            </Grid>
+                            <TextBlock Text="{loc:Tr Admin_LayoutId}" Style="{StaticResource FieldLabel}" Margin="0,10,0,3"/>
                             <TextBox Text="{Binding LayoutEditor.LayoutId, UpdateSourceTrigger=PropertyChanged}" Margin="0,0,0,10"/>
-                            <TextBlock Text="Ten" Style="{StaticResource FieldLabel}"/>
+                            <TextBlock Text="{loc:Tr Admin_Name}" Style="{StaticResource FieldLabel}"/>
                             <TextBox Text="{Binding LayoutEditor.LayoutName, UpdateSourceTrigger=PropertyChanged}" Margin="0,0,0,10"/>
-                            <TextBlock Text="Form factor" Style="{StaticResource FieldLabel}"/>
+                            <TextBlock Text="{loc:Tr Admin_FormFactor}" Style="{StaticResource FieldLabel}"/>
                             <TextBox Text="{Binding LayoutEditor.FormFactor, UpdateSourceTrigger=PropertyChanged}" Margin="0,0,0,10"/>
-                            <TextBlock Text="Key count" Style="{StaticResource FieldLabel}"/>
+                            <TextBlock Text="{loc:Tr Admin_KeyCount}" Style="{StaticResource FieldLabel}"/>
                             <TextBox Text="{Binding LayoutEditor.KeyCount, UpdateSourceTrigger=PropertyChanged}" Margin="0,0,0,12"/>
                             <WrapPanel>
-                                <Button Content="Moi" Command="{Binding NewLayoutCommand}" Style="{StaticResource SecondaryButton}" Margin="0,0,8,0"/>
-                                <Button Content="Luu layout" Command="{Binding SaveLayoutCommand}" Style="{StaticResource PrimaryButton}"/>
+                                <Button Content="{loc:Tr Common_New}" Command="{Binding NewLayoutCommand}" Style="{StaticResource SecondaryButton}" Margin="0,0,8,0"/>
+                                <Button Content="{loc:Tr Admin_SaveLayout}" Command="{Binding SaveLayoutCommand}" Style="{StaticResource PrimaryButton}"/>
                             </WrapPanel>
                         </StackPanel>
                     </Border>
@@ -342,34 +432,50 @@
                             </Grid.RowDefinitions>
                             <DockPanel Margin="0,0,0,10">
                                 <ComboBox DockPanel.Dock="Right" Width="160" ItemsSource="{Binding ComponentTypes}" SelectedItem="{Binding SelectedComponentType}"/>
-                                <TextBlock Text="Linh kien" Style="{StaticResource SectionTitle}" Margin="0" VerticalAlignment="Center"/>
+                                <TextBlock Text="{loc:Tr Admin_NavComponents}" Style="{StaticResource SectionTitle}" Margin="0" VerticalAlignment="Center"/>
                             </DockPanel>
-                            <DataGrid Grid.Row="1" ItemsSource="{Binding Components}" SelectedItem="{Binding SelectedComponent}" AlternationCount="2">
+                            <Grid Grid.Row="1">
+                            <DataGrid x:Name="AdminComponentsGrid" ItemsSource="{Binding Components}" SelectedItem="{Binding SelectedComponent}" AlternationCount="2">
                                 <DataGrid.Columns>
-                                    <DataGridTextColumn Header="TEN" Binding="{Binding Name}" Width="*"/>
-                                    <DataGridTextColumn Header="ID" Binding="{Binding ComponentId}" Width="*"/>
-                                    <DataGridTextColumn Header="GIA (USD)" Binding="{Binding PriceUsd, StringFormat=N2}" Width="90">
+                                    <DataGridTextColumn Header="{loc:Tr Admin_ColName}" Binding="{Binding Name}" Width="*"/>
+                                    <DataGridTextColumn Header="{loc:Tr Admin_ColId}" Binding="{Binding ComponentId}" Width="*"/>
+                                    <DataGridTextColumn Header="{loc:Tr Admin_ColPrice}" Binding="{Binding PriceUsd, StringFormat=N2}" Width="90">
                                         <DataGridTextColumn.ElementStyle>
                                             <Style TargetType="{x:Type TextBlock}">
                                                 <Setter Property="HorizontalAlignment" Value="Right"/>
                                             </Style>
                                         </DataGridTextColumn.ElementStyle>
                                     </DataGridTextColumn>
-                                    <DataGridTemplateColumn Header="CO SAN" Width="90">
+                                    <DataGridTemplateColumn Header="{loc:Tr Admin_ColAvailable}" Width="90">
                                         <DataGridTemplateColumn.CellTemplate>
                                             <DataTemplate>
                                                 <Border Style="{StaticResource BadgeChrome}" Background="{Binding IsAvailable, Converter={StaticResource BoolToBadgeBrush}}">
-                                                    <TextBlock Style="{StaticResource StatusBadgeText}"
-                                                               Text="{Binding IsAvailable, Converter={StaticResource BoolToLabel}, ConverterParameter='Co|An'}"/>
+                                                    <TextBlock Style="{StaticResource StatusBadgeText}">
+                                                        <TextBlock.Text>
+                                                            <MultiBinding Converter="{StaticResource LocalizedBoolLabel}" ConverterParameter="Common_Available|Common_Hidden">
+                                                                <Binding Path="IsAvailable"/>
+                                                                <Binding Path="Language" Source="{x:Static loc:Loc.Instance}"/>
+                                                            </MultiBinding>
+                                                        </TextBlock.Text>
+                                                    </TextBlock>
                                                 </Border>
                                             </DataTemplate>
                                         </DataGridTemplateColumn.CellTemplate>
                                     </DataGridTemplateColumn>
                                 </DataGrid.Columns>
                             </DataGrid>
+                            <Border Style="{StaticResource EmptyStateCard}"
+                                    Visibility="{Binding Items.Count, ElementName=AdminComponentsGrid, Converter={StaticResource CountToVisibility}}">
+                                <StackPanel>
+                                    <TextBlock Text="{loc:Tr Admin_EmptyComponentsTitle}" Style="{StaticResource EmptyStateTitle}"/>
+                                    <TextBlock Text="{loc:Tr Admin_EmptyComponentsText}"
+                                               Style="{StaticResource EmptyStateText}"/>
+                                </StackPanel>
+                            </Border>
+                            </Grid>
                             <WrapPanel Grid.Row="2" Margin="0,12,0,0">
-                                <Button Content="An" Command="{Binding HideComponentCommand}" Style="{StaticResource SecondaryButton}" Margin="0,0,8,0"/>
-                                <Button Content="Khoi phuc" Command="{Binding RestoreComponentCommand}" Style="{StaticResource SecondaryButton}"/>
+                                <Button Content="{loc:Tr Admin_Hide}" Command="{Binding HideComponentCommand}" Style="{StaticResource SecondaryButton}" Margin="0,0,8,0"/>
+                                <Button Content="{loc:Tr Admin_Restore}" Command="{Binding RestoreComponentCommand}" Style="{StaticResource SecondaryButton}"/>
                             </WrapPanel>
                         </Grid>
                     </Border>
@@ -377,75 +483,75 @@
                     <Border Grid.Column="2" Style="{StaticResource DashboardCard}">
                         <ScrollViewer VerticalScrollBarVisibility="Auto">
                             <StackPanel>
-                                <TextBlock Text="Editor linh kien" Style="{StaticResource SectionTitle}"/>
-                                <TextBlock Text="Component id" Style="{StaticResource FieldLabel}"/>
+                                <TextBlock Text="{loc:Tr Admin_ComponentEditor}" Style="{StaticResource SectionTitle}"/>
+                                <TextBlock Text="{loc:Tr Admin_ComponentId}" Style="{StaticResource FieldLabel}"/>
                                 <TextBox Text="{Binding ComponentEditor.ComponentId, UpdateSourceTrigger=PropertyChanged}" Margin="0,0,0,10"/>
-                                <TextBlock Text="Ten" Style="{StaticResource FieldLabel}"/>
+                                <TextBlock Text="{loc:Tr Admin_Name}" Style="{StaticResource FieldLabel}"/>
                                 <TextBox Text="{Binding ComponentEditor.Name, UpdateSourceTrigger=PropertyChanged}" Margin="0,0,0,10"/>
-                                <TextBlock Text="Gia (USD)" Style="{StaticResource FieldLabel}"/>
+                                <TextBlock Text="{loc:Tr Admin_PriceUsd}" Style="{StaticResource FieldLabel}"/>
                                 <TextBox Text="{Binding ComponentEditor.PriceUsd, UpdateSourceTrigger=PropertyChanged}" Margin="0,0,0,10"/>
-                                <CheckBox Content="Available" IsChecked="{Binding ComponentEditor.IsAvailable}" Margin="0,0,0,10"/>
+                                <CheckBox Content="{loc:Tr Admin_AvailableCheckbox}" IsChecked="{Binding ComponentEditor.IsAvailable}" Margin="0,0,0,10"/>
 
                                 <StackPanel Visibility="{Binding BrandFieldVisibility}">
-                                    <TextBlock Text="Brand" Style="{StaticResource FieldLabel}"/>
+                                    <TextBlock Text="{loc:Tr Admin_Brand}" Style="{StaticResource FieldLabel}"/>
                                     <ComboBox ItemsSource="{Binding Brands}" SelectedValue="{Binding ComponentEditor.BrandId}"
                                               SelectedValuePath="BrandId" DisplayMemberPath="BrandName" Margin="0,0,0,10"/>
                                 </StackPanel>
 
                                 <!-- Kit -->
                                 <StackPanel Visibility="{Binding KitFieldsVisibility}">
-                                    <TextBlock Text="Layout" Style="{StaticResource FieldLabel}"/>
+                                    <TextBlock Text="{loc:Tr Admin_Layout}" Style="{StaticResource FieldLabel}"/>
                                     <ComboBox ItemsSource="{Binding Layouts}" SelectedValue="{Binding ComponentEditor.LayoutId}"
                                               SelectedValuePath="LayoutId" DisplayMemberPath="LayoutName" Margin="0,0,0,10"/>
-                                    <TextBlock Text="PCB technology" Style="{StaticResource FieldLabel}"/>
+                                    <TextBlock Text="{loc:Tr Admin_PcbTechnology}" Style="{StaticResource FieldLabel}"/>
                                     <TextBox Text="{Binding ComponentEditor.PcbTechnology, UpdateSourceTrigger=PropertyChanged}" Margin="0,0,0,10"/>
-                                    <TextBlock Text="Switch mount" Style="{StaticResource FieldLabel}"/>
+                                    <TextBlock Text="{loc:Tr Admin_SwitchMount}" Style="{StaticResource FieldLabel}"/>
                                     <TextBox Text="{Binding ComponentEditor.SwitchMount, UpdateSourceTrigger=PropertyChanged}" Margin="0,0,0,10"/>
-                                    <TextBlock Text="Required switch quantity" Style="{StaticResource FieldLabel}"/>
+                                    <TextBlock Text="{loc:Tr Admin_RequiredSwitchQty}" Style="{StaticResource FieldLabel}"/>
                                     <TextBox Text="{Binding ComponentEditor.RequiredSwitchQuantity, UpdateSourceTrigger=PropertyChanged}" Margin="0,0,0,10"/>
-                                    <TextBlock Text="Included parts" Style="{StaticResource FieldLabel}"/>
+                                    <TextBlock Text="{loc:Tr Admin_IncludedParts}" Style="{StaticResource FieldLabel}"/>
                                     <TextBox Text="{Binding ComponentEditor.IncludedParts, UpdateSourceTrigger=PropertyChanged}" Margin="0,0,0,10" TextWrapping="Wrap"/>
                                 </StackPanel>
 
                                 <!-- Switch -->
                                 <StackPanel Visibility="{Binding SwitchFieldsVisibility}">
-                                    <TextBlock Text="Switch technology" Style="{StaticResource FieldLabel}"/>
+                                    <TextBlock Text="{loc:Tr Admin_SwitchTechnology}" Style="{StaticResource FieldLabel}"/>
                                     <TextBox Text="{Binding ComponentEditor.SwitchTechnology, UpdateSourceTrigger=PropertyChanged}" Margin="0,0,0,10"/>
-                                    <TextBlock Text="Mount type" Style="{StaticResource FieldLabel}"/>
+                                    <TextBlock Text="{loc:Tr Admin_MountType}" Style="{StaticResource FieldLabel}"/>
                                     <TextBox Text="{Binding ComponentEditor.MountType, UpdateSourceTrigger=PropertyChanged}" Margin="0,0,0,10"/>
-                                    <TextBlock Text="Switch type" Style="{StaticResource FieldLabel}"/>
+                                    <TextBlock Text="{loc:Tr Admin_SwitchType}" Style="{StaticResource FieldLabel}"/>
                                     <TextBox Text="{Binding ComponentEditor.SwitchType, UpdateSourceTrigger=PropertyChanged}" Margin="0,0,0,10"/>
-                                    <TextBlock Text="Actuation force (g)" Style="{StaticResource FieldLabel}"/>
+                                    <TextBlock Text="{loc:Tr Admin_ActuationForce}" Style="{StaticResource FieldLabel}"/>
                                     <TextBox Text="{Binding ComponentEditor.ActuationForceG, UpdateSourceTrigger=PropertyChanged, TargetNullValue=''}" Margin="0,0,0,10"/>
                                 </StackPanel>
 
                                 <!-- Keycap -->
                                 <StackPanel Visibility="{Binding KeycapFieldsVisibility}">
-                                    <TextBlock Text="Supported form factor" Style="{StaticResource FieldLabel}"/>
+                                    <TextBlock Text="{loc:Tr Admin_SupportedFormFactor}" Style="{StaticResource FieldLabel}"/>
                                     <TextBox Text="{Binding ComponentEditor.SupportedFormFactor, UpdateSourceTrigger=PropertyChanged}" Margin="0,0,0,10"/>
-                                    <TextBlock Text="Profile" Style="{StaticResource FieldLabel}"/>
+                                    <TextBlock Text="{loc:Tr Admin_Profile}" Style="{StaticResource FieldLabel}"/>
                                     <TextBox Text="{Binding ComponentEditor.Profile, UpdateSourceTrigger=PropertyChanged}" Margin="0,0,0,10"/>
-                                    <TextBlock Text="Material" Style="{StaticResource FieldLabel}"/>
+                                    <TextBlock Text="{loc:Tr Admin_Material}" Style="{StaticResource FieldLabel}"/>
                                     <TextBox Text="{Binding ComponentEditor.Material, UpdateSourceTrigger=PropertyChanged}" Margin="0,0,0,10"/>
                                 </StackPanel>
 
                                 <!-- Stabilizer -->
                                 <StackPanel Visibility="{Binding StabilizerFieldsVisibility}">
-                                    <TextBlock Text="Supported layouts" Style="{StaticResource FieldLabel}"/>
+                                    <TextBlock Text="{loc:Tr Admin_SupportedLayouts}" Style="{StaticResource FieldLabel}"/>
                                     <TextBox Text="{Binding ComponentEditor.SupportedLayouts, UpdateSourceTrigger=PropertyChanged}" Margin="0,0,0,10"/>
                                 </StackPanel>
 
                                 <!-- Accessory -->
                                 <StackPanel Visibility="{Binding AccessoryFieldsVisibility}">
-                                    <TextBlock Text="Accessory type" Style="{StaticResource FieldLabel}"/>
+                                    <TextBlock Text="{loc:Tr Admin_AccessoryType}" Style="{StaticResource FieldLabel}"/>
                                     <TextBox Text="{Binding ComponentEditor.AccessoryType, UpdateSourceTrigger=PropertyChanged}" Margin="0,0,0,10"/>
-                                    <TextBlock Text="Target component" Style="{StaticResource FieldLabel}"/>
+                                    <TextBlock Text="{loc:Tr Admin_TargetComponent}" Style="{StaticResource FieldLabel}"/>
                                     <TextBox Text="{Binding ComponentEditor.TargetComponent, UpdateSourceTrigger=PropertyChanged}" Margin="0,0,0,10"/>
                                 </StackPanel>
 
                                 <WrapPanel Margin="0,4,0,0">
-                                    <Button Content="Moi" Command="{Binding NewComponentCommand}" Style="{StaticResource SecondaryButton}" Margin="0,0,8,0"/>
-                                    <Button Content="Luu linh kien" Command="{Binding SaveComponentCommand}" Style="{StaticResource PrimaryButton}"/>
+                                    <Button Content="{loc:Tr Common_New}" Command="{Binding NewComponentCommand}" Style="{StaticResource SecondaryButton}" Margin="0,0,8,0"/>
+                                    <Button Content="{loc:Tr Admin_SaveComponent}" Command="{Binding SaveComponentCommand}" Style="{StaticResource PrimaryButton}"/>
                                 </WrapPanel>
                             </StackPanel>
                         </ScrollViewer>
@@ -461,20 +567,107 @@
                             <RowDefinition Height="*"/>
                         </Grid.RowDefinitions>
                         <DockPanel Margin="0,0,0,10">
-                            <Button DockPanel.Dock="Right" Content="Refresh audit" Command="{Binding RefreshAuditCommand}"
+                            <Button DockPanel.Dock="Right" Content="{loc:Tr Admin_RefreshAudit}" Command="{Binding RefreshAuditCommand}"
                                     Style="{StaticResource SecondaryButton}"/>
-                            <TextBlock Text="Audit log" Style="{StaticResource SectionTitle}" Margin="0" VerticalAlignment="Center"/>
+                            <TextBlock Text="{loc:Tr Admin_NavAudit}" Style="{StaticResource SectionTitle}" Margin="0" VerticalAlignment="Center"/>
                         </DockPanel>
-                        <DataGrid Grid.Row="1" ItemsSource="{Binding AuditLogs}" AlternationCount="2">
+                        <Grid Grid.Row="1">
+                        <DataGrid x:Name="AdminAuditGrid" ItemsSource="{Binding AuditLogs}" AlternationCount="2">
                             <DataGrid.Columns>
-                                <DataGridTextColumn Header="ACTION" Binding="{Binding Action}" Width="160"/>
-                                <DataGridTextColumn Header="BANG" Binding="{Binding TableName}" Width="*"/>
-                                <DataGridTextColumn Header="RECORD" Binding="{Binding RecordId}" Width="120"/>
-                                <DataGridTextColumn Header="THOI GIAN" Binding="{Binding ChangedAt, StringFormat=yyyy-MM-dd HH:mm}" Width="160"/>
+                                <DataGridTextColumn Header="{loc:Tr Admin_ColAction}" Binding="{Binding Action}" Width="160"/>
+                                <DataGridTextColumn Header="{loc:Tr Admin_ColTable}" Binding="{Binding TableName}" Width="*"/>
+                                <DataGridTextColumn Header="{loc:Tr Admin_ColRecord}" Binding="{Binding RecordId}" Width="120"/>
+                                <DataGridTextColumn Header="{loc:Tr Admin_ColTime}" Binding="{Binding ChangedAt, StringFormat=yyyy-MM-dd HH:mm}" Width="160"/>
                             </DataGrid.Columns>
                         </DataGrid>
+                        <Border Style="{StaticResource EmptyStateCard}"
+                                Visibility="{Binding Items.Count, ElementName=AdminAuditGrid, Converter={StaticResource CountToVisibility}}">
+                            <StackPanel>
+                                <TextBlock Text="{loc:Tr Admin_EmptyAuditTitle}" Style="{StaticResource EmptyStateTitle}"/>
+                                <TextBlock Text="{loc:Tr Admin_EmptyAuditText}"
+                                           Style="{StaticResource EmptyStateText}"/>
+                            </StackPanel>
+                        </Border>
+                        </Grid>
                     </Grid>
                 </Border>
+
+                <!-- ============ Seller applications ============ -->
+                <Grid Visibility="{Binding IsChecked, ElementName=NavApplications, Converter={StaticResource BoolToVis}}">
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="*"/>
+                        <ColumnDefinition Width="16"/>
+                        <ColumnDefinition Width="340"/>
+                    </Grid.ColumnDefinitions>
+
+                    <Border Style="{StaticResource DashboardCard}">
+                        <Grid>
+                            <Grid.RowDefinitions>
+                                <RowDefinition Height="Auto"/>
+                                <RowDefinition Height="*"/>
+                            </Grid.RowDefinitions>
+                            <DockPanel Margin="0,0,0,10">
+                                <Button DockPanel.Dock="Right" Content="{loc:Tr Common_Refresh}" Command="{Binding RefreshApplicationsCommand}"
+                                        Style="{StaticResource SecondaryButton}"/>
+                                <TextBlock Text="{loc:Tr Admin_ApplicationsTitle}" Style="{StaticResource SectionTitle}" Margin="0" VerticalAlignment="Center"/>
+                            </DockPanel>
+                            <DataGrid Grid.Row="1" ItemsSource="{Binding Applications}" SelectedItem="{Binding SelectedApplication}" AlternationCount="2">
+                                <DataGrid.Columns>
+                                    <DataGridTextColumn Header="{loc:Tr Admin_ColApplicant}" Binding="{Binding Username}" Width="*"/>
+                                    <DataGridTextColumn Header="{loc:Tr Common_ColShop}" Binding="{Binding ShopName}" Width="*"/>
+                                    <DataGridTextColumn Header="{loc:Tr Common_ColDate}" Binding="{Binding CreatedAt, StringFormat=yyyy-MM-dd}" Width="100"/>
+                                    <DataGridTemplateColumn Header="{loc:Tr Common_ColStatus}" Width="120">
+                                        <DataGridTemplateColumn.CellTemplate>
+                                            <DataTemplate>
+                                                <Border Style="{StaticResource StatusBadge}">
+                                                    <TextBlock Style="{StaticResource StatusBadgeText}">
+                                                        <TextBlock.Text>
+                                                            <MultiBinding Converter="{StaticResource LocalizedStatus}">
+                                                                <Binding Path="Status"/>
+                                                                <Binding Path="Language" Source="{x:Static loc:Loc.Instance}"/>
+                                                            </MultiBinding>
+                                                        </TextBlock.Text>
+                                                    </TextBlock>
+                                                </Border>
+                                            </DataTemplate>
+                                        </DataGridTemplateColumn.CellTemplate>
+                                    </DataGridTemplateColumn>
+                                </DataGrid.Columns>
+                            </DataGrid>
+                        </Grid>
+                    </Border>
+
+                    <Border Grid.Column="2" Style="{StaticResource DashboardCard}" VerticalAlignment="Top">
+                        <StackPanel DataContext="{Binding SelectedApplication}">
+                            <TextBlock Text="{loc:Tr Admin_ApplicationDetail}" Style="{StaticResource SectionTitle}"/>
+                            <TextBlock Text="{loc:Tr Admin_Applicant}" Style="{StaticResource FieldLabel}"/>
+                            <TextBlock Text="{Binding Username}" Margin="0,0,0,8" TextWrapping="Wrap"/>
+                            <TextBlock Text="{loc:Tr Common_Email}" Style="{StaticResource FieldLabel}"/>
+                            <TextBlock Text="{Binding Email}" Margin="0,0,0,8" TextWrapping="Wrap"/>
+                            <TextBlock Text="{loc:Tr Common_ShopName}" Style="{StaticResource FieldLabel}"/>
+                            <TextBlock Text="{Binding ShopName}" Margin="0,0,0,8" TextWrapping="Wrap"/>
+                            <TextBlock Text="{loc:Tr Common_Phone}" Style="{StaticResource FieldLabel}"/>
+                            <TextBlock Text="{Binding Phone}" Margin="0,0,0,8" TextWrapping="Wrap"/>
+                            <TextBlock Text="{loc:Tr Common_Address}" Style="{StaticResource FieldLabel}"/>
+                            <TextBlock Text="{Binding Address}" Margin="0,0,0,8" TextWrapping="Wrap"/>
+                            <TextBlock Text="{loc:Tr Common_Notes}" Style="{StaticResource FieldLabel}"/>
+                            <TextBlock Text="{Binding Note}" Margin="0,0,0,12" TextWrapping="Wrap"/>
+
+                            <TextBlock Text="{loc:Tr Admin_ReviewNoteOptional}" Style="{StaticResource FieldLabel}"
+                                       DataContext="{Binding RelativeSource={RelativeSource AncestorType=UserControl}, Path=DataContext}"/>
+                            <TextBox DataContext="{Binding RelativeSource={RelativeSource AncestorType=UserControl}, Path=DataContext}"
+                                     Text="{Binding ApplicationReviewNote, UpdateSourceTrigger=PropertyChanged}"
+                                     Margin="0,0,0,12" TextWrapping="Wrap" AcceptsReturn="True" MinHeight="44"/>
+
+                            <WrapPanel DataContext="{Binding RelativeSource={RelativeSource AncestorType=UserControl}, Path=DataContext}">
+                                <Button Content="{loc:Tr Admin_Approve}" Command="{Binding ApproveApplicationCommand}"
+                                        Style="{StaticResource SuccessButton}" Margin="0,0,8,0"/>
+                                <Button Content="{loc:Tr Admin_Reject}" Command="{Binding RejectApplicationCommand}"
+                                        Style="{StaticResource DangerButton}"/>
+                            </WrapPanel>
+                        </StackPanel>
+                    </Border>
+                </Grid>
 
                 <!-- ============ Chat ============ -->
                 <Border Visibility="{Binding IsChecked, ElementName=NavChat, Converter={StaticResource BoolToVis}}"
@@ -485,10 +678,18 @@
 
             <!-- Status bar -->
             <Border Grid.Row="3" Margin="0,12,0,0" Background="#EEF2F6" CornerRadius="4" Padding="12,8">
-                <StackPanel Orientation="Horizontal">
-                    <Border Width="4" Background="{StaticResource AccentBrush}" CornerRadius="2" Margin="0,0,10,0"/>
-                    <TextBlock Text="{Binding StatusMessage}" Foreground="{StaticResource TextMutedBrush}" VerticalAlignment="Center"/>
-                </StackPanel>
+                <DockPanel>
+                    <Border DockPanel.Dock="Right"
+                            Style="{StaticResource BadgeChrome}"
+                            Background="{StaticResource AccentBrush}"
+                            Visibility="{Binding IsBusy, Converter={StaticResource BoolToVis}}">
+                        <TextBlock Text="{loc:Tr Common_Processing}" Style="{StaticResource StatusBadgeText}"/>
+                    </Border>
+                    <StackPanel Orientation="Horizontal">
+                        <Border Width="4" Background="{StaticResource AccentBrush}" CornerRadius="2" Margin="0,0,10,0"/>
+                        <TextBlock Text="{Binding StatusMessage}" Foreground="{StaticResource TextMutedBrush}" VerticalAlignment="Center"/>
+                    </StackPanel>
+                </DockPanel>
             </Border>
         </Grid>
     </Grid>

@@ -3,6 +3,8 @@
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
              xmlns:views="clr-namespace:Custom_keyboard.Views"
              xmlns:vm="clr-namespace:Custom_keyboard.ViewModels"
+             xmlns:loc="clr-namespace:Custom_keyboard.Localization"
+             AutomationProperties.AutomationId="BuyerDashboardRoot"
              Loaded="OnLoaded">
     <UserControl.Resources>
         <!-- Sidebar nav buttons that light up when their screen is active -->
@@ -51,6 +53,15 @@
                 </DataTrigger>
             </Style.Triggers>
         </Style>
+        <Style x:Key="NavRegisterSeller" TargetType="{x:Type Button}" BasedOn="{StaticResource SidebarButton}">
+            <Style.Triggers>
+                <DataTrigger Binding="{Binding RegisterSellerVisibility}" Value="Visible">
+                    <Setter Property="Background" Value="{StaticResource AccentBrush}"/>
+                    <Setter Property="Foreground" Value="White"/>
+                    <Setter Property="FontWeight" Value="SemiBold"/>
+                </DataTrigger>
+            </Style.Triggers>
+        </Style>
     </UserControl.Resources>
 
     <Grid Background="{StaticResource BodyBgBrush}">
@@ -75,16 +86,17 @@
                                    FontSize="20" FontWeight="SemiBold"
                                    VerticalAlignment="Center"/>
                     </StackPanel>
-                    <TextBlock Text="Buyer workspace"
+                    <TextBlock Text="{loc:Tr Buyer_Workspace}"
                                Foreground="#AFC1D0"
                                FontSize="12"
                                Margin="0,0,0,24"/>
 
-                    <Button Content="Trang chu" Command="{Binding ShowHomeCommand}" Style="{StaticResource NavHome}"/>
-                    <Button Content="Build cua toi" Command="{Binding ShowBuildListCommand}" Style="{StaticResource NavBuildList}"/>
-                    <Button Content="Tao build moi" Command="{Binding NewBuildCommand}" Style="{StaticResource NavConfigurator}"/>
-                    <Button Content="Request da gui" Command="{Binding ShowSentRequestsCommand}" Style="{StaticResource NavRequests}"/>
-                    <Button Content="Chat" Command="{Binding ShowChatCommand}" Style="{StaticResource NavChat}"/>
+                    <Button Content="{loc:Tr Buyer_NavHome}" Command="{Binding ShowHomeCommand}" Style="{StaticResource NavHome}"/>
+                    <Button Content="{loc:Tr Buyer_NavMyBuilds}" Command="{Binding ShowBuildListCommand}" Style="{StaticResource NavBuildList}"/>
+                    <Button Content="{loc:Tr Buyer_NavNewBuild}" Command="{Binding NewBuildCommand}" Style="{StaticResource NavConfigurator}"/>
+                    <Button Content="{loc:Tr Buyer_NavSentRequests}" Command="{Binding ShowSentRequestsCommand}" Style="{StaticResource NavRequests}"/>
+                    <Button Content="{loc:Tr Nav_Chat}" Command="{Binding ShowChatCommand}" Style="{StaticResource NavChat}"/>
+                    <Button Content="{loc:Tr Buyer_NavRegisterSeller}" Command="{Binding ShowRegisterSellerCommand}" Style="{StaticResource NavRegisterSeller}"/>
                 </StackPanel>
 
                 <Border DockPanel.Dock="Bottom"
@@ -98,7 +110,7 @@
                                    TextWrapping="Wrap"/>
                         <StackPanel Orientation="Horizontal" Margin="0,5,0,0">
                             <Ellipse Width="8" Height="8" Fill="{StaticResource AccentBrush}" VerticalAlignment="Center" Margin="0,0,6,0"/>
-                            <TextBlock Text="Online"
+                            <TextBlock Text="{loc:Tr Common_Online}"
                                        Foreground="{StaticResource AccentBrush}"
                                        FontSize="12"/>
                         </StackPanel>
@@ -117,10 +129,8 @@
 
             <!-- Topbar -->
             <DockPanel Margin="0,0,0,16">
-                <Button DockPanel.Dock="Right" Content="Dang xuat"
-                        Command="{Binding LogoutCommand}"
-                        Style="{StaticResource SecondaryButton}"/>
-                <Button DockPanel.Dock="Right" Content="Refresh"
+                <views:UserMenuView DockPanel.Dock="Right"/>
+                <Button DockPanel.Dock="Right" Content="{loc:Tr Common_Refresh}"
                         Command="{Binding RefreshAllCommand}"
                         Style="{StaticResource SecondaryButton}" Margin="0,0,8,0"/>
                 <StackPanel>
@@ -134,7 +144,7 @@
                 <Border Visibility="{Binding HomeVisibility}" Style="{StaticResource DashboardCard}" VerticalAlignment="Top">
                     <StackPanel>
                         <TextBlock Text="{Binding UserMenuHeader}" Style="{StaticResource SectionTitle}"/>
-                        <TextBlock Text="Quy trinh buyer" FontWeight="SemiBold" Margin="0,4,0,12"/>
+                        <TextBlock Text="{loc:Tr Buyer_Workflow}" FontWeight="SemiBold" Margin="0,4,0,12"/>
                         <ItemsControl ItemsSource="{Binding Tasks}">
                             <ItemsControl.ItemTemplate>
                                 <DataTemplate>
@@ -159,30 +169,37 @@
                             <RowDefinition Height="Auto"/>
                         </Grid.RowDefinitions>
                         <DockPanel Margin="0,0,0,10">
-                            <Button DockPanel.Dock="Right" Content="+ Tao build moi"
+                            <Button DockPanel.Dock="Right" Content="{loc:Tr Buyer_NewBuildPlus}"
                                     Command="{Binding NewBuildCommand}"
                                     Style="{StaticResource PrimaryButton}"/>
-                            <TextBlock Text="Build cua toi" Style="{StaticResource SectionTitle}" Margin="0" VerticalAlignment="Center"/>
+                            <TextBlock Text="{loc:Tr Buyer_NavMyBuilds}" Style="{StaticResource SectionTitle}" Margin="0" VerticalAlignment="Center"/>
                         </DockPanel>
 
-                        <DataGrid Grid.Row="1"
+                        <Grid Grid.Row="1">
+                        <DataGrid x:Name="BuyerBuildsGrid"
                                   ItemsSource="{Binding Builds}"
                                   SelectedItem="{Binding SelectedBuild}"
                                   AlternationCount="2">
                             <DataGrid.Columns>
-                                <DataGridTextColumn Header="TEN BUILD" Binding="{Binding Name}" Width="*"/>
-                                <DataGridTextColumn Header="KIT" Binding="{Binding KitId}" Width="120"/>
-                                <DataGridTemplateColumn Header="TRANG THAI" Width="130">
+                                <DataGridTextColumn Header="{loc:Tr Buyer_ColBuildName}" Binding="{Binding Name}" Width="*"/>
+                                <DataGridTextColumn Header="{loc:Tr Buyer_ColKit}" Binding="{Binding KitId}" Width="120"/>
+                                <DataGridTemplateColumn Header="{loc:Tr Common_ColStatus}" Width="130">
                                     <DataGridTemplateColumn.CellTemplate>
                                         <DataTemplate>
                                             <Border Style="{StaticResource StatusBadge}">
-                                                <TextBlock Text="{Binding Status, Converter={StaticResource StatusToTextConverter}}"
-                                                           Style="{StaticResource StatusBadgeText}"/>
+                                                <TextBlock Style="{StaticResource StatusBadgeText}">
+                                                    <TextBlock.Text>
+                                                        <MultiBinding Converter="{StaticResource LocalizedStatus}">
+                                                            <Binding Path="Status"/>
+                                                            <Binding Path="Language" Source="{x:Static loc:Loc.Instance}"/>
+                                                        </MultiBinding>
+                                                    </TextBlock.Text>
+                                                </TextBlock>
                                             </Border>
                                         </DataTemplate>
                                     </DataGridTemplateColumn.CellTemplate>
                                 </DataGridTemplateColumn>
-                                <DataGridTextColumn Header="TONG (USD)" Binding="{Binding TotalCostSnapshot, StringFormat=N2}" Width="120">
+                                <DataGridTextColumn Header="{loc:Tr Buyer_ColTotal}" Binding="{Binding TotalCostSnapshot, StringFormat=N2}" Width="120">
                                     <DataGridTextColumn.ElementStyle>
                                         <Style TargetType="{x:Type TextBlock}">
                                             <Setter Property="HorizontalAlignment" Value="Right"/>
@@ -193,10 +210,20 @@
                             </DataGrid.Columns>
                         </DataGrid>
 
+                        <Border Style="{StaticResource EmptyStateCard}"
+                                Visibility="{Binding Items.Count, ElementName=BuyerBuildsGrid, Converter={StaticResource CountToVisibility}}">
+                            <StackPanel>
+                                <TextBlock Text="{loc:Tr Buyer_EmptyBuildsTitle}" Style="{StaticResource EmptyStateTitle}"/>
+                                <TextBlock Text="{loc:Tr Buyer_EmptyBuildsText}"
+                                           Style="{StaticResource EmptyStateText}"/>
+                            </StackPanel>
+                        </Border>
+                        </Grid>
+
                         <WrapPanel Grid.Row="2" Margin="0,12,0,0">
-                            <Button Content="Mo trong configurator" Command="{Binding OpenBuildCommand}"
+                            <Button Content="{loc:Tr Buyer_OpenInConfigurator}" Command="{Binding OpenBuildCommand}"
                                     Style="{StaticResource PrimaryButton}" Margin="0,0,8,0"/>
-                            <Button Content="Archive" Command="{Binding ArchiveBuildCommand}"
+                            <Button Content="{loc:Tr Buyer_Archive}" Command="{Binding ArchiveBuildCommand}"
                                     Style="{StaticResource SecondaryButton}"/>
                         </WrapPanel>
                     </Grid>
@@ -214,38 +241,38 @@
 
                             <!-- Left: selections -->
                             <StackPanel>
-                                <TextBlock Text="Cau hinh build" Style="{StaticResource SectionTitle}"/>
+                                <TextBlock Text="{loc:Tr Buyer_ConfigTitle}" Style="{StaticResource SectionTitle}"/>
 
-                                <TextBlock Text="Ten build" Style="{StaticResource FieldLabel}"/>
+                                <TextBlock Text="{loc:Tr Buyer_BuildNameLabel}" Style="{StaticResource FieldLabel}"/>
                                 <TextBox Text="{Binding BuildName, UpdateSourceTrigger=PropertyChanged}" Margin="0,0,0,12"/>
 
-                                <TextBlock Text="Ghi chu" Style="{StaticResource FieldLabel}"/>
+                                <TextBlock Text="{loc:Tr Common_Notes}" Style="{StaticResource FieldLabel}"/>
                                 <TextBox Text="{Binding BuildNotes, UpdateSourceTrigger=PropertyChanged}" Margin="0,0,0,12"
                                          TextWrapping="Wrap" AcceptsReturn="True" MinHeight="48"/>
 
-                                <TextBlock Text="Kit" Style="{StaticResource FieldLabel}"/>
+                                <TextBlock Text="{loc:Tr Buyer_KitLabel}" Style="{StaticResource FieldLabel}"/>
                                 <ComboBox ItemsSource="{Binding Kits}" SelectedItem="{Binding SelectedKit}" DisplayMemberPath="KitName" Margin="0,0,0,4"/>
                                 <TextBlock Text="{Binding KitSummary}" Foreground="{StaticResource TextMutedBrush}" FontSize="12" TextWrapping="Wrap" Margin="0,0,0,12"/>
 
-                                <TextBlock Text="Switch" Style="{StaticResource FieldLabel}"/>
-                                <ComboBox ItemsSource="{Binding Switches}" SelectedItem="{Binding SelectedSwitch}" DisplayMemberPath="SwitchName" Margin="0,0,0,8"/>
+                                <TextBlock Text="{loc:Tr Buyer_SwitchLabel}" Style="{StaticResource FieldLabel}"/>
+                                <ComboBox ItemsSource="{Binding CompatibleSwitches}" SelectedItem="{Binding SelectedSwitch}" DisplayMemberPath="SwitchName" Margin="0,0,0,8"/>
                                 <DockPanel Margin="0,0,0,12">
-                                    <Button DockPanel.Dock="Right" Content="Dung so luong kit"
+                                    <Button DockPanel.Dock="Right" Content="{loc:Tr Buyer_UseKitQuantity}"
                                             Command="{Binding ApplyRequiredSwitchQuantityCommand}"
                                             Style="{StaticResource SecondaryButton}" Margin="8,0,0,0" VerticalAlignment="Bottom"/>
                                     <StackPanel>
-                                        <TextBlock Text="So luong switch" Style="{StaticResource FieldLabel}"/>
+                                        <TextBlock Text="{loc:Tr Buyer_SwitchQuantityLabel}" Style="{StaticResource FieldLabel}"/>
                                         <TextBox Text="{Binding SwitchQuantity, UpdateSourceTrigger=PropertyChanged}"/>
                                     </StackPanel>
                                 </DockPanel>
 
-                                <TextBlock Text="Keycap" Style="{StaticResource FieldLabel}"/>
+                                <TextBlock Text="{loc:Tr Buyer_KeycapLabel}" Style="{StaticResource FieldLabel}"/>
                                 <ComboBox ItemsSource="{Binding Keycaps}" SelectedItem="{Binding SelectedKeycap}" DisplayMemberPath="KeycapName" Margin="0,0,0,12"/>
 
-                                <TextBlock Text="Stabilizer" Style="{StaticResource FieldLabel}"/>
+                                <TextBlock Text="{loc:Tr Buyer_StabilizerLabel}" Style="{StaticResource FieldLabel}"/>
                                 <ComboBox ItemsSource="{Binding Stabilizers}" SelectedItem="{Binding SelectedStabilizer}" DisplayMemberPath="StabilizerName" Margin="0,0,0,12"/>
 
-                                <TextBlock Text="Accessory" Style="{StaticResource FieldLabel}"/>
+                                <TextBlock Text="{loc:Tr Buyer_AccessoryLabel}" Style="{StaticResource FieldLabel}"/>
                                 <ItemsControl ItemsSource="{Binding Accessories}" Margin="0,0,0,12">
                                     <ItemsControl.ItemTemplate>
                                         <DataTemplate>
@@ -255,27 +282,93 @@
                                 </ItemsControl>
 
                                 <DockPanel Margin="0,0,0,6">
-                                    <Button DockPanel.Dock="Right" Content="Xoa mod" Command="{Binding RemoveModCommand}"
+                                    <Button DockPanel.Dock="Right" Content="{loc:Tr Buyer_RemoveSelectedMod}" Command="{Binding RemoveModCommand}"
                                             Style="{StaticResource SecondaryButton}" Margin="8,0,0,0"/>
-                                    <Button DockPanel.Dock="Right" Content="Them mod" Command="{Binding AddModCommand}"
-                                            Style="{StaticResource SecondaryButton}" Margin="8,0,0,0"/>
-                                    <TextBlock Text="Mod" Style="{StaticResource FieldLabel}" Margin="0" VerticalAlignment="Center"/>
+                                    <TextBlock Text="{loc:Tr Buyer_ModPresets}" Style="{StaticResource FieldLabel}" Margin="0" VerticalAlignment="Center"/>
                                 </DockPanel>
-                                <ListBox ItemsSource="{Binding Mods}" SelectedItem="{Binding SelectedMod}" MaxHeight="180">
+                                <WrapPanel Margin="0,0,0,8">
+                                    <Button Content="Switch lube" Command="{Binding AddModCommand}" CommandParameter="Switch|Lube"
+                                            Style="{StaticResource SecondaryButton}" Margin="0,0,6,6"/>
+                                    <Button Content="Switch film" Command="{Binding AddModCommand}" CommandParameter="Switch|Film"
+                                            Style="{StaticResource SecondaryButton}" Margin="0,0,6,6"/>
+                                    <Button Content="Spring swap" Command="{Binding AddModCommand}" CommandParameter="Switch|Spring_swap"
+                                            Style="{StaticResource SecondaryButton}" Margin="0,0,6,6"/>
+                                    <Button Content="Stab lube" Command="{Binding AddModCommand}" CommandParameter="Stabilizer|Lube"
+                                            Style="{StaticResource SecondaryButton}" Margin="0,0,6,6"/>
+                                    <Button Content="Stab tune" Command="{Binding AddModCommand}" CommandParameter="Stabilizer|Tune"
+                                            Style="{StaticResource SecondaryButton}" Margin="0,0,6,6"/>
+                                    <Button Content="Tape mod" Command="{Binding AddModCommand}" CommandParameter="Build|Tape_mod"
+                                            Style="{StaticResource SecondaryButton}" Margin="0,0,6,6"/>
+                                    <Button Content="Foam mod" Command="{Binding AddModCommand}" CommandParameter="Build|Foam_mod"
+                                            Style="{StaticResource SecondaryButton}" Margin="0,0,6,6"/>
+                                </WrapPanel>
+                                <ListBox ItemsSource="{Binding Mods}" SelectedItem="{Binding SelectedMod}" MaxHeight="240">
                                     <ListBox.ItemTemplate>
                                         <DataTemplate>
-                                            <Grid Margin="0,2">
-                                                <Grid.ColumnDefinitions>
-                                                    <ColumnDefinition Width="120"/>
-                                                    <ColumnDefinition Width="110"/>
-                                                    <ColumnDefinition Width="*"/>
-                                                </Grid.ColumnDefinitions>
-                                                <ComboBox ItemsSource="{x:Static vm:BuildModEditorViewModel.ModTypes}"
-                                                          SelectedItem="{Binding ModType}" Margin="0,0,6,0"/>
-                                                <ComboBox Grid.Column="1" ItemsSource="{x:Static vm:BuildModEditorViewModel.TargetComponents}"
-                                                          SelectedItem="{Binding TargetComponent}" Margin="0,0,6,0"/>
-                                                <TextBox Grid.Column="2" Text="{Binding Notes, UpdateSourceTrigger=PropertyChanged}"/>
-                                            </Grid>
+                                            <Border Background="#F8FAFC"
+                                                    BorderBrush="{StaticResource BorderBrush}"
+                                                    BorderThickness="1"
+                                                    CornerRadius="4"
+                                                    Padding="10"
+                                                    Margin="0,0,0,6">
+                                                <Grid>
+                                                    <Grid.RowDefinitions>
+                                                        <RowDefinition Height="Auto"/>
+                                                        <RowDefinition Height="Auto"/>
+                                                        <RowDefinition Height="Auto"/>
+                                                    </Grid.RowDefinitions>
+                                                    <DockPanel LastChildFill="False" Margin="0,0,0,8">
+                                                        <TextBlock Text="{Binding DisplayTitle}"
+                                                                   DockPanel.Dock="Left"
+                                                                   FontWeight="SemiBold"
+                                                                   Foreground="{StaticResource TextPrimaryBrush}"
+                                                                   VerticalAlignment="Center"/>
+                                                        <TextBlock DockPanel.Dock="Right"
+                                                                   Text="{Binding DisplaySummary}"
+                                                                   Foreground="{StaticResource TextMutedBrush}"
+                                                                   FontSize="12"
+                                                                   TextTrimming="CharacterEllipsis"
+                                                                   MaxWidth="220"/>
+                                                    </DockPanel>
+
+                                                    <Grid Grid.Row="1" Margin="0,0,0,8">
+                                                        <Grid.ColumnDefinitions>
+                                                            <ColumnDefinition Width="120"/>
+                                                            <ColumnDefinition Width="130"/>
+                                                            <ColumnDefinition Width="110"/>
+                                                            <ColumnDefinition Width="110"/>
+                                                        </Grid.ColumnDefinitions>
+                                                        <StackPanel Margin="0,0,8,0">
+                                                            <TextBlock Text="{loc:Tr Buyer_ModTarget}" Style="{StaticResource FieldLabel}"/>
+                                                            <ComboBox ItemsSource="{x:Static vm:BuildModEditorViewModel.TargetComponents}"
+                                                                      SelectedItem="{Binding TargetComponent}"/>
+                                                        </StackPanel>
+                                                        <StackPanel Grid.Column="1" Margin="0,0,8,0">
+                                                            <TextBlock Text="{loc:Tr Buyer_ModType}" Style="{StaticResource FieldLabel}"/>
+                                                            <ComboBox ItemsSource="{Binding AvailableModTypes}"
+                                                                      SelectedItem="{Binding ModType}"/>
+                                                        </StackPanel>
+                                                        <StackPanel Grid.Column="2"
+                                                                    Margin="0,0,8,0"
+                                                                    Visibility="{Binding SwitchQuantityVisibility}">
+                                                            <TextBlock Text="{loc:Tr Buyer_ModSwitchCount}" Style="{StaticResource FieldLabel}"/>
+                                                            <ComboBox ItemsSource="{Binding QuantityOptions}"
+                                                                      SelectedItem="{Binding ModQuantity}"/>
+                                                        </StackPanel>
+                                                        <StackPanel Grid.Column="3"
+                                                                    Visibility="{Binding SpringWeightVisibility}">
+                                                            <TextBlock Text="{loc:Tr Buyer_ModGram}" Style="{StaticResource FieldLabel}"/>
+                                                            <ComboBox ItemsSource="{x:Static vm:BuildModEditorViewModel.SpringWeightOptions}"
+                                                                      SelectedItem="{Binding SpringWeightG}"/>
+                                                        </StackPanel>
+                                                    </Grid>
+
+                                                    <TextBox Grid.Row="2"
+                                                             Text="{Binding Notes, UpdateSourceTrigger=PropertyChanged}"
+                                                             ToolTip="{loc:Tr Buyer_ModNotesTooltip}"
+                                                             MinHeight="34"/>
+                                                </Grid>
+                                            </Border>
                                         </DataTemplate>
                                     </ListBox.ItemTemplate>
                                 </ListBox>
@@ -285,7 +378,7 @@
                             <StackPanel Grid.Column="2">
                                 <Border Background="{StaticResource AccentBrush}" CornerRadius="6" Padding="14" Margin="0,0,0,14">
                                     <StackPanel>
-                                        <TextBlock Text="TONG GIA (SNAPSHOT)" Foreground="#D6F5EE" FontSize="11" FontWeight="SemiBold"/>
+                                        <TextBlock Text="{loc:Tr Buyer_TotalSnapshotLabel}" Foreground="#D6F5EE" FontSize="11" FontWeight="SemiBold"/>
                                         <TextBlock Text="{Binding TotalPreview, StringFormat={}{0:N2} USD}" Foreground="White" FontSize="26" FontWeight="SemiBold" Margin="0,2,0,0"/>
                                     </StackPanel>
                                 </Border>
@@ -318,12 +411,12 @@
                                     </ItemsControl.ItemTemplate>
                                 </ItemsControl>
 
-                                <Button Content="Luu build" Command="{Binding SaveBuildCommand}"
+                                <Button Content="{loc:Tr Buyer_SaveBuild}" Command="{Binding SaveBuildCommand}"
                                         Style="{StaticResource SuccessButton}" Margin="0,0,0,18"/>
 
                                 <Border Background="#F8FAFC" BorderBrush="{StaticResource BorderBrush}" BorderThickness="1" CornerRadius="6" Padding="14">
                                     <StackPanel>
-                                        <TextBlock Text="Gui request cho seller" FontWeight="SemiBold" Margin="0,0,0,8"/>
+                                        <TextBlock Text="{loc:Tr Buyer_SendRequestSection}" FontWeight="SemiBold" Margin="0,0,0,8"/>
                                         <ComboBox ItemsSource="{Binding AvailableSellers}" SelectedItem="{Binding SelectedSeller}" DisplayMemberPath="ShopName" Margin="0,0,0,6"/>
                                         <TextBlock Text="{Binding SellerEmptyMessage}" Foreground="{StaticResource DangerBrush}" FontSize="12" TextWrapping="Wrap"/>
 
@@ -335,33 +428,50 @@
                                                 <DockPanel Margin="0,0,0,8">
                                                     <Border DockPanel.Dock="Right" Style="{StaticResource BadgeChrome}"
                                                             Background="{Binding SellerStats.IsVerified, Converter={StaticResource BoolToBadgeBrush}}">
-                                                        <TextBlock Style="{StaticResource StatusBadgeText}"
-                                                                   Text="{Binding SellerStats.IsVerified, Converter={StaticResource BoolToLabel}, ConverterParameter='Verified|Chua verify'}"/>
+                                                        <TextBlock Style="{StaticResource StatusBadgeText}">
+                                                            <TextBlock.Text>
+                                                                <MultiBinding Converter="{StaticResource LocalizedBoolLabel}" ConverterParameter="Common_Verified|Common_Unverified">
+                                                                    <Binding Path="SellerStats.IsVerified"/>
+                                                                    <Binding Path="Language" Source="{x:Static loc:Loc.Instance}"/>
+                                                                </MultiBinding>
+                                                            </TextBlock.Text>
+                                                        </TextBlock>
                                                     </Border>
-                                                    <TextBlock Text="Uy tin seller" FontWeight="SemiBold" VerticalAlignment="Center"/>
+                                                    <TextBlock Text="{loc:Tr Buyer_SellerReputation}" FontWeight="SemiBold" VerticalAlignment="Center"/>
                                                 </DockPanel>
                                                 <DockPanel Margin="0,0,0,3">
                                                     <TextBlock DockPanel.Dock="Right" Text="{Binding SellerStats.ProductsMade}" FontWeight="SemiBold"/>
-                                                    <TextBlock Text="San pham da lam" Foreground="{StaticResource TextMutedBrush}" FontSize="12"/>
+                                                    <TextBlock Text="{loc:Tr Buyer_SellerProductsMade}" Foreground="{StaticResource TextMutedBrush}" FontSize="12"/>
                                                 </DockPanel>
                                                 <DockPanel Margin="0,0,0,3">
                                                     <TextBlock DockPanel.Dock="Right" Text="{Binding SellerStats.TotalOrders}" FontWeight="SemiBold"/>
-                                                    <TextBlock Text="Tong don nhan" Foreground="{StaticResource TextMutedBrush}" FontSize="12"/>
+                                                    <TextBlock Text="{loc:Tr Buyer_SellerTotalOrders}" Foreground="{StaticResource TextMutedBrush}" FontSize="12"/>
                                                 </DockPanel>
                                                 <DockPanel Margin="0,0,0,3">
                                                     <TextBlock DockPanel.Dock="Right" Text="{Binding SellerStats.Customers}" FontWeight="SemiBold"/>
-                                                    <TextBlock Text="Khach da phuc vu" Foreground="{StaticResource TextMutedBrush}" FontSize="12"/>
+                                                    <TextBlock Text="{loc:Tr Buyer_SellerCustomers}" Foreground="{StaticResource TextMutedBrush}" FontSize="12"/>
+                                                </DockPanel>
+                                                <DockPanel Margin="0,0,0,3">
+                                                    <TextBlock DockPanel.Dock="Right" FontWeight="SemiBold">
+                                                        <TextBlock.Text>
+                                                            <MultiBinding StringFormat="{}{0:N1} {1}">
+                                                                <Binding Path="SellerStats.AvgCompletionDays" TargetNullValue="-"/>
+                                                                <Binding Path="[Common_DaysUnit]" Source="{x:Static loc:Loc.Instance}"/>
+                                                            </MultiBinding>
+                                                        </TextBlock.Text>
+                                                    </TextBlock>
+                                                    <TextBlock Text="{loc:Tr Buyer_SellerAvgCompletion}" Foreground="{StaticResource TextMutedBrush}" FontSize="12"/>
                                                 </DockPanel>
                                                 <DockPanel>
                                                     <TextBlock DockPanel.Dock="Right" FontWeight="SemiBold"
                                                                Text="{Binding SellerStats.VerifiedAt, StringFormat=yyyy-MM-dd, TargetNullValue=-}"/>
-                                                    <TextBlock Text="Thanh vien tu" Foreground="{StaticResource TextMutedBrush}" FontSize="12"/>
+                                                    <TextBlock Text="{loc:Tr Buyer_SellerMemberSince}" Foreground="{StaticResource TextMutedBrush}" FontSize="12"/>
                                                 </DockPanel>
                                             </StackPanel>
                                         </Border>
                                         <TextBox Text="{Binding RequestNote, UpdateSourceTrigger=PropertyChanged}" Margin="0,6,0,8"
                                                  TextWrapping="Wrap" AcceptsReturn="True" MinHeight="44"/>
-                                        <Button Content="Gui request" Command="{Binding SendRequestCommand}"
+                                        <Button Content="{loc:Tr Buyer_SendRequest}" Command="{Binding SendRequestCommand}"
                                                 Style="{StaticResource PrimaryButton}" HorizontalAlignment="Stretch"/>
                                     </StackPanel>
                                 </Border>
@@ -377,26 +487,43 @@
                             <RowDefinition Height="Auto"/>
                             <RowDefinition Height="*"/>
                         </Grid.RowDefinitions>
-                        <TextBlock Text="Request da gui" Style="{StaticResource SectionTitle}"/>
-                        <DataGrid Grid.Row="1"
+                        <TextBlock Text="{loc:Tr Buyer_NavSentRequests}" Style="{StaticResource SectionTitle}"/>
+                        <Grid Grid.Row="1">
+                        <DataGrid x:Name="BuyerRequestsGrid"
                                   ItemsSource="{Binding Requests}"
                                   AlternationCount="2">
                             <DataGrid.Columns>
-                                <DataGridTextColumn Header="REQUEST" Binding="{Binding RequestId}" Width="*"/>
-                                <DataGridTextColumn Header="BUILD" Binding="{Binding BuildId}" Width="*"/>
-                                <DataGridTextColumn Header="SELLER" Binding="{Binding SellerUserId}" Width="90"/>
-                                <DataGridTemplateColumn Header="TRANG THAI" Width="130">
+                                <DataGridTextColumn Header="{loc:Tr Common_ColRequest}" Binding="{Binding RequestId}" Width="*"/>
+                                <DataGridTextColumn Header="{loc:Tr Common_ColBuild}" Binding="{Binding BuildId}" Width="*"/>
+                                <DataGridTextColumn Header="{loc:Tr Common_ColSeller}" Binding="{Binding SellerUserId}" Width="90"/>
+                                <DataGridTemplateColumn Header="{loc:Tr Common_ColStatus}" Width="130">
                                     <DataGridTemplateColumn.CellTemplate>
                                         <DataTemplate>
                                             <Border Style="{StaticResource StatusBadge}">
-                                                <TextBlock Text="{Binding Status, Converter={StaticResource StatusToTextConverter}}"
-                                                           Style="{StaticResource StatusBadgeText}"/>
+                                                <TextBlock Style="{StaticResource StatusBadgeText}">
+                                                    <TextBlock.Text>
+                                                        <MultiBinding Converter="{StaticResource LocalizedStatus}">
+                                                            <Binding Path="Status"/>
+                                                            <Binding Path="Language" Source="{x:Static loc:Loc.Instance}"/>
+                                                        </MultiBinding>
+                                                    </TextBlock.Text>
+                                                </TextBlock>
                                             </Border>
                                         </DataTemplate>
                                     </DataGridTemplateColumn.CellTemplate>
                                 </DataGridTemplateColumn>
                             </DataGrid.Columns>
                         </DataGrid>
+
+                        <Border Style="{StaticResource EmptyStateCard}"
+                                Visibility="{Binding Items.Count, ElementName=BuyerRequestsGrid, Converter={StaticResource CountToVisibility}}">
+                            <StackPanel>
+                                <TextBlock Text="{loc:Tr Buyer_EmptyRequestsTitle}" Style="{StaticResource EmptyStateTitle}"/>
+                                <TextBlock Text="{loc:Tr Buyer_EmptyRequestsText}"
+                                           Style="{StaticResource EmptyStateText}"/>
+                            </StackPanel>
+                        </Border>
+                        </Grid>
                     </Grid>
                 </Border>
 
@@ -404,14 +531,70 @@
                 <Border Visibility="{Binding ChatVisibility}" Background="{StaticResource BodyBgBrush}">
                     <views:ChatView DataContext="{Binding Chat}"/>
                 </Border>
+
+                <!-- Register as seller -->
+                <Border Visibility="{Binding RegisterSellerVisibility}" Style="{StaticResource DashboardCard}" VerticalAlignment="Top">
+                    <Grid MaxWidth="560" HorizontalAlignment="Left">
+                        <StackPanel>
+                            <TextBlock Text="{loc:Tr Buyer_BecomeSellerTitle}" Style="{StaticResource SectionTitle}"/>
+                            <TextBlock Text="{loc:Tr Buyer_BecomeSellerDesc}"
+                                       Foreground="{StaticResource TextMutedBrush}" TextWrapping="Wrap" Margin="0,0,0,14"/>
+
+                            <!-- Current application status -->
+                            <Border Background="#EEF2F6" CornerRadius="4" Padding="12,10" Margin="0,0,0,16">
+                                <StackPanel Orientation="Horizontal">
+                                    <Border Style="{StaticResource StatusBadge}"
+                                            Visibility="{Binding HasMyApplication, Converter={StaticResource BoolToVis}}"
+                                            DataContext="{Binding MyApplication}">
+                                        <TextBlock Style="{StaticResource StatusBadgeText}">
+                                            <TextBlock.Text>
+                                                <MultiBinding Converter="{StaticResource LocalizedStatus}">
+                                                    <Binding Path="Status"/>
+                                                    <Binding Path="Language" Source="{x:Static loc:Loc.Instance}"/>
+                                                </MultiBinding>
+                                            </TextBlock.Text>
+                                        </TextBlock>
+                                    </Border>
+                                    <TextBlock Text="{Binding MyApplicationStatusText}" Foreground="{StaticResource TextPrimaryBrush}"
+                                               VerticalAlignment="Center" Margin="10,0,0,0" TextWrapping="Wrap"/>
+                                </StackPanel>
+                            </Border>
+
+                            <TextBlock Text="{loc:Tr Common_ShopName}" Style="{StaticResource FieldLabel}"/>
+                            <TextBox Text="{Binding SellerAppShopName, UpdateSourceTrigger=PropertyChanged}" Margin="0,0,0,12"/>
+
+                            <TextBlock Text="{loc:Tr Common_Phone}" Style="{StaticResource FieldLabel}"/>
+                            <TextBox Text="{Binding SellerAppPhone, UpdateSourceTrigger=PropertyChanged}" Margin="0,0,0,12"/>
+
+                            <TextBlock Text="{loc:Tr Common_Address}" Style="{StaticResource FieldLabel}"/>
+                            <TextBox Text="{Binding SellerAppAddress, UpdateSourceTrigger=PropertyChanged}" Margin="0,0,0,12"
+                                     TextWrapping="Wrap" AcceptsReturn="True" MinHeight="44"/>
+
+                            <TextBlock Text="{loc:Tr Buyer_NoteOptional}" Style="{StaticResource FieldLabel}"/>
+                            <TextBox Text="{Binding SellerAppNote, UpdateSourceTrigger=PropertyChanged}" Margin="0,0,0,16"
+                                     TextWrapping="Wrap" AcceptsReturn="True" MinHeight="44"/>
+
+                            <Button Content="{loc:Tr Buyer_SubmitApplication}" Command="{Binding SubmitSellerApplicationCommand}"
+                                    Style="{StaticResource PrimaryButton}" HorizontalAlignment="Left"/>
+                        </StackPanel>
+                    </Grid>
+                </Border>
             </Grid>
 
             <!-- Status bar -->
             <Border Grid.Row="2" Margin="0,12,0,0" Background="#EEF2F6" CornerRadius="4" Padding="12,8">
-                <StackPanel Orientation="Horizontal">
-                    <Border Width="4" Background="{StaticResource AccentBrush}" CornerRadius="2" Margin="0,0,10,0"/>
-                    <TextBlock Text="{Binding StatusMessage}" Foreground="{StaticResource TextMutedBrush}" VerticalAlignment="Center"/>
-                </StackPanel>
+                <DockPanel>
+                    <Border DockPanel.Dock="Right"
+                            Style="{StaticResource BadgeChrome}"
+                            Background="{StaticResource AccentBrush}"
+                            Visibility="{Binding IsBusy, Converter={StaticResource BoolToVis}}">
+                        <TextBlock Text="{loc:Tr Common_Processing}" Style="{StaticResource StatusBadgeText}"/>
+                    </Border>
+                    <StackPanel Orientation="Horizontal">
+                        <Border Width="4" Background="{StaticResource AccentBrush}" CornerRadius="2" Margin="0,0,10,0"/>
+                        <TextBlock Text="{Binding StatusMessage}" Foreground="{StaticResource TextMutedBrush}" VerticalAlignment="Center"/>
+                    </StackPanel>
+                </DockPanel>
             </Border>
         </Grid>
     </Grid>

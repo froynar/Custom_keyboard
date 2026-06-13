@@ -28,6 +28,9 @@ public sealed class StatusToBrushConverter : IValueConverter
             "Saved" => "InfoBrush",
             "Requested" => "WarningBrush",
             "Archived" => "DefaultBadgeBrush",
+            // SellerApplicationStatus
+            "Approved" => "SuccessBrush",
+            "Rejected" => "DangerBrush",
             _ => "DefaultBadgeBrush"
         };
 
@@ -78,6 +81,30 @@ public sealed class BoolToLabelConverter : IValueConverter
         var onText = parts.Length > 0 ? parts[0] : "Yes";
         var offText = parts.Length > 1 ? parts[1] : "No";
         return value is true ? onText : offText;
+    }
+
+    public object ConvertBack(object? value, Type targetType, object? parameter, CultureInfo culture)
+        => throw new NotSupportedException();
+}
+
+/// <summary>
+/// Shows an empty-state overlay when a bound count is zero.
+/// Use ConverterParameter="NonEmpty" when the visible condition should be count greater than zero.
+/// </summary>
+public sealed class CountToVisibilityConverter : IValueConverter
+{
+    public object Convert(object? value, Type targetType, object? parameter, CultureInfo culture)
+    {
+        var count = value switch
+        {
+            int intValue => intValue,
+            System.Collections.ICollection collection => collection.Count,
+            _ => 0
+        };
+
+        var showWhenNonEmpty = string.Equals(parameter as string, "NonEmpty", StringComparison.OrdinalIgnoreCase);
+        var isVisible = showWhenNonEmpty ? count > 0 : count == 0;
+        return isVisible ? Visibility.Visible : Visibility.Collapsed;
     }
 
     public object ConvertBack(object? value, Type targetType, object? parameter, CultureInfo culture)

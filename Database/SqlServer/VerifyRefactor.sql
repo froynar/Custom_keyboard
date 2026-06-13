@@ -14,8 +14,8 @@ PRINT ' 14.1  Row counts per table (compare to Summary 12.1)';
 PRINT '       Expected: roles 3, users 7, seller_profiles 3, brands 13,';
 PRINT '       layouts 4, keyboard_kits 9, switches 10, keycap_sets 5,';
 PRINT '       stabilizers 4, accessories 7, builds 5, build_items 17,';
-PRINT '       build_mods 5, build_requests 2, audit_log 3,';
-PRINT '       chat_conversations 2, chat_messages 4.';
+PRINT '       build_mods 5, build_requests 2, audit_log >=3,';
+PRINT '       chat_conversations 2, chat_messages 4, seller_applications >=1.';
 PRINT '================================================================';
 SELECT 'roles' AS table_name, COUNT(*) AS row_count, 3 AS expected_count FROM roles
 UNION ALL SELECT 'users', COUNT(*), 7 FROM users
@@ -33,7 +33,8 @@ UNION ALL SELECT 'build_mods', COUNT(*), 5 FROM build_mods
 UNION ALL SELECT 'build_requests', COUNT(*), 2 FROM build_requests
 UNION ALL SELECT 'audit_log', COUNT(*), 3 FROM audit_log
 UNION ALL SELECT 'chat_conversations', COUNT(*), 2 FROM chat_conversations
-UNION ALL SELECT 'chat_messages', COUNT(*), 4 FROM chat_messages;
+UNION ALL SELECT 'chat_messages', COUNT(*), 4 FROM chat_messages
+UNION ALL SELECT 'seller_applications', COUNT(*), 1 FROM seller_applications;
 GO
 
 PRINT '================================================================';
@@ -187,6 +188,37 @@ WHERE m.sender_user_id NOT IN (
     ISNULL(c.buyer_id, -1),
     ISNULL(c.admin_user_id, -1)
 );
+GO
+
+PRINT '================================================================';
+PRINT ' Extra D  Seller applications: valid status + applicant/reviewer exist';
+PRINT '          Expected: 0 rows.';
+PRINT '================================================================';
+SELECT problem, application_id, status
+FROM (
+    SELECT 'invalid_status_or_fk' AS problem, sa.application_id, sa.status
+    FROM seller_applications sa
+    LEFT JOIN users b ON b.user_id = sa.buyer_user_id
+    LEFT JOIN users r ON r.user_id = sa.reviewed_by
+    WHERE sa.status NOT IN ('Pending', 'Approved', 'Rejected')
+       OR b.user_id IS NULL
+       OR (sa.reviewed_by IS NOT NULL AND r.user_id IS NULL)
+
+    UNION ALL
+    SELECT 'pending_applicant_not_active_buyer', sa.application_id, sa.status
+    FROM seller_applications sa
+    INNER JOIN users b ON b.user_id = sa.buyer_user_id
+    INNER JOIN roles br ON br.role_id = b.role_id
+    WHERE sa.status = 'Pending'
+      AND (b.is_active = 0 OR br.role_name <> 'Buyer')
+
+    UNION ALL
+    SELECT 'duplicate_pending_for_buyer', MIN(sa.application_id), 'Pending'
+    FROM seller_applications sa
+    WHERE sa.status = 'Pending'
+    GROUP BY sa.buyer_user_id
+    HAVING COUNT(*) > 1
+) problems;
 GO
 
 PRINT 'Verification queries complete.';

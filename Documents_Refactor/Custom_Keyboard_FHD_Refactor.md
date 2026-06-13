@@ -19,7 +19,7 @@ flowchart TD
     B --> B1["1.1 Dang ky"]
     B --> B2["1.2 Dang nhap"]
     B --> B3["1.3 Dang xuat"]
-    B --> B4["1.4 Xem thong tin tai khoan"]
+    B --> B4["1.4 Xem profile tai khoan"]
 
     C --> C1["2.1 Xem dashboard buyer"]
     C --> C2["2.2 Xem danh sach build"]
@@ -33,6 +33,7 @@ flowchart TD
     C --> C10["2.10 Gui request"]
     C --> C11["2.11 Theo doi request"]
     C --> C12["2.12 Luu tru build"]
+    C --> C13["2.13 Dang ky tro thanh seller"]
 
     D --> D1["3.1 Xem dashboard seller"]
     D --> D2["3.2 Xem danh sach request"]
@@ -47,6 +48,7 @@ flowchart TD
     E --> E3["4.3 Quan ly seller profile"]
     E --> E4["4.4 Quan ly catalog"]
     E --> E5["4.5 Xem audit log"]
+    E --> E6["4.6 Duyet don xin lam seller"]
 
     F --> F1["5.1 Buyer chat voi seller"]
     F --> F2["5.2 Seller chat voi buyer"]
@@ -63,7 +65,7 @@ flowchart TD
 | 1.1 | Dang ky | Nguoi dung tao tai khoan moi. |
 | 1.2 | Dang nhap | Nguoi dung dang nhap de vao dung dashboard theo role. |
 | 1.3 | Dang xuat | Nguoi dung thoat khoi phien lam viec hien tai. |
-| 1.4 | Xem thong tin tai khoan | Nguoi dung xem thong tin co ban va vai tro hien tai. |
+| 1.4 | Xem profile tai khoan | Buyer/Seller/Admin mo user menu goc tren phai va bam Profile settings de xem username, email, phone, role, status va user id cua chinh minh. |
 
 ### 2. Buyer - Tao build tu kit
 
@@ -73,7 +75,7 @@ flowchart TD
 | 2.2 | Xem danh sach build | Buyer xem cac build da tao theo kit, tong gia va trang thai. |
 | 2.3 | Tao build moi | Buyer bat dau mot build moi. |
 | 2.4 | Chon keyboard kit | Buyer chon kit lam nen tang build. |
-| 2.5 | Them linh kien vao build | Buyer them switch, keycap, stabilizer, accessory va mod note. |
+| 2.5 | Them linh kien vao build | Buyer them switch, keycap, stabilizer, accessory va mod preset; mod Switch co so luong switch can mod, Spring swap co gram 30-76g. |
 | 2.6 | Xem canh bao tuong thich | Buyer xem canh bao neu linh kien khong hop voi kit. |
 | 2.7 | Xem tong gia | Buyer xem tong gia tam tinh cua build. |
 | 2.8 | Luu build | Buyer luu cau hinh build. |
@@ -81,6 +83,7 @@ flowchart TD
 | 2.10 | Gui request | Buyer gui build da luu cho seller. |
 | 2.11 | Theo doi request | Buyer theo doi trang thai request. |
 | 2.12 | Luu tru build | Buyer an build khoi danh sach chinh khi khong con can thao tac. |
+| 2.13 | Dang ky tro thanh seller | Buyer gui don (ten shop/phone/dia chi/ghi chu) xin nang cap len seller; xem trang thai don. |
 
 ### 3. Seller - Xu ly request
 
@@ -103,6 +106,7 @@ flowchart TD
 | 4.3 | Quan ly seller profile | Admin tao/cap nhat profile va verify/unverify seller. |
 | 4.4 | Quan ly catalog | Admin quan ly brand, layout, kit, switch, keycap, stabilizer va accessory. |
 | 4.5 | Xem audit log | Admin xem lich su thao tac quan trong. |
+| 4.6 | Duyet don xin lam seller | Admin xem hang doi don, chap nhan (buyer -> seller da verify) hoac tu choi; ghi audit. |
 
 ### 5. Chat
 

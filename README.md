@@ -29,7 +29,7 @@ Quickstart:
 2. Tao schema (script tu `CREATE DATABASE`, chay **khong kem `-d`**): `CreateSchema_Refactor.sql`.
 3. Seed du lieu (da gom hash that cua `Password123`): `Documents_Refactor/SeedData_Refactor.sql`.
 4. `dotnet build` -> `dotnet run`.
-5. Verify: `dotnet run --project Phase6Verification\Phase6Verification.csproj` -> ky vong `Passed: 14`.
+5. Verify: `dotnet run --project Phase6Verification\Phase6Verification.csproj` -> ky vong `Passed: 18`.
 
 Tai khoan seed (mat khau **`Password123`**, login bang username hoac email):
 
@@ -294,13 +294,14 @@ Vi du (kit-based, khop `RequestService` snapshot — kit + build_items, khong co
 
 - User management.
 - Seller profile va verify/unverify seller.
+- Duyet don xin lam seller (buyer nop don -> admin chap nhan/tu choi; chap nhan se nang role Buyer len Seller da verify + tao seller profile).
 - Component management: them/sua/an/khoi phuc linh kien.
 - Audit log viewer.
 
 ### Phase 4: Buyer Build Configuration
 
 - Buyer dashboard hien build da luu va request da gui.
-- Build configurator chon layout/case/PCB/plate/switch/keycap/stabilizer/mod.
+- Build configurator chon keyboard kit (kit da gom case/PCB/plate) + switch/keycap/stabilizer/accessory/mod.
 - Kiem tra compatibility va tinh `total_cost_snapshot`.
 - Luu build vao `builds` va mod vao `build_mods`.
 
@@ -310,6 +311,7 @@ Vi du (kit-based, khop `RequestService` snapshot — kit + build_items, khong co
 - Buyer chon build da luu, chon seller, nhap note request.
 - Tao JSON snapshot va luu request `Pending`.
 - Buyer theo doi request da gui.
+- Buyer co the **dang ky tro thanh seller** (man "Dang ky Seller"): nhap ten shop/phone/dia chi/ghi chu -> tao don `Pending` cho admin duyet; sau khi duoc duyet thi dang nhap lai de vao dashboard seller.
 
 ### Phase 6: Seller Xu Ly Request
 
@@ -380,10 +382,10 @@ Chay Phase 6 verification:
 dotnet run --project Phase6Verification\Phase6Verification.csproj
 ```
 
-Verification (14 checks, ky vong `Passed: 14`) bao gom:
+Verification (18 checks, ky vong `Passed: 18`) bao gom:
 
-- Unit-style checks cho `BuildService`, `RequestService` (state machine, seller scoping T08/T09, chan seller unverified, realtime best-effort), `ChatService` (participant + admin-seller), `AccountService` (validate email/phone + login dung/sai/banned T01/T02) va `AdminService` (audit log).
-- SQL integration: tao build tam/gui request/tao chat roi cleanup; **seed accounts login `Password123`** (admin/buyer/seller) + banned seed account bi chan.
+- Unit-style checks cho `BuildService`, `RequestService` (state machine, seller scoping T08/T09, chan seller unverified, realtime best-effort), `ChatService` (participant + admin-seller), `AccountService` (validate email/phone + login dung/sai/banned T01/T02), `AdminService` (audit log), `StatsService` (role/active guard), va Buyer dashboard switch filtering.
+- SQL integration: tao build tam/gui request/tao chat roi cleanup; analytics aggregates seller/buyer/admin; **seed accounts login `Password123`** (admin/buyer/seller) + banned seed account bi chan.
 - DB invariant checks tu `VerifyRefactor.sql`: total snapshot, switch quantity, exactly-one-FK, seller verified, conversation XOR, FK orphan, requested build/request, chat sender participant, password hash format.
 - UI smoke manual/automation da kiem buyer/seller/admin login khong con popup `Loi (UI thread)`.
 

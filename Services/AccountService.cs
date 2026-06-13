@@ -1,4 +1,5 @@
 using System.Text.RegularExpressions;
+using Custom_keyboard.Localization;
 using Custom_keyboard.Models.Accounts;
 using Custom_keyboard.Models.Enums;
 using Custom_keyboard.Repositories;
@@ -38,7 +39,7 @@ public sealed class AccountService : IAccountService
         {
             return AccountResult.Failure(
                 AccountOperationStatus.ValidationError,
-                "Nhap email/username va mat khau.");
+                Loc.Instance["Account_LoginEmpty"]);
         }
 
         var user = await _userRepository.FindByEmailOrUsernameAsync(emailOrUsername, cancellationToken);
@@ -46,14 +47,14 @@ public sealed class AccountService : IAccountService
         {
             return AccountResult.Failure(
                 AccountOperationStatus.InvalidCredentials,
-                "Email/username hoac mat khau khong dung.");
+                Loc.Instance["Account_InvalidCredentials"]);
         }
 
         if (!user.IsActive)
         {
             return AccountResult.Failure(
                 AccountOperationStatus.InactiveUser,
-                "Tai khoan dang bi khoa.");
+                Loc.Instance["Account_Inactive"]);
         }
 
         CurrentUser = user;
@@ -80,43 +81,43 @@ public sealed class AccountService : IAccountService
         {
             return AccountResult.Failure(
                 AccountOperationStatus.ValidationError,
-                "Nhap day du username, email, phone va mat khau.");
+                Loc.Instance["Account_RegisterEmpty"]);
         }
 
         if (password.Length < 6)
         {
             return AccountResult.Failure(
                 AccountOperationStatus.ValidationError,
-                "Mat khau can it nhat 6 ky tu.");
+                Loc.Instance["Account_PasswordTooShort"]);
         }
 
         if (!EmailPattern.IsMatch(email))
         {
             return AccountResult.Failure(
                 AccountOperationStatus.ValidationError,
-                "Email khong dung dinh dang (vd: ten@domain.com).");
+                Loc.Instance["Account_EmailInvalid"]);
         }
 
         if (!PhonePattern.IsMatch(phone))
         {
             return AccountResult.Failure(
                 AccountOperationStatus.ValidationError,
-                "So dien thoai khong hop le (8-15 chu so, co the bat dau bang +).");
+                Loc.Instance["Account_PhoneInvalid"]);
         }
 
         if (await _userRepository.FindByUsernameAsync(username, cancellationToken) is not null)
         {
-            return AccountResult.Failure(AccountOperationStatus.DuplicateUsername, "Username da ton tai.");
+            return AccountResult.Failure(AccountOperationStatus.DuplicateUsername, Loc.Instance["Account_DuplicateUsername"]);
         }
 
         if (await _userRepository.FindByEmailAsync(email, cancellationToken) is not null)
         {
-            return AccountResult.Failure(AccountOperationStatus.DuplicateEmail, "Email da ton tai.");
+            return AccountResult.Failure(AccountOperationStatus.DuplicateEmail, Loc.Instance["Account_DuplicateEmail"]);
         }
 
         if (await _userRepository.FindByPhoneAsync(phone, cancellationToken) is not null)
         {
-            return AccountResult.Failure(AccountOperationStatus.DuplicatePhone, "Phone da ton tai.");
+            return AccountResult.Failure(AccountOperationStatus.DuplicatePhone, Loc.Instance["Account_DuplicatePhone"]);
         }
 
         var user = new User
@@ -130,7 +131,7 @@ public sealed class AccountService : IAccountService
         };
 
         var created = await _userRepository.AddAsync(user, cancellationToken);
-        return AccountResult.Success(created, "Dang ky thanh cong. Hay dang nhap.");
+        return AccountResult.Success(created, Loc.Instance["Account_RegisterSuccess"]);
     }
 
     public Task<User?> GetAccountInfoAsync(int userId, CancellationToken cancellationToken = default)

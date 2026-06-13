@@ -1,3 +1,4 @@
+using Custom_keyboard.Localization;
 using Custom_keyboard.Models.Accounts;
 using Custom_keyboard.Models.Chat;
 using Custom_keyboard.Models.Enums;
@@ -27,7 +28,7 @@ public sealed class ChatService : IChatService
     {
         if (userId <= 0)
         {
-            throw new InvalidOperationException("User khong hop le.");
+            throw new InvalidOperationException(Loc.Instance["Service_InvalidUser"]);
         }
 
         return _chatRepository.GetConversationsForUserAsync(userId, cancellationToken);
@@ -44,7 +45,7 @@ public sealed class ChatService : IChatService
 
         if (sellerUserId == buyerId)
         {
-            throw new InvalidOperationException("Seller va buyer khong duoc trung nhau.");
+            throw new InvalidOperationException(Loc.Instance["Service_SellerBuyerSame"]);
         }
 
         return await _chatRepository.GetOrCreateConversationAsync(
@@ -89,13 +90,13 @@ public sealed class ChatService : IChatService
     {
         if (string.IsNullOrWhiteSpace(messageText))
         {
-            throw new InvalidOperationException("Noi dung tin nhan khong duoc rong.");
+            throw new InvalidOperationException(Loc.Instance["Service_MessageEmpty"]);
         }
 
         var text = messageText.Trim();
         if (text.Length > MessageMaxLength)
         {
-            throw new InvalidOperationException($"Tin nhan khong duoc vuot qua {MessageMaxLength} ky tu.");
+            throw new InvalidOperationException(Loc.Instance.Format("Service_MessageTooLong", MessageMaxLength));
         }
 
         var conversation = await RequireConversationAsync(conversationId, cancellationToken);
@@ -115,15 +116,15 @@ public sealed class ChatService : IChatService
     {
         if (string.IsNullOrWhiteSpace(conversationId))
         {
-            throw new InvalidOperationException("Conversation khong hop le.");
+            throw new InvalidOperationException(Loc.Instance["Service_InvalidConversation"]);
         }
 
         var conversation = await _chatRepository.GetConversationByIdAsync(conversationId.Trim(), cancellationToken)
-            ?? throw new InvalidOperationException("Conversation khong ton tai.");
+            ?? throw new InvalidOperationException(Loc.Instance["Service_ConversationNotExist"]);
 
         if (!conversation.HasValidParticipants())
         {
-            throw new InvalidOperationException("Conversation phai co dung mot buyer hoac admin.");
+            throw new InvalidOperationException(Loc.Instance["Service_ConversationParticipants"]);
         }
 
         return conversation;
@@ -137,7 +138,7 @@ public sealed class ChatService : IChatService
 
         if (!isParticipant)
         {
-            throw new InvalidOperationException("User khong thuoc conversation nay.");
+            throw new InvalidOperationException(Loc.Instance["Service_NotConversationParticipant"]);
         }
     }
 
@@ -147,11 +148,11 @@ public sealed class ChatService : IChatService
         _ = seller;
 
         var profile = await _sellerRepository.GetBySellerUserIdAsync(sellerUserId, cancellationToken)
-            ?? throw new InvalidOperationException("Seller chua co profile.");
+            ?? throw new InvalidOperationException(Loc.Instance["Service_SellerNoProfile"]);
 
         if (!profile.IsVerified)
         {
-            throw new InvalidOperationException("Seller chua duoc verified.");
+            throw new InvalidOperationException(Loc.Instance["Service_SellerNotVerified"]);
         }
     }
 
@@ -159,20 +160,20 @@ public sealed class ChatService : IChatService
     {
         if (userId <= 0)
         {
-            throw new InvalidOperationException($"{roleLabel} khong hop le.");
+            throw new InvalidOperationException(Loc.Instance.Format("Service_InvalidEntity", roleLabel));
         }
 
         var user = await _userRepository.GetByIdAsync(userId, cancellationToken)
-            ?? throw new InvalidOperationException($"Khong tim thay {roleLabel}.");
+            ?? throw new InvalidOperationException(Loc.Instance.Format("Service_EntityNotFound", roleLabel));
 
         if (user.Role != role)
         {
-            throw new InvalidOperationException($"User khong phai {roleLabel}.");
+            throw new InvalidOperationException(Loc.Instance.Format("Service_UserNotRole", roleLabel));
         }
 
         if (!user.IsActive)
         {
-            throw new InvalidOperationException($"{roleLabel} dang bi khoa.");
+            throw new InvalidOperationException(Loc.Instance.Format("Service_EntityLocked", roleLabel));
         }
 
         return user;

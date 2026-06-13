@@ -1,4 +1,5 @@
 using System.Text.Json;
+using Custom_keyboard.Localization;
 using Custom_keyboard.Models.Accounts;
 using Custom_keyboard.Models.Admin;
 using Custom_keyboard.Models.Components;
@@ -73,7 +74,7 @@ public sealed class AdminService : IAdminService
 
         if (userId == adminUserId && !isActive)
         {
-            throw new InvalidOperationException("Admin khong the khoa chinh tai khoan dang dung.");
+            throw new InvalidOperationException(Loc.Instance["Service_AdminCannotLockSelf"]);
         }
 
         await _userRepository.SetActiveAsync(userId, isActive, cancellationToken);
@@ -100,7 +101,7 @@ public sealed class AdminService : IAdminService
 
         if (userId == adminUserId && role != UserRole.Admin)
         {
-            throw new InvalidOperationException("Admin khong the doi role cua chinh minh khoi Admin.");
+            throw new InvalidOperationException(Loc.Instance["Service_AdminCannotChangeOwnRole"]);
         }
 
         await _userRepository.SetRoleAsync(userId, role, cancellationToken);
@@ -125,7 +126,7 @@ public sealed class AdminService : IAdminService
         var sellerUser = await RequireUserAsync(sellerProfile.UserId, cancellationToken);
         if (sellerUser.Role != UserRole.Seller)
         {
-            throw new InvalidOperationException("Chi user role Seller moi co seller profile.");
+            throw new InvalidOperationException(Loc.Instance["Service_OnlySellerProfile"]);
         }
 
         var oldProfile = await _sellerRepository.GetBySellerUserIdAsync(sellerProfile.UserId, cancellationToken);
@@ -171,20 +172,20 @@ public sealed class AdminService : IAdminService
         var sellerUser = await RequireUserAsync(sellerUserId, cancellationToken);
         if (sellerUser.Role != UserRole.Seller)
         {
-            throw new InvalidOperationException("Chi user role Seller moi duoc verify.");
+            throw new InvalidOperationException(Loc.Instance["Service_OnlySellerVerify"]);
         }
 
         if (isVerified && !sellerUser.IsActive)
         {
-            throw new InvalidOperationException("Khong the verify seller dang bi khoa.");
+            throw new InvalidOperationException(Loc.Instance["Service_CannotVerifyLocked"]);
         }
 
         var oldProfile = await _sellerRepository.GetBySellerUserIdAsync(sellerUserId, cancellationToken)
-            ?? throw new InvalidOperationException("Hay tao seller profile truoc khi verify.");
+            ?? throw new InvalidOperationException(Loc.Instance["Service_CreateProfileBeforeVerify"]);
 
         await _sellerRepository.SetVerifiedAsync(sellerUserId, isVerified, adminUserId, cancellationToken);
         var newProfile = await _sellerRepository.GetBySellerUserIdAsync(sellerUserId, cancellationToken)
-            ?? throw new InvalidOperationException("Khong tim thay seller profile sau khi cap nhat.");
+            ?? throw new InvalidOperationException(Loc.Instance["Service_SellerProfileNotFoundAfterUpdate"]);
 
         await AddAuditAsync(
             adminUserId,
@@ -291,11 +292,11 @@ public sealed class AdminService : IAdminService
         await EnsureAdminAsync(adminUserId, cancellationToken);
         componentId = componentId.Trim();
         var oldComponent = await _componentRepository.GetAdminComponentByIdAsync(componentType, componentId, cancellationToken)
-            ?? throw new InvalidOperationException("Khong tim thay linh kien.");
+            ?? throw new InvalidOperationException(Loc.Instance["Service_ComponentNotFound"]);
 
         await _componentRepository.SetComponentAvailabilityAsync(componentType, componentId, isAvailable, cancellationToken);
         var newComponent = await _componentRepository.GetAdminComponentByIdAsync(componentType, componentId, cancellationToken)
-            ?? throw new InvalidOperationException("Khong tim thay linh kien sau khi cap nhat.");
+            ?? throw new InvalidOperationException(Loc.Instance["Service_ComponentNotFoundAfterUpdate"]);
 
         await AddAuditAsync(
             adminUserId,
@@ -315,14 +316,14 @@ public sealed class AdminService : IAdminService
         var adminUser = await RequireUserAsync(adminUserId, cancellationToken);
         if (adminUser.Role != UserRole.Admin || !adminUser.IsActive)
         {
-            throw new InvalidOperationException("Chi admin active moi duoc thuc hien thao tac nay.");
+            throw new InvalidOperationException(Loc.Instance["Service_OnlyActiveAdmin"]);
         }
     }
 
     private async Task<User> RequireUserAsync(int userId, CancellationToken cancellationToken)
     {
         return await _userRepository.GetByIdAsync(userId, cancellationToken)
-            ?? throw new InvalidOperationException("Khong tim thay user.");
+            ?? throw new InvalidOperationException(Loc.Instance["Service_UserNotFound"]);
     }
 
     private static void ValidateSellerProfile(SellerProfile sellerProfile)
@@ -331,7 +332,7 @@ public sealed class AdminService : IAdminService
             || string.IsNullOrWhiteSpace(sellerProfile.Phone)
             || string.IsNullOrWhiteSpace(sellerProfile.Address))
         {
-            throw new InvalidOperationException("Nhap day du shop name, phone va address.");
+            throw new InvalidOperationException(Loc.Instance["Service_SellerProfileFieldsRequired"]);
         }
     }
 
@@ -339,7 +340,7 @@ public sealed class AdminService : IAdminService
     {
         if (string.IsNullOrWhiteSpace(brand.BrandName))
         {
-            throw new InvalidOperationException("Nhap brand name.");
+            throw new InvalidOperationException(Loc.Instance["Service_BrandNameRequired"]);
         }
     }
 
@@ -349,12 +350,12 @@ public sealed class AdminService : IAdminService
             || string.IsNullOrWhiteSpace(layout.LayoutName)
             || string.IsNullOrWhiteSpace(layout.FormFactor))
         {
-            throw new InvalidOperationException("Nhap day du layout id, name va form factor.");
+            throw new InvalidOperationException(Loc.Instance["Service_LayoutFieldsRequired"]);
         }
 
         if (layout.KeyCount <= 0)
         {
-            throw new InvalidOperationException("Key count phai lon hon 0.");
+            throw new InvalidOperationException(Loc.Instance["Service_KeyCountPositive"]);
         }
     }
 
@@ -362,23 +363,23 @@ public sealed class AdminService : IAdminService
     {
         if (string.IsNullOrWhiteSpace(component.ComponentId))
         {
-            throw new InvalidOperationException("Nhap component id.");
+            throw new InvalidOperationException(Loc.Instance["Service_ComponentIdRequired"]);
         }
 
         if (string.IsNullOrWhiteSpace(component.Name))
         {
-            throw new InvalidOperationException("Nhap ten linh kien.");
+            throw new InvalidOperationException(Loc.Instance["Service_ComponentNameRequired"]);
         }
 
         if (component.PriceUsd < 0)
         {
-            throw new InvalidOperationException("Gia linh kien khong duoc am.");
+            throw new InvalidOperationException(Loc.Instance["Service_ComponentPriceNegative"]);
         }
 
         // Accessories have no brand in the refactor ERD; all other catalog types require one.
         if (component.ComponentType != AdminComponentType.Accessory && component.BrandId <= 0)
         {
-            throw new InvalidOperationException("BrandId phai lon hon 0.");
+            throw new InvalidOperationException(Loc.Instance["Service_BrandIdPositive"]);
         }
 
         switch (component.ComponentType)
@@ -389,7 +390,7 @@ public sealed class AdminService : IAdminService
                 RequireText(component.SwitchMount, "Switch mount");
                 if (component.RequiredSwitchQuantity <= 0)
                 {
-                    throw new InvalidOperationException("Required switch quantity phai lon hon 0.");
+                    throw new InvalidOperationException(Loc.Instance["Service_RequiredSwitchQtyPositive"]);
                 }
 
                 break;
@@ -398,7 +399,7 @@ public sealed class AdminService : IAdminService
                 RequireText(component.MountType, "Mount type");
                 if (component.ActuationForceG is <= 0)
                 {
-                    throw new InvalidOperationException("Actuation force phai lon hon 0.");
+                    throw new InvalidOperationException(Loc.Instance["Service_ActuationForcePositive"]);
                 }
 
                 break;
@@ -413,7 +414,7 @@ public sealed class AdminService : IAdminService
                 RequireText(component.TargetComponent, "Target component");
                 if (!IsValidAccessoryTarget(component.TargetComponent))
                 {
-                    throw new InvalidOperationException("Target component phai la Switch, Stabilizer, Kit hoac General.");
+                    throw new InvalidOperationException(Loc.Instance["Service_TargetComponentInvalid"]);
                 }
 
                 break;

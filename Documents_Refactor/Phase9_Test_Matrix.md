@@ -2,7 +2,7 @@
 
 **Cập nhật:** 13/06/2026
 **Nguồn sự thật:** code nhánh `refactor/kit-based-erd` + runner `Phase6Verification`.
-**Kết quả tự động:** `Phase6Verification` **14/14 PASS** (10 unit + 1 realtime best-effort + 3 SQL: integration build/request/chat, **seed-account login `Password123`** (Phase 10), invariant queries).
+**Kết quả tự động:** `Phase6Verification` **18/18 PASS** (unit checks + realtime best-effort + SQL build/request/chat + SQL analytics aggregates, **seed-account login `Password123`** (Phase 10), stats service role/active guard, buyer dashboard switch filtering, invariant queries, requested-build/archive visibility review fixes).
 
 > Ghi chú: bộ test vẫn mang tên lịch sử "Phase 6 verification" nhưng nay phủ cả các case Phase 9. Đổi tên project là việc cosmetic, chưa làm để tránh vỡ tham chiếu trong docs/roadmap.
 
@@ -50,7 +50,7 @@ dotnet run --project Phase6Verification/Phase6Verification.csproj
 
 ## 3. Invariant nền (ngoài T01–T16, chạy kèm trong runner)
 
-`VerifyRefactor invariant queries return clean results` kiểm 17 bảng + các bất biến nghiệp vụ, gồm:
+`VerifyRefactor invariant queries return clean results` kiểm 18 bảng + các bất biến nghiệp vụ, gồm:
 
 - Row count seed đúng kỳ vọng (cho phép baseline ≥ ở các bảng giao dịch).
 - User bắt buộc đủ field, không trùng username/email/phone.

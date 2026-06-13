@@ -3,6 +3,7 @@ using System.Windows;
 using System.Windows.Input;
 using Custom_keyboard.Commands;
 using Custom_keyboard.Diagnostics;
+using Custom_keyboard.Localization;
 using Custom_keyboard.Models.Accounts;
 using Custom_keyboard.Models.Chat;
 using Custom_keyboard.Models.Enums;
@@ -31,10 +32,10 @@ public sealed class ChatViewModel : ViewModelBase
         _requestService = requestService;
         _currentUser = currentUser;
 
-        RefreshConversationsCommand = new AsyncRelayCommand(_ => ExecuteSafeAsync(RefreshConversationsAsync, "Da refresh hoi thoai."));
+        RefreshConversationsCommand = new AsyncRelayCommand(_ => ExecuteSafeAsync(RefreshConversationsAsync, Tr("Chat_RefreshedConversations")));
         StartConversationCommand = new AsyncRelayCommand(_ => ExecuteSafeAsync(StartConversationAsync), _ => CanStartConversation && SelectedCounterpart is not null && !IsBusy);
-        SendMessageCommand = new AsyncRelayCommand(_ => ExecuteSafeAsync(SendMessageAsync, "Da gui tin nhan."), _ => SelectedConversation is not null && !string.IsNullOrWhiteSpace(MessageText) && !IsBusy);
-        RefreshMessagesCommand = new AsyncRelayCommand(_ => ExecuteSafeAsync(RefreshMessagesAsync, "Da refresh tin nhan."), _ => SelectedConversation is not null && !IsBusy);
+        SendMessageCommand = new AsyncRelayCommand(_ => ExecuteSafeAsync(SendMessageAsync, Tr("Chat_MessageSent")), _ => SelectedConversation is not null && !string.IsNullOrWhiteSpace(MessageText) && !IsBusy);
+        RefreshMessagesCommand = new AsyncRelayCommand(_ => ExecuteSafeAsync(RefreshMessagesAsync, Tr("Chat_RefreshedMessages")), _ => SelectedConversation is not null && !IsBusy);
     }
 
     public ObservableCollection<ConversationItemViewModel> Conversations { get; } = [];
@@ -48,7 +49,7 @@ public sealed class ChatViewModel : ViewModelBase
 
     public bool CanStartConversation => _currentUser.Role is UserRole.Buyer or UserRole.Admin;
     public Visibility StartConversationVisibility => CanStartConversation ? Visibility.Visible : Visibility.Collapsed;
-    public string CounterpartLabel => _currentUser.Role == UserRole.Admin ? "Chon seller de chat" : "Chon seller de chat";
+    public string CounterpartLabel => Tr("Chat_SelectSeller");
 
     public bool IsBusy
     {
@@ -168,7 +169,7 @@ public sealed class ChatViewModel : ViewModelBase
     {
         if (SelectedCounterpart is null)
         {
-            throw new InvalidOperationException("Chon seller truoc.");
+            throw new InvalidOperationException(Tr("Chat_SelectSellerFirst"));
         }
 
         var conversation = _currentUser.Role == UserRole.Admin
@@ -178,14 +179,14 @@ public sealed class ChatViewModel : ViewModelBase
         await RefreshConversationsAsync();
         SelectedConversation = Conversations.FirstOrDefault(item =>
             string.Equals(item.Conversation.ConversationId, conversation.ConversationId, StringComparison.OrdinalIgnoreCase));
-        StatusMessage = "Da mo hoi thoai.";
+        StatusMessage = Tr("Chat_ConversationOpened");
     }
 
     private async Task SendMessageAsync()
     {
         if (SelectedConversation is null)
         {
-            throw new InvalidOperationException("Chon hoi thoai truoc.");
+            throw new InvalidOperationException(Tr("Chat_SelectConversationFirst"));
         }
 
         await _chatService.SendMessageAsync(
@@ -255,7 +256,7 @@ public sealed class ConversationItemViewModel
 
     public ChatConversation Conversation { get; }
     public string Title { get; }
-    public string Subtitle => $"Cap nhat: {(Conversation.UpdatedAt ?? Conversation.CreatedAt):yyyy-MM-dd HH:mm}";
+    public string Subtitle => Loc.Instance.Format("Chat_UpdatedAt", Conversation.UpdatedAt ?? Conversation.CreatedAt);
 }
 
 public sealed class ChatMessageItemViewModel
@@ -265,7 +266,7 @@ public sealed class ChatMessageItemViewModel
         Text = message.MessageText;
         SentAt = message.SentAt;
         IsOwn = isOwn;
-        SenderLabel = isOwn ? "Ban" : $"User #{message.SenderUserId}";
+        SenderLabel = isOwn ? Loc.Instance["Common_You"] : $"User #{message.SenderUserId}";
     }
 
     public string Text { get; }

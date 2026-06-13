@@ -21,7 +21,7 @@ public sealed class SellerDashboardViewModel : RoleDashboardViewModel
     private readonly IStatsService _statsService;
     private bool _hasLoaded;
     private bool _isBusy;
-    private string _statusMessage = "San sang.";
+    private string _statusMessage = Tr("Common_Ready");
     private BuildRequest? _selectedRequest;
 
     private SellerDashboardStats _stats = new();
@@ -40,21 +40,16 @@ public sealed class SellerDashboardViewModel : RoleDashboardViewModel
         : base(
             currentUser,
             logoutCommand,
-            "Seller dashboard",
-            "Xu ly request build duoc gan cho seller.",
-            [
-                "Xem danh sach request moi",
-                "Mo chi tiet build snapshot",
-                "Cap nhat trang thai request",
-                "Chat voi buyer va admin"
-            ])
+            "Seller_Title",
+            "Seller_Subtitle",
+            ["Seller_Task1", "Seller_Task2", "Seller_Task3", "Seller_Task4"])
     {
         _requestService = requestService;
         _statsService = statsService;
         Chat = chat;
 
         LoadCommand = new AsyncRelayCommand(_ => ExecuteSafeAsync(LoadAsync));
-        RefreshCommand = new AsyncRelayCommand(_ => ExecuteSafeAsync(RefreshSellerAsync, "Da refresh request."));
+        RefreshCommand = new AsyncRelayCommand(_ => ExecuteSafeAsync(RefreshSellerAsync, Tr("Seller_RequestsRefreshed")));
         AcceptCommand = new AsyncRelayCommand(_ => UpdateStatusAsync(RequestStatus.Accepted), _ => CanTransitionTo(RequestStatus.Accepted));
         StartProgressCommand = new AsyncRelayCommand(_ => UpdateStatusAsync(RequestStatus.In_progress), _ => CanTransitionTo(RequestStatus.In_progress));
         CompleteCommand = new AsyncRelayCommand(_ => UpdateStatusAsync(RequestStatus.Completed), _ => CanTransitionTo(RequestStatus.Completed));
@@ -107,8 +102,8 @@ public sealed class SellerDashboardViewModel : RoleDashboardViewModel
     }
 
     public string SelectedRequestPayload => SelectedRequest is null
-        ? "Chon request de xem snapshot build."
-        : SelectedRequest.RequestPayloadJson;
+        ? Tr("Seller_SelectRequestForSnapshot")
+        : BuildRequestSnapshotFormatter.Format(SelectedRequest.RequestPayloadJson);
 
     // --- Analytics (read-only, derived from build_requests + builds) ---
 
@@ -116,7 +111,7 @@ public sealed class SellerDashboardViewModel : RoleDashboardViewModel
     public int ProductsMade => _stats.ProductsMade;
     public int TotalCustomers => _stats.TotalCustomers;
     public int InProgressOrders => _stats.InProgressOrders;
-    public string AvgCompletionText => _stats.AvgCompletionDays is { } days ? $"{days:N1} ngay" : "-";
+    public string AvgCompletionText => _stats.AvgCompletionDays is { } days ? TrFormat("Common_DaysFormat", days) : "-";
 
     public StatsPeriod SelectedPeriod
     {
@@ -125,7 +120,7 @@ public sealed class SellerDashboardViewModel : RoleDashboardViewModel
         {
             if (SetProperty(ref _selectedPeriod, value) && _hasLoaded)
             {
-                _ = ExecuteSafeAsync(LoadStatsAsync, "Da cap nhat bieu do.");
+                _ = ExecuteSafeAsync(LoadStatsAsync, Tr("Seller_ChartUpdated"));
             }
         }
     }
@@ -197,7 +192,7 @@ public sealed class SellerDashboardViewModel : RoleDashboardViewModel
 
     /// <summary>Reload requests in response to a realtime "new request" event.</summary>
     public Task ReloadRequestsAsync()
-        => ExecuteSafeAsync(RefreshRequestsAsync, "Co request moi (realtime).");
+        => ExecuteSafeAsync(RefreshRequestsAsync, Tr("Seller_NewRequestRealtime"));
 
     private async Task RefreshRequestsAsync()
     {
@@ -217,13 +212,13 @@ public sealed class SellerDashboardViewModel : RoleDashboardViewModel
         {
             if (SelectedRequest is null)
             {
-                throw new InvalidOperationException("Chon request truoc.");
+                throw new InvalidOperationException(Tr("Seller_SelectRequestFirst"));
             }
 
             await _requestService.UpdateStatusAsync(SelectedRequest.RequestId, CurrentUser.UserId, status);
             await RefreshRequestsAsync();
             await LoadStatsAsync();
-        }, $"Da cap nhat request sang {status}.");
+        }, TrFormat("Seller_RequestStatusUpdated", Tr("Status_" + status)));
 
     private bool CanTransitionTo(RequestStatus status)
     {
@@ -244,12 +239,12 @@ public sealed class SellerDashboardViewModel : RoleDashboardViewModel
     private async Task ExecuteSafeAsync(Func<Task> action, string? successMessage = null)
     {
         IsBusy = true;
-        StatusMessage = "Dang xu ly...";
+        StatusMessage = Tr("Common_Processing");
 
         try
         {
             await action();
-            StatusMessage = successMessage ?? "Hoan tat.";
+            StatusMessage = successMessage ?? Tr("Common_Done");
         }
         catch (Exception ex)
         {

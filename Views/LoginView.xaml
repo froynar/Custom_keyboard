@@ -1,7 +1,8 @@
 <UserControl x:Class="Custom_keyboard.Views.LoginView"
              xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
-             xmlns:behaviors="clr-namespace:Custom_keyboard.Behaviors">
+             xmlns:behaviors="clr-namespace:Custom_keyboard.Behaviors"
+             xmlns:loc="clr-namespace:Custom_keyboard.Localization">
     <Grid>
         <Grid.Background>
             <LinearGradientBrush StartPoint="0,0" EndPoint="0,1">
@@ -29,43 +30,49 @@
                                    Foreground="{StaticResource TextMutedBrush}"/>
                     </StackPanel>
                 </StackPanel>
-                <TextBlock Text="Dang nhap"
+                <TextBlock Text="{loc:Tr Login_Title}"
                            FontSize="{StaticResource FontSizeHero}"
                            FontWeight="SemiBold"
                            Foreground="{StaticResource TextPrimaryBrush}"/>
-                <TextBlock Text="Dang nhap de tiep tuc"
+                <TextBlock Text="{loc:Tr Login_Subtitle}"
                            Margin="0,4,0,24"
                            FontSize="14"
                            Foreground="{StaticResource TextMutedBrush}"/>
 
-                <TextBlock Text="Email hoac username"
+                <TextBlock Text="{loc:Tr Login_EmailOrUsername}"
                            FontWeight="SemiBold"
                            Foreground="{StaticResource TextPrimaryBrush}"/>
-                <TextBox Text="{Binding EmailOrUsername, UpdateSourceTrigger=PropertyChanged}"
+                <TextBox AutomationProperties.AutomationId="LoginEmailOrUsernameTextBox"
+                         Text="{Binding EmailOrUsername, UpdateSourceTrigger=PropertyChanged}"
                          Margin="0,6,0,14"/>
 
-                <TextBlock Text="Mat khau"
+                <TextBlock Text="{loc:Tr Common_Password}"
                            FontWeight="SemiBold"
                            Foreground="{StaticResource TextPrimaryBrush}"/>
-                <PasswordBox behaviors:PasswordBoxBinding.Attach="True"
+                <PasswordBox AutomationProperties.AutomationId="LoginPasswordBox"
+                             behaviors:PasswordBoxBinding.Attach="True"
                              behaviors:PasswordBoxBinding.BoundPassword="{Binding Password, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"
                              Margin="0,6,0,14"/>
 
-                <TextBlock Text="{Binding ErrorMessage}"
+                <TextBlock AutomationProperties.AutomationId="LoginErrorMessage"
+                           Text="{Binding ErrorMessage}"
                            Foreground="{StaticResource DangerBrush}"
                            TextWrapping="Wrap"
                            MinHeight="20"/>
-                <TextBlock Text="{Binding StatusMessage}"
+                <TextBlock AutomationProperties.AutomationId="LoginStatusMessage"
+                           Text="{Binding StatusMessage}"
                            Foreground="{StaticResource SuccessBrush}"
                            TextWrapping="Wrap"
                            MinHeight="20"/>
 
-                <Button Content="Dang nhap"
+                <Button AutomationProperties.AutomationId="LoginSubmitButton"
+                        Content="{loc:Tr Login_SignIn}"
                         Command="{Binding LoginCommand}"
                         Margin="0,8,0,10"
                         Style="{StaticResource PrimaryButton}"/>
 
-                <Button Content="Tao tai khoan buyer"
+                <Button AutomationProperties.AutomationId="LoginShowRegisterButton"
+                        Content="{loc:Tr Login_CreateBuyerAccount}"
                         Command="{Binding ShowRegisterCommand}"
                         Style="{StaticResource SecondaryButton}"/>
             </StackPanel>

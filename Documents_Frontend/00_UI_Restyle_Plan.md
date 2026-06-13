@@ -120,6 +120,7 @@ Restyle `MainWindow` + 3 role view theo khung Gentelella:
 
 ### U6 — Polish & ảnh
 - Đồng bộ spacing/icon/empty-loading state; rà toàn bộ; chụp screenshot cho demo (cập nhật `Phase9_Demo_Script`).
+- **Done:** thêm empty-state/loading badge nhất quán cho Buyer/Seller/Admin/Chat, cập nhật screenshot checklist 18/18 + analytics. Ảnh GUI thực tế vẫn chụp thủ công khi chạy app.
 
 ---
 
@@ -130,10 +131,10 @@ Restyle `MainWindow` + 3 role view theo khung Gentelella:
 | Lỡ đổi tên property/command | Chỉ sửa template/style; không động ViewModel |
 | LiveCharts2 thêm dependency | Chỉ ở U5; là lib WPF/.NET phổ biến, MVVM-friendly |
 | Look không giống Bootstrap 100% | Chấp nhận; nhắm "admin sạch hiện đại", không pixel-perfect |
-| `Phase6Verification` (logic) | Không ảnh hưởng (chỉ đổi UI) — vẫn phải xanh 15/15 |
+| `Phase6Verification` (logic) | Không ảnh hưởng (chỉ đổi UI) — vẫn phải xanh 18/18 |
 
 ## 6. Definition of Done
 - 3 role có look admin hiện đại (sidebar + topbar + card + bảng + badge) theo phong cách Gentelella.
-- Toàn bộ chức năng cũ **giữ nguyên** (binding/command không đổi); `Phase6Verification` vẫn **15/15**.
+- Toàn bộ chức năng cũ **giữ nguyên** (binding/command không đổi); `Phase6Verification` vẫn **18/18**.
 - Seller có dashboard biểu đồ; Buyer xem stats seller; Admin có tổng quan (LiveCharts2).
 - Không đổi schema/kiến trúc; có screenshot demo.

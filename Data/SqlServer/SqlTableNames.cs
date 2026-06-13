@@ -6,6 +6,7 @@ public static class SqlTableNames
     public const string Roles = "roles";
     public const string Users = "users";
     public const string SellerProfiles = "seller_profiles";
+    public const string SellerApplications = "seller_applications";
 
     // Catalog
     public const string Brands = "brands";

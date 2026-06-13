@@ -452,4 +452,16 @@ WHEN NOT MATCHED THEN
     INSERT (message_id, conversation_id, sender_user_id, message_text, sent_at)
     VALUES (source.message_id, source.conversation_id, source.sender_user_id, source.message_text, source.sent_at);
 
+-- ---------------------------------------------------------------------------
+-- Seller applications (buyer -> seller upgrade): one Pending demo for the admin queue.
+-- ---------------------------------------------------------------------------
+IF NOT EXISTS (
+    SELECT 1 FROM seller_applications sa
+    INNER JOIN users u ON u.user_id = sa.buyer_user_id
+    WHERE u.username = 'buyer_second'
+)
+INSERT INTO seller_applications (buyer_user_id, shop_name, phone, address, note, status, created_at)
+SELECT u.user_id, 'My Custom Keeb Shop', '0900000103', '123 Demo Street, HCMC', 'Xin duoc tro thanh seller.', 'Pending', SYSUTCDATETIME()
+FROM users AS u WHERE u.username = 'buyer_second';
+
 COMMIT TRANSACTION;

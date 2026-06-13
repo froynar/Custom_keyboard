@@ -77,8 +77,8 @@ public enum StatsPeriod { Monthly, Quarterly, Yearly }
 public interface IStatsService
 {
     Task<SellerDashboardStats> GetSellerDashboardAsync(int sellerUserId, StatsPeriod period, CancellationToken ct = default);
-    Task<SellerPublicStats>    GetSellerPublicAsync(int sellerUserId, CancellationToken ct = default);
-    Task<AdminOverviewStats>   GetAdminOverviewAsync(StatsPeriod period, CancellationToken ct = default);
+    Task<SellerPublicStats>    GetSellerPublicAsync(int requesterUserId, int sellerUserId, CancellationToken ct = default);
+    Task<AdminOverviewStats>   GetAdminOverviewAsync(int adminUserId, StatsPeriod period, CancellationToken ct = default);
 }
 ```
 - **DTO:** `SellerDashboardStats { Kpis, TimeSeries[] (label, orders, revenue), StatusBreakdown[] (status,count), TopKits[] }`; `SellerPublicStats { productsMade, totalOrders, customers, isVerified, verifiedAt, avgCompletionDays }`; `AdminOverviewStats { kpis, statusBreakdown[], revenueSeries[], topSellers[] }`.

@@ -3,6 +3,8 @@
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
              xmlns:views="clr-namespace:Custom_keyboard.Views"
              xmlns:lvc="clr-namespace:LiveChartsCore.SkiaSharpView.WPF;assembly=LiveChartsCore.SkiaSharpView.WPF"
+             xmlns:loc="clr-namespace:Custom_keyboard.Localization"
+             AutomationProperties.AutomationId="SellerDashboardRoot"
              Loaded="OnLoaded">
     <Grid Background="{StaticResource BodyBgBrush}">
         <Grid.ColumnDefinitions>
@@ -26,16 +28,16 @@
                                    FontSize="20" FontWeight="SemiBold"
                                    VerticalAlignment="Center"/>
                     </StackPanel>
-                    <TextBlock Text="Seller workspace"
+                    <TextBlock Text="{loc:Tr Seller_Workspace}"
                                Foreground="#AFC1D0"
                                FontSize="12"
                                Margin="0,0,0,24"/>
 
-                    <RadioButton x:Name="NavRequest" Content="Request" GroupName="sellerNav"
+                    <RadioButton x:Name="NavRequest" Content="{loc:Tr Seller_NavRequest}" GroupName="sellerNav"
                                  Style="{StaticResource SidebarNav}" IsChecked="True"/>
-                    <RadioButton x:Name="NavAnalytics" Content="Analytics" GroupName="sellerNav"
+                    <RadioButton x:Name="NavAnalytics" Content="{loc:Tr Seller_NavAnalytics}" GroupName="sellerNav"
                                  Style="{StaticResource SidebarNav}"/>
-                    <RadioButton x:Name="NavChat" Content="Chat" GroupName="sellerNav"
+                    <RadioButton x:Name="NavChat" Content="{loc:Tr Nav_Chat}" GroupName="sellerNav"
                                  Style="{StaticResource SidebarNav}"/>
                 </StackPanel>
 
@@ -67,10 +69,8 @@
 
             <!-- Topbar -->
             <DockPanel Margin="0,0,0,16">
-                <Button DockPanel.Dock="Right" Content="Dang xuat"
-                        Command="{Binding LogoutCommand}"
-                        Style="{StaticResource SecondaryButton}"/>
-                <Button DockPanel.Dock="Right" Content="Refresh"
+                <views:UserMenuView DockPanel.Dock="Right"/>
+                <Button DockPanel.Dock="Right" Content="{loc:Tr Common_Refresh}"
                         Command="{Binding RefreshCommand}"
                         Style="{StaticResource SecondaryButton}" Margin="0,0,8,0"/>
                 <StackPanel>
@@ -97,22 +97,29 @@
                                 <RowDefinition Height="Auto"/>
                             </Grid.RowDefinitions>
 
-                            <TextBlock Text="Request duoc gan" Style="{StaticResource SectionTitle}"/>
+                            <TextBlock Text="{loc:Tr Seller_AssignedRequests}" Style="{StaticResource SectionTitle}"/>
 
-                            <DataGrid Grid.Row="1"
+                            <Grid Grid.Row="1">
+                            <DataGrid x:Name="SellerRequestsGrid"
                                       ItemsSource="{Binding Requests}"
                                       SelectedItem="{Binding SelectedRequest}"
                                       AlternationCount="2">
                                 <DataGrid.Columns>
-                                    <DataGridTextColumn Header="REQUEST" Binding="{Binding RequestId}" Width="*"/>
-                                    <DataGridTextColumn Header="BUILD" Binding="{Binding BuildId}" Width="*"/>
-                                    <DataGridTextColumn Header="NGAY" Binding="{Binding RequestedAt, StringFormat=yyyy-MM-dd}" Width="100"/>
-                                    <DataGridTemplateColumn Header="TRANG THAI" Width="130">
+                                    <DataGridTextColumn Header="{loc:Tr Common_ColRequest}" Binding="{Binding RequestId}" Width="*"/>
+                                    <DataGridTextColumn Header="{loc:Tr Common_ColBuild}" Binding="{Binding BuildId}" Width="*"/>
+                                    <DataGridTextColumn Header="{loc:Tr Common_ColDate}" Binding="{Binding RequestedAt, StringFormat=yyyy-MM-dd}" Width="100"/>
+                                    <DataGridTemplateColumn Header="{loc:Tr Common_ColStatus}" Width="130">
                                         <DataGridTemplateColumn.CellTemplate>
                                             <DataTemplate>
                                                 <Border Style="{StaticResource StatusBadge}">
-                                                    <TextBlock Text="{Binding Status, Converter={StaticResource StatusToTextConverter}}"
-                                                               Style="{StaticResource StatusBadgeText}"/>
+                                                    <TextBlock Style="{StaticResource StatusBadgeText}">
+                                                        <TextBlock.Text>
+                                                            <MultiBinding Converter="{StaticResource LocalizedStatus}">
+                                                                <Binding Path="Status"/>
+                                                                <Binding Path="Language" Source="{x:Static loc:Loc.Instance}"/>
+                                                            </MultiBinding>
+                                                        </TextBlock.Text>
+                                                    </TextBlock>
                                                 </Border>
                                             </DataTemplate>
                                         </DataGridTemplateColumn.CellTemplate>
@@ -120,14 +127,24 @@
                                 </DataGrid.Columns>
                             </DataGrid>
 
+                            <Border Style="{StaticResource EmptyStateCard}"
+                                    Visibility="{Binding Items.Count, ElementName=SellerRequestsGrid, Converter={StaticResource CountToVisibility}}">
+                                <StackPanel>
+                                    <TextBlock Text="{loc:Tr Seller_EmptyRequestsTitle}" Style="{StaticResource EmptyStateTitle}"/>
+                                    <TextBlock Text="{loc:Tr Seller_EmptyRequestsText}"
+                                               Style="{StaticResource EmptyStateText}"/>
+                                </StackPanel>
+                            </Border>
+                            </Grid>
+
                             <WrapPanel Grid.Row="2" Margin="0,12,0,0">
-                                <Button Content="Accept" Command="{Binding AcceptCommand}"
+                                <Button Content="{loc:Tr Seller_Accept}" Command="{Binding AcceptCommand}"
                                         Style="{StaticResource PrimaryButton}" Margin="0,0,8,8"/>
-                                <Button Content="In progress" Command="{Binding StartProgressCommand}"
+                                <Button Content="{loc:Tr Seller_InProgress}" Command="{Binding StartProgressCommand}"
                                         Style="{StaticResource InfoButton}" Margin="0,0,8,8"/>
-                                <Button Content="Complete" Command="{Binding CompleteCommand}"
+                                <Button Content="{loc:Tr Seller_Complete}" Command="{Binding CompleteCommand}"
                                         Style="{StaticResource SuccessButton}" Margin="0,0,8,8"/>
-                                <Button Content="Cancel" Command="{Binding CancelCommand}"
+                                <Button Content="{loc:Tr Seller_Cancel}" Command="{Binding CancelCommand}"
                                         Style="{StaticResource DangerButton}" Margin="0,0,8,8"/>
                             </WrapPanel>
                         </Grid>
@@ -140,14 +157,15 @@
                                 <RowDefinition Height="Auto"/>
                                 <RowDefinition Height="*"/>
                             </Grid.RowDefinitions>
-                            <TextBlock Text="Snapshot build" Style="{StaticResource SectionTitle}"/>
+                            <TextBlock Text="{loc:Tr Seller_SnapshotTitle}" Style="{StaticResource SectionTitle}"/>
                             <Border Grid.Row="1" Background="#F8FAFC" BorderBrush="{StaticResource BorderBrush}"
                                     BorderThickness="1" CornerRadius="6" Padding="2">
                                 <ScrollViewer VerticalScrollBarVisibility="Auto">
                                     <TextBox Text="{Binding SelectedRequestPayload, Mode=OneWay}"
                                              IsReadOnly="True" TextWrapping="Wrap"
                                              BorderThickness="0" Background="Transparent"
-                                             FontFamily="Consolas" Padding="10"/>
+                                             FontFamily="{StaticResource AppFontFamily}"
+                                             Padding="10"/>
                                 </ScrollViewer>
                             </Border>
                         </Grid>
@@ -165,31 +183,31 @@
                     <UniformGrid Rows="1" Columns="5" Margin="0,0,0,14">
                         <Border Style="{StaticResource KpiCard}">
                             <StackPanel>
-                                <TextBlock Text="Doanh thu (USD)" Style="{StaticResource MutedText}"/>
+                                <TextBlock Text="{loc:Tr Seller_KpiRevenue}" Style="{StaticResource MutedText}"/>
                                 <TextBlock Text="{Binding TotalRevenue, StringFormat=N2}" FontSize="20" FontWeight="SemiBold" Foreground="{StaticResource AccentBrush}"/>
                             </StackPanel>
                         </Border>
                         <Border Style="{StaticResource KpiCard}">
                             <StackPanel>
-                                <TextBlock Text="San pham" Style="{StaticResource MutedText}"/>
+                                <TextBlock Text="{loc:Tr Seller_KpiProducts}" Style="{StaticResource MutedText}"/>
                                 <TextBlock Text="{Binding ProductsMade}" FontSize="20" FontWeight="SemiBold" Foreground="{StaticResource TextPrimaryBrush}"/>
                             </StackPanel>
                         </Border>
                         <Border Style="{StaticResource KpiCard}">
                             <StackPanel>
-                                <TextBlock Text="Khach hang" Style="{StaticResource MutedText}"/>
+                                <TextBlock Text="{loc:Tr Seller_KpiCustomers}" Style="{StaticResource MutedText}"/>
                                 <TextBlock Text="{Binding TotalCustomers}" FontSize="20" FontWeight="SemiBold" Foreground="{StaticResource TextPrimaryBrush}"/>
                             </StackPanel>
                         </Border>
                         <Border Style="{StaticResource KpiCard}">
                             <StackPanel>
-                                <TextBlock Text="Dang xu ly" Style="{StaticResource MutedText}"/>
+                                <TextBlock Text="{loc:Tr Seller_KpiInProgress}" Style="{StaticResource MutedText}"/>
                                 <TextBlock Text="{Binding InProgressOrders}" FontSize="20" FontWeight="SemiBold" Foreground="{StaticResource WarningBrush}"/>
                             </StackPanel>
                         </Border>
                         <Border Style="{StaticResource KpiCard}" Margin="0">
                             <StackPanel>
-                                <TextBlock Text="TG hoan thanh TB" Style="{StaticResource MutedText}"/>
+                                <TextBlock Text="{loc:Tr Seller_KpiAvgCompletion}" Style="{StaticResource MutedText}"/>
                                 <TextBlock Text="{Binding AvgCompletionText}" FontSize="20" FontWeight="SemiBold" Foreground="{StaticResource TextPrimaryBrush}"/>
                             </StackPanel>
                         </Border>
@@ -212,7 +230,7 @@
                                 <DockPanel Margin="0,0,0,8">
                                     <ComboBox DockPanel.Dock="Right" Width="130"
                                               ItemsSource="{Binding Periods}" SelectedItem="{Binding SelectedPeriod}"/>
-                                    <TextBlock Text="Doanh thu &amp; so don" Style="{StaticResource SectionTitle}" Margin="0" VerticalAlignment="Center"/>
+                                    <TextBlock Text="{loc:Tr Seller_RevenueOrders}" Style="{StaticResource SectionTitle}" Margin="0" VerticalAlignment="Center"/>
                                 </DockPanel>
                                 <lvc:CartesianChart Grid.Row="1" MinHeight="260"
                                                     Series="{Binding RevenueSeries}"
@@ -233,22 +251,32 @@
                                     <RowDefinition Height="Auto"/>
                                     <RowDefinition Height="*"/>
                                 </Grid.RowDefinitions>
-                                <TextBlock Text="Ti le trang thai" Style="{StaticResource SectionTitle}"/>
+                                <TextBlock Text="{loc:Tr Seller_StatusRatio}" Style="{StaticResource SectionTitle}"/>
                                 <lvc:PieChart Grid.Row="1"
                                               Series="{Binding StatusSeries}"
                                               LegendPosition="Bottom"/>
-                                <TextBlock Grid.Row="2" Text="Top kit" Style="{StaticResource SectionTitle}" Margin="0,12,0,8"/>
-                                <ItemsControl Grid.Row="3" ItemsSource="{Binding TopKits}">
-                                    <ItemsControl.ItemTemplate>
-                                        <DataTemplate>
-                                            <DockPanel Margin="0,0,0,6">
-                                                <TextBlock DockPanel.Dock="Right" Text="{Binding Revenue, StringFormat=N2}" FontWeight="SemiBold" Foreground="{StaticResource AccentBrush}"/>
-                                                <TextBlock DockPanel.Dock="Right" Text="{Binding Orders, StringFormat=' x{0}'}" Foreground="{StaticResource TextMutedBrush}" Margin="0,0,10,0"/>
-                                                <TextBlock Text="{Binding KitName}" TextTrimming="CharacterEllipsis"/>
-                                            </DockPanel>
-                                        </DataTemplate>
-                                    </ItemsControl.ItemTemplate>
-                                </ItemsControl>
+                                <TextBlock Grid.Row="2" Text="{loc:Tr Seller_TopKit}" Style="{StaticResource SectionTitle}" Margin="0,12,0,8"/>
+                                <Grid Grid.Row="3">
+                                    <ItemsControl x:Name="TopKitsList" ItemsSource="{Binding TopKits}">
+                                        <ItemsControl.ItemTemplate>
+                                            <DataTemplate>
+                                                <DockPanel Margin="0,0,0,6">
+                                                    <TextBlock DockPanel.Dock="Right" Text="{Binding Revenue, StringFormat=N2}" FontWeight="SemiBold" Foreground="{StaticResource AccentBrush}"/>
+                                                    <TextBlock DockPanel.Dock="Right" Text="{Binding Orders, StringFormat=' x{0}'}" Foreground="{StaticResource TextMutedBrush}" Margin="0,0,10,0"/>
+                                                    <TextBlock Text="{Binding KitName}" TextTrimming="CharacterEllipsis"/>
+                                                </DockPanel>
+                                            </DataTemplate>
+                                        </ItemsControl.ItemTemplate>
+                                    </ItemsControl>
+                                    <Border Style="{StaticResource EmptyStateCard}"
+                                            Visibility="{Binding Items.Count, ElementName=TopKitsList, Converter={StaticResource CountToVisibility}}">
+                                        <StackPanel>
+                                            <TextBlock Text="{loc:Tr Seller_EmptyKitsTitle}" Style="{StaticResource EmptyStateTitle}"/>
+                                            <TextBlock Text="{loc:Tr Seller_EmptyKitsText}"
+                                                       Style="{StaticResource EmptyStateText}"/>
+                                        </StackPanel>
+                                    </Border>
+                                </Grid>
                             </Grid>
                         </Border>
                     </Grid>
@@ -263,10 +291,18 @@
 
             <!-- Status bar -->
             <Border Grid.Row="2" Margin="0,12,0,0" Background="#EEF2F6" CornerRadius="4" Padding="12,8">
-                <StackPanel Orientation="Horizontal">
-                    <Border Width="4" Background="{StaticResource AccentBrush}" CornerRadius="2" Margin="0,0,10,0"/>
-                    <TextBlock Text="{Binding StatusMessage}" Foreground="{StaticResource TextMutedBrush}" VerticalAlignment="Center"/>
-                </StackPanel>
+                <DockPanel>
+                    <Border DockPanel.Dock="Right"
+                            Style="{StaticResource BadgeChrome}"
+                            Background="{StaticResource AccentBrush}"
+                            Visibility="{Binding IsBusy, Converter={StaticResource BoolToVis}}">
+                        <TextBlock Text="{loc:Tr Common_Processing}" Style="{StaticResource StatusBadgeText}"/>
+                    </Border>
+                    <StackPanel Orientation="Horizontal">
+                        <Border Width="4" Background="{StaticResource AccentBrush}" CornerRadius="2" Margin="0,0,10,0"/>
+                        <TextBlock Text="{Binding StatusMessage}" Foreground="{StaticResource TextMutedBrush}" VerticalAlignment="Center"/>
+                    </StackPanel>
+                </DockPanel>
             </Border>
         </Grid>
     </Grid>

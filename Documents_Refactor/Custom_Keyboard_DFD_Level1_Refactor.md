@@ -108,16 +108,19 @@ flowchart LR
 ```mermaid
 flowchart LR
     Admin["Admin"]
+    Buyer["Buyer"]
 
     P41(("4.1\nQuan ly user"))
     P42(("4.2\nQuan ly seller profile"))
     P43(("4.3\nQuan ly catalog"))
     P44(("4.4\nTra cuu audit log"))
+    P45(("4.5\nDuyet don xin seller"))
 
     D1[("D1\nNguoi dung va vai tro")]
     D2[("D2\nHo so seller")]
     D3[("D3\nCatalog keyboard")]
     D6[("D6\nAudit log")]
+    D8[("D8\nDon xin seller")]
 
     Admin -- "(1) Yeu cau user/role" --> P41
     P41 -- "(2) Lay/cap nhat user" --> D1
@@ -143,6 +146,19 @@ flowchart LR
     P44 -- "(19) Lay audit log" --> D6
     D6 -- "(20) Audit log" --> P44
     P44 -- "(21) Audit log hien thi" --> Admin
+
+    Buyer -- "(22) Nop don xin lam seller" --> P45
+    P45 -- "(23) Luu don Pending" --> D8
+    D8 -- "(24) Don can duyet" --> P45
+    P45 -- "(25) Kiem tra applicant con Buyer active" --> D1
+    D1 -- "(26) User/role/active" --> P45
+    P45 -- "(27) Duyet: doi role -> Seller" --> D1
+    P45 -- "(28) Duyet: tao seller profile verified" --> D2
+    P45 -- "(29) Cap nhat trang thai don (Approved/Rejected)" --> D8
+    P45 -- "(30) Log duyet/tu choi" --> D6
+    P45 -- "(31) Trang thai don" --> Buyer
+    Admin -- "(32) Duyet/tu choi don" --> P45
+    P45 -- "(33) Ket qua duyet" --> Admin
 ```
 
 ## DFD Level 1 - 5.0 Quan Ly Chat
