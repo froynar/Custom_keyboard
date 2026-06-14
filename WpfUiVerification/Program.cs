@@ -8,6 +8,7 @@ await runner.RunAsync(args);
 internal sealed class WpfUiRunner
 {
     private readonly List<string> _failures = [];
+    private int _total;
 
     public async Task RunAsync(string[] args)
     {
@@ -19,9 +20,12 @@ internal sealed class WpfUiRunner
         await RunScenarioAsync("UI login smoke: seller dashboard", appPath, "seller_soigear", "Password123", "SellerDashboardRoot");
         await RunScenarioAsync("UI login smoke: admin dashboard", appPath, "admin_refactor", "Password123", "AdminDashboardRoot");
         await RunLanguageSwitchScenarioAsync("UI i18n: live language switch + persistence", appPath);
+        await RunSellerAnalyticsScenarioAsync("UI flow: seller analytics + chart localization (UC-02.3.1)", appPath);
+        await RunAdminTabsScenarioAsync("UI flow: admin tab navigation renders (UC-03.4.x)", appPath);
+        await RunSellerSnapshotScenarioAsync("UI flow: seller request snapshot renders (UC-02.3.2)", appPath);
 
         Console.WriteLine();
-        Console.WriteLine($"Passed: {4 - _failures.Count}");
+        Console.WriteLine($"Passed: {_total - _failures.Count}");
         Console.WriteLine($"Failed: {_failures.Count}");
 
         if (_failures.Count > 0)
@@ -45,6 +49,7 @@ internal sealed class WpfUiRunner
         string password,
         string expectedDashboardAutomationId)
     {
+        _total++;
         Process? process = null;
         try
         {
@@ -84,6 +89,7 @@ internal sealed class WpfUiRunner
 
     private async Task RunLanguageSwitchScenarioAsync(string name, string appPath)
     {
+        _total++;
         Process? process = null;
         try
         {
@@ -187,6 +193,225 @@ internal sealed class WpfUiRunner
                 }
             }
         }
+    }
+
+    // UC-02.3.1: seller opens the Analytics tab; charts (localized series) must render and survive a
+    // live language switch (exercises ChartFactory + the OnLanguageChangedCore chart rebuild).
+    private async Task RunSellerAnalyticsScenarioAsync(string name, string appPath)
+    {
+        _total++;
+        Process? process = null;
+        try
+        {
+            process = StartApp(appPath);
+            var window = WaitForMainWindow(process.Id, TimeSpan.FromSeconds(20));
+            LoginAndWaitDashboard(window, "seller_soigear", "SellerDashboardRoot");
+
+            ClickNav(window, "NavAnalytics", "Phân tích");
+            Thread.Sleep(800);
+            var viAnalytics = FindByName(window, "Doanh thu & số đơn") is not null
+                              || FindByName(window, "Tỉ lệ trạng thái") is not null;
+            Console.WriteLine($"[seller-analytics] VI analytics labels visible: {viAnalytics}");
+
+            SwitchLanguage(process.Id, window, "LanguageEnglishOption");
+            Thread.Sleep(900);
+            var alive = !process.HasExited && FindByAutomationId(window, "SellerDashboardRoot") is not null;
+            var enAnalytics = FindByName(window, "Revenue & orders") is not null
+                              || FindByName(window, "Status breakdown") is not null;
+            Console.WriteLine($"[seller-analytics] after EN switch -> alive:{alive} EN labels:{enAnalytics}");
+
+            SwitchLanguage(process.Id, window, "LanguageVietnameseOption");
+            Thread.Sleep(300);
+
+            var problems = new List<string>();
+            if (!viAnalytics) problems.Add("Vietnamese analytics labels did not render");
+            if (!alive) problems.Add("app crashed after switching language on the analytics tab (chart rebuild)");
+            if (!enAnalytics) problems.Add("analytics labels did not localize to English after switch");
+            Report(name, problems);
+        }
+        catch (Exception ex) { _failures.Add($"{name}: {ex.Message}"); }
+        finally { await CloseAppAsync(process); }
+    }
+
+    // UC-03.4.x: admin navigates every sidebar tab; each must render without a binding crash, and a
+    // language switch on the chart-heavy Overview tab must not bring the app down.
+    private async Task RunAdminTabsScenarioAsync(string name, string appPath)
+    {
+        _total++;
+        Process? process = null;
+        try
+        {
+            process = StartApp(appPath);
+            var window = WaitForMainWindow(process.Id, TimeSpan.FromSeconds(20));
+            LoginAndWaitDashboard(window, "admin_refactor", "AdminDashboardRoot");
+
+            var tabs = new (string Id, string Fallback)[]
+            {
+                ("NavUser", "Người dùng"),
+                ("NavSeller", "Seller"),
+                ("NavApplications", "Đơn xin Seller"),
+                ("NavBrand", "Brand & Layout"),
+                ("NavComponent", "Linh kiện"),
+                ("NavAudit", "Audit log"),
+                ("NavOverview", "Tổng quan"),
+            };
+
+            var problems = new List<string>();
+            foreach (var (id, fallback) in tabs)
+            {
+                ClickNav(window, id, fallback);
+                Thread.Sleep(500);
+                if (process.HasExited || FindByAutomationId(window, "AdminDashboardRoot") is null)
+                {
+                    problems.Add($"crash/blank after opening tab {id}");
+                    break;
+                }
+
+                Console.WriteLine($"[admin-tabs] {id} rendered");
+            }
+
+            if (!process.HasExited)
+            {
+                SwitchLanguage(process.Id, window, "LanguageEnglishOption");
+                Thread.Sleep(900);
+                var alive = !process.HasExited && FindByAutomationId(window, "AdminDashboardRoot") is not null;
+                var enOverview = FindByName(window, "Platform revenue (USD)") is not null
+                                 || FindByName(window, "Revenue over time") is not null;
+                Console.WriteLine($"[admin-tabs] after EN switch on overview -> alive:{alive} EN:{enOverview}");
+                if (!alive) problems.Add("app crashed switching language on admin overview (chart rebuild)");
+                SwitchLanguage(process.Id, window, "LanguageVietnameseOption");
+                Thread.Sleep(300);
+            }
+
+            Report(name, problems);
+        }
+        catch (Exception ex) { _failures.Add($"{name}: {ex.Message}"); }
+        finally { await CloseAppAsync(process); }
+    }
+
+    // UC-02.3.2: seller selects an assigned request; the build snapshot (localized formatter) must
+    // render without crashing.
+    private async Task RunSellerSnapshotScenarioAsync(string name, string appPath)
+    {
+        _total++;
+        Process? process = null;
+        try
+        {
+            process = StartApp(appPath);
+            var window = WaitForMainWindow(process.Id, TimeSpan.FromSeconds(20));
+            LoginAndWaitDashboard(window, "seller_soigear", "SellerDashboardRoot");
+
+            var grid = WaitForElement(window, "SellerRequestsGrid", TimeSpan.FromSeconds(10));
+            var firstRow = grid.FindFirst(
+                TreeScope.Descendants,
+                new PropertyCondition(AutomationElement.ControlTypeProperty, ControlType.DataItem));
+            if (firstRow is null)
+            {
+                Console.WriteLine($"[seller-snapshot] no requests assigned; snapshot path not exercised");
+                Console.WriteLine($"PASS {name} (no data)");
+                return;
+            }
+
+            if (firstRow.TryGetCurrentPattern(SelectionItemPattern.Pattern, out var sel))
+            {
+                ((SelectionItemPattern)sel).Select();
+            }
+
+            Thread.Sleep(800);
+            var alive = !process.HasExited && FindByAutomationId(window, "SellerDashboardRoot") is not null;
+            var snapshotShown = FindByNameContains(window, "Kit") is not null
+                                || FindByNameContains(window, "Tổng giá") is not null
+                                || FindByNameContains(window, "Build") is not null;
+            Console.WriteLine($"[seller-snapshot] alive:{alive} snapshot text present:{snapshotShown}");
+
+            var problems = new List<string>();
+            if (!alive) problems.Add("app crashed rendering the build snapshot");
+            if (!snapshotShown) problems.Add("snapshot text did not render after selecting a request");
+            Report(name, problems);
+        }
+        catch (Exception ex) { _failures.Add($"{name}: {ex.Message}"); }
+        finally { await CloseAppAsync(process); }
+    }
+
+    private void Report(string name, List<string> problems)
+    {
+        if (problems.Count == 0)
+        {
+            Console.WriteLine($"PASS {name}");
+        }
+        else
+        {
+            _failures.Add($"{name}: {string.Join("; ", problems)}");
+        }
+    }
+
+    private static Process StartApp(string appPath)
+        => Process.Start(new ProcessStartInfo
+        {
+            FileName = appPath,
+            WorkingDirectory = Path.GetDirectoryName(appPath) ?? Environment.CurrentDirectory,
+            UseShellExecute = false
+        }) ?? throw new InvalidOperationException("Could not start WPF app.");
+
+    private static async Task CloseAppAsync(Process? process)
+    {
+        if (process is not null && !process.HasExited)
+        {
+            process.CloseMainWindow();
+            await Task.Delay(500);
+            if (!process.HasExited)
+            {
+                process.Kill(entireProcessTree: true);
+            }
+        }
+    }
+
+    private void LoginAndWaitDashboard(AutomationElement window, string username, string dashboardAutomationId)
+    {
+        SetValue(window, "LoginEmailOrUsernameTextBox", username);
+        SetValue(window, "LoginPasswordBox", "Password123");
+        Invoke(window, "LoginSubmitButton");
+        WaitForDashboard(window, dashboardAutomationId, username, TimeSpan.FromSeconds(20));
+    }
+
+    private void ClickNav(AutomationElement window, string automationId, string fallbackName)
+    {
+        var element = FindByAutomationId(window, automationId)
+                      ?? (string.IsNullOrEmpty(fallbackName) ? null : FindByName(window, fallbackName));
+        if (element is null)
+        {
+            throw new InvalidOperationException($"Nav element '{automationId}'/'{fallbackName}' not found.");
+        }
+
+        InvokeOrToggle(element, automationId);
+    }
+
+    private void SwitchLanguage(int processId, AutomationElement window, string optionAutomationId)
+    {
+        // Make sure the user menu + preferences panel are open, then pick the language radio button.
+        if (FindByAutomationIdInProcess(processId, optionAutomationId) is null)
+        {
+            InvokeOrToggle(WaitForElement(window, "UserMenuButton", TimeSpan.FromSeconds(10)), "UserMenuButton");
+            InvokeOrToggle(WaitForElementInProcess(processId, "UserMenuPreferencesButton", TimeSpan.FromSeconds(10)), "UserMenuPreferencesButton");
+        }
+
+        InvokeOrToggle(WaitForElementInProcess(processId, optionAutomationId, TimeSpan.FromSeconds(10)), optionAutomationId);
+    }
+
+    private static AutomationElement? FindByNameContains(AutomationElement root, string substring)
+    {
+        var all = root.FindAll(TreeScope.Descendants, Condition.TrueCondition);
+        foreach (AutomationElement element in all)
+        {
+            var elementName = element.Current.Name;
+            if (!string.IsNullOrEmpty(elementName) &&
+                elementName.Contains(substring, StringComparison.OrdinalIgnoreCase))
+            {
+                return element;
+            }
+        }
+
+        return null;
     }
 
     private static string ResolveAppPath(string[] args)
