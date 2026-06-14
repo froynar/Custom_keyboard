@@ -8,8 +8,8 @@ Du an hien tai la ung dung desktop WPF dung .NET va SQL Server database `CustomK
 
 - Refactor kit-based da hoan thanh loi MVP (Phase 0-10): build/request/seller-status/chat-DB/admin/audit + validation & logging (Phase 7) + MQTT realtime tuy chon (Phase 8) + test matrix & handover (Phase 9-10). Chat SignalR (Phase 8A) con lai, tuy chon.
 - ERD refactor moi la source of truth: `Documents_Refactor/`.
-- Tai lieu cu trong `Documents/` chi de tham khao lich su.
-- Test/verification runner nam o `Phase6Verification/`.
+- Tai lieu cu (`Documents/`) va template/SQL legacy da go khoi repo; tra cuu qua lich su git neu can.
+- Test/verification runner nam o `Phase6Verification/` (service/SQL) va `WpfUiVerification/` (UI).
 - DB test mac dinh: `CustomKeyboard_Refactor` tren `KHOADZS1VN\SQLEXPRESS`.
 
 Lenh kiem tra chinh:

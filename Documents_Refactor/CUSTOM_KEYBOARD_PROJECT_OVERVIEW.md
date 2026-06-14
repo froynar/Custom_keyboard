@@ -255,44 +255,37 @@ Custom Keyboard Builder
 
 ```
 Custom_keyboard/
-├─ Documents/                      # Tài liệu cũ (tham khảo, không dùng làm nguồn refactor)
-├─ Documents_Refactor/             # ⭐ Tài liệu refactor (CHÍNH THỨC)
+├─ Documents_Refactor/             # ⭐ Tài liệu CHÍNH THỨC (kit-based) — design + plan + phase docs
 │  ├─ Custom_Keyboard_ERD_Realistic_Kit_Shop_Proposal.dbml
-│  ├─ Keyboard_Build_Validation_Logic.md
 │  ├─ Custom_Keyboard_FHD_Refactor.md
 │  ├─ Custom_Keyboard_Use_Cases_Refactor.md
-│  ├─ Custom_Keyboard_DFD_Context_Level0_Refactor.md
-│  ├─ Custom_Keyboard_DFD_Level1_Refactor.md
-│  ├─ Custom_Keyboard_DFD_Level2_Refactor.md
+│  ├─ Custom_Keyboard_DFD_Context_Level0_Refactor.md / _Level1_ / _Level2_
 │  ├─ Custom_Keyboard_Class_Diagram_Refactor.md
-│  ├─ SeedData_Refactor.sql
-│  ├─ SeedData_Refactor_Check.md
-│  └─ Custom_Keyboard_Project_Refactor_Summary.md
+│  ├─ Custom_Keyboard_Activity_Diagrams_Refactor.md
+│  ├─ Keyboard_Build_Validation_Logic.md
+│  ├─ Custom_Keyboard_Project_Refactor_Summary.md / Post_Refactor_Roadmap.md
+│  ├─ REFACTOR_PLAN.md / Phase8A_SignalR_Hotspot_Demo_Plan.md
+│  ├─ Architecture.md / CUSTOM_KEYBOARD_PROJECT_OVERVIEW.md
+│  ├─ Phase6_Verification_Report.md / Phase9_Test_Matrix.md / Phase9_Demo_Script.md / Phase10_Handover.md / UseCaseVerification_Matrix.md
+│  └─ SeedData_Refactor.sql / SeedData_Refactor_Check.md
 │
-├─ Models/                         # Domain models
-│  ├─ Accounts/  (User, Role, SellerProfile, AuditLogEntry)
-│  ├─ Builds/    (KeyboardBuild, BuildMod, BuildRequest)
-│  ├─ Components/ (Brand, Layout, Switch, KeycapSet, Stabilizer, Accessory, Case, PCB, Plate)
-│  └─ Enums/     (BuildStatus, RequestStatus, etc.)
+├─ Models/                         # Domain models (Accounts, Builds, Components, Chat, Admin, Enums)
+├─ Services/                       # Business logic (+ Security/)
+├─ Repositories/                   # Data access interfaces (+ SqlServer/)
+├─ Data/SqlServer/                 # Connection factory + settings
+├─ ViewModels/ Views/ Commands/ Behaviors/ Converters/ Localization/ Analytics/ Realtime/ Diagnostics/ Themes/
 │
-├─ Services/                       # Business logic
-│  └─ Security/
+├─ Database/SqlServer/             # SQL scripts (kit-based)
+│  ├─ CreateSchema_Refactor.sql
+│  ├─ SeedDemoAnalytics_Refactor.sql
+│  ├─ ApplySellerApplications.sql
+│  ├─ VerifyRefactor.sql
+│  └─ PHASE0_SETUP.md
 │
-├─ Repositories/                   # Data access
-│  └─ SqlServer/
+├─ Phase6Verification/             # Service/SQL verification runner
+├─ WpfUiVerification/              # WPF UI automation runner
 │
-├─ ViewModels/                     # UI logic
-├─ Views/                          # UI (WPF)
-├─ Commands/
-├─ Behaviors/
-│
-├─ Database/SqlServer/             # SQL scripts
-│  ├─ CreateSchema.sql
-│  ├─ SeedSampleData.sql
-│  └─ ApplyPhaseX*.sql (migrations)
-│
-├─ Data/SqlServer/                 # DbContext (EF Core)
-└─ Architecture.md                 # Tài liệu kiến trúc
+└─ README.md                       # Architecture.md & CUSTOM_KEYBOARD_PROJECT_OVERVIEW.md nay nam trong Documents_Refactor/
 ```
 
 ---
