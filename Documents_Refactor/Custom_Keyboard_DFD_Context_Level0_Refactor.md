@@ -49,7 +49,7 @@ flowchart LR
 
 | Ma | Tien trinh | Y nghia |
 | --- | --- | --- |
-| 1.0 | Quan ly tai khoan | Xu ly dang ky, dang nhap, dang xuat va tra cuu tai khoan. |
+| 1.0 | Quan ly tai khoan | Xu ly Buyer dang ky, dang nhap, dang xuat va tra cuu tai khoan. |
 | 2.0 | Quan ly build keyboard | Xu ly catalog, cau hinh build tu kit, kiem tra tuong thich, tinh tong gia va luu build. |
 | 3.0 | Quan ly request build | Xu ly buyer gui request cho seller va seller cap nhat trang thai. |
 | 4.0 | Quan tri he thong | Xu ly quan ly user, seller profile, catalog, audit log va duyet don xin lam seller. |
@@ -147,7 +147,7 @@ flowchart LR
 
 | So | Nguon | Dich | Luong du lieu |
 | --- | --- | --- | --- |
-| (1) | Buyer/Seller/Admin | 1.0 | Dang ky, dang nhap, dang xuat hoac xem tai khoan |
+| (1) | Buyer/Seller/Admin | 1.0 | Buyer dang ky; Buyer/Seller/Admin dang nhap, dang xuat hoac xem tai khoan |
 | (2) | 1.0 | Buyer/Seller/Admin | Ket qua xac thuc, role va thong tin tai khoan |
 | (3) | 1.0 | D1 | Yeu cau tao/kiem tra user |
 | (4) | D1 | 1.0 | User, role, password hash, active status |
@@ -194,4 +194,3 @@ flowchart LR
 - DFD Level 0 chi the hien tien trinh xu ly du lieu lon, khong mo ta tung man hinh UI.
 - D3 gom catalog keyboard theo ERD refactor, khong co inventory va khong co case/PCB/plate rieng le.
 - Cac chi tiet phuc tap duoc bung o Level 1 va Level 2.
-

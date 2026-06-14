@@ -301,6 +301,7 @@
 
                     <Button Style="{StaticResource UserMenuAction}"
                             IsEnabled="False"
+                            Visibility="Collapsed"
                             ToolTip="{loc:Tr UserMenu_AccountSettingsTooltip}">
                         <DockPanel>
                             <TextBlock DockPanel.Dock="Left" Text="&#xE713;" FontFamily="Segoe MDL2 Assets" Margin="0,0,10,0"/>

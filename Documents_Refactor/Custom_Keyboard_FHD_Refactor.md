@@ -62,7 +62,7 @@ flowchart TD
 
 | Ma | Chuc nang | Mo ta |
 | --- | --- | --- |
-| 1.1 | Dang ky | Nguoi dung tao tai khoan moi. |
+| 1.1 | Dang ky | Buyer tu tao tai khoan moi; Seller/Admin duoc quan tri qua Admin. |
 | 1.2 | Dang nhap | Nguoi dung dang nhap de vao dung dashboard theo role. |
 | 1.3 | Dang xuat | Nguoi dung thoat khoi phien lam viec hien tai. |
 | 1.4 | Xem profile tai khoan | Buyer/Seller/Admin mo user menu goc tren phai va bam Profile settings de xem username, email, phone, role, status va user id cua chinh minh. |

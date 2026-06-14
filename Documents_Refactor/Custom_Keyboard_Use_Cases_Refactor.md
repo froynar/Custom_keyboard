@@ -68,7 +68,7 @@ flowchart LR
 | Muc | Noi dung |
 | --- | --- |
 | Actor chinh | Buyer |
-| Muc tieu | Buyer tao build ban phim dua tren keyboard kit, them linh kien, luu build va gui request cho seller. |
+| Muc tieu | Buyer dang ky/dang nhap, tao build ban phim dua tren keyboard kit, them linh kien, luu build, gui request cho seller va co the nop don tro thanh seller. |
 | Tien dieu kien | Buyer co tai khoan active va dang nhap. |
 | Hau dieu kien | Build duoc luu; request duoc gui den seller verified; buyer co the theo doi trang thai va chat voi seller. |
 
@@ -89,8 +89,9 @@ flowchart LR
 | 11 | Buyer gui request cho seller. | 2.10 |
 | 12 | Buyer theo doi trang thai request. | 2.11 |
 | 13 | Buyer co the luu tru build khong con can thao tac trong danh sach chinh. | 2.12 |
-| 14 | Buyer chat voi seller neu can trao doi them. | 5.1 |
-| 15 | Buyer mo user menu goc tren phai de xem profile tai khoan hoac dang xuat khi ket thuc. | 1.3, 1.4 |
+| 14 | Buyer co the nop don Dang ky tro thanh seller va xem trang thai don. | 2.13 |
+| 15 | Buyer chat voi seller neu can trao doi them. | 5.1 |
+| 16 | Buyer mo user menu goc tren phai de xem profile tai khoan hoac dang xuat khi ket thuc. | 1.3, 1.4 |
 
 ### Chi Tiet Nghiep Vu
 
@@ -115,13 +116,14 @@ flowchart LR
 | Buyer muon doi seller | Buyer quay lai man chon seller truoc khi gui request. | 2.9 |
 | Buyer muon xem tien do | Buyer mo danh sach request hoac dashboard buyer. | 2.1, 2.11 |
 | Buyer khong con can build | Buyer luu tru build de an khoi danh sach chinh. | 2.12 |
+| Buyer muon tro thanh seller | Buyer gui don voi ten shop, phone, dia chi va ghi chu; he thong hien trang thai Pending/Approved/Rejected. | 2.13 |
 
 ### Mapping FHD Cho Buyer
 
 | Nhom | Ma FHD duoc bao phu |
 | --- | --- |
 | Tai khoan | 1.1, 1.2, 1.3, 1.4 |
-| Buyer | 2.1, 2.2, 2.3, 2.4, 2.5, 2.6, 2.7, 2.8, 2.9, 2.10, 2.11, 2.12 |
+| Buyer | 2.1, 2.2, 2.3, 2.4, 2.5, 2.6, 2.7, 2.8, 2.9, 2.10, 2.11, 2.12, 2.13 |
 | Chat | 5.1 |
 
 ## UC-02: Seller Xu Ly Request Build
@@ -250,9 +252,9 @@ flowchart LR
 | Muc | Noi dung |
 | --- | --- |
 | Actor chinh | Admin |
-| Muc tieu | Admin quan ly user, seller profile, catalog va xem audit log. |
+| Muc tieu | Admin quan ly user, seller profile, catalog, audit log va duyet don xin lam seller. |
 | Tien dieu kien | Admin co tai khoan active, role Admin va dang nhap. |
-| Hau dieu kien | Du lieu user, seller profile hoac catalog duoc cap nhat; thao tac quan trong co the duoc ghi audit log. |
+| Hau dieu kien | Du lieu user, seller profile, catalog hoac don xin seller duoc cap nhat; thao tac quan trong co the duoc ghi audit log. |
 
 ### Luong Chinh
 
@@ -264,8 +266,9 @@ flowchart LR
 | 4 | Admin quan ly seller profile: tao/cap nhat profile, verify/unverify seller. | 4.3 |
 | 5 | Admin quan ly catalog: brand, layout, keyboard kit, switch, keycap, stabilizer, accessory. | 4.4 |
 | 6 | Admin xem audit log khi can kiem tra lich su thao tac. | 4.5 |
-| 7 | Admin chat voi seller neu can ho tro. | 5.4 |
-| 8 | Admin mo user menu goc tren phai de xem profile tai khoan hoac dang xuat khi ket thuc. | 1.3, 1.4 |
+| 7 | Admin duyet don xin lam seller: xem hang doi, chap nhan hoac tu choi. | 4.6 |
+| 8 | Admin chat voi seller neu can ho tro. | 5.4 |
+| 9 | Admin mo user menu goc tren phai de xem profile tai khoan hoac dang xuat khi ket thuc. | 1.3, 1.4 |
 
 ### Chi Tiet Nghiep Vu
 
@@ -273,6 +276,7 @@ flowchart LR
 | --- | --- |
 | Quan ly user | Admin cap nhat active status va role Buyer/Seller/Admin. |
 | Quan ly seller profile | Seller chi duoc buyer chon khi user active, role Seller va profile verified. |
+| Duyet don xin seller | Khi chap nhan don, he thong doi role Buyer thanh Seller, tao/cap nhat seller profile verified va ghi audit log; khi tu choi, he thong luu ly do va trang thai Rejected. |
 | Quan ly brand | Brand dung cho keyboard kit, switch, keycap va stabilizer. |
 | Quan ly layout | Layout gom form factor va key count. |
 | Quan ly keyboard kit | Kit gom brand, layout, PCB technology, switch mount, required switch quantity, included parts, price va availability. |
@@ -286,7 +290,7 @@ flowchart LR
 | Tinh huong | Xu ly tren UI | Chuc nang FHD |
 | --- | --- | --- |
 | User bi khoa nham | Admin mo lai tai khoan. | 4.2 |
-| Buyer can thanh seller | Admin cap role Seller, tao seller profile va verify seller. | 4.2, 4.3 |
+| Buyer can thanh seller | Admin duyet don xin lam seller; neu chap nhan thi cap role Seller, tao seller profile va verify seller. | 4.6 |
 | Seller tam ngung nhan request | Admin unverify seller hoac khoa tai khoan. | 4.2, 4.3 |
 | San pham catalog khong con dung | Admin an item bang `is_available = false`. | 4.4 |
 | San pham catalog duoc dung lai | Admin hien item bang `is_available = true`. | 4.4 |
@@ -297,7 +301,7 @@ flowchart LR
 | Nhom | Ma FHD duoc bao phu |
 | --- | --- |
 | Tai khoan | 1.2, 1.3, 1.4 |
-| Admin | 4.1, 4.2, 4.3, 4.4, 4.5 |
+| Admin | 4.1, 4.2, 4.3, 4.4, 4.5, 4.6 |
 | Chat | 5.4 |
 
 ## Bang Doi Chieu FHD
@@ -320,6 +324,7 @@ flowchart LR
 | 2.10 | Gui request | UC-01 |
 | 2.11 | Theo doi request | UC-01 |
 | 2.12 | Luu tru build | UC-01 |
+| 2.13 | Dang ky tro thanh seller | UC-01 |
 | 3.1 | Xem dashboard seller | UC-02 |
 | 3.2 | Xem danh sach request | UC-02 |
 | 3.3 | Xem chi tiet request | UC-02 |
@@ -332,6 +337,7 @@ flowchart LR
 | 4.3 | Quan ly seller profile | UC-03 |
 | 4.4 | Quan ly catalog | UC-03 |
 | 4.5 | Xem audit log | UC-03 |
+| 4.6 | Duyet don xin lam seller | UC-03 |
 | 5.1 | Buyer chat voi seller | UC-01 |
 | 5.2 | Seller chat voi buyer | UC-02 |
 | 5.3 | Seller chat voi admin | UC-02 |

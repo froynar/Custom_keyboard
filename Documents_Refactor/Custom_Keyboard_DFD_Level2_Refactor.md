@@ -125,7 +125,7 @@ flowchart LR
 | --- | --- |
 | Participant | Sender phai la seller, buyer hoac admin cua conversation. |
 | Cap chat | Conversation hop le la Buyer-Seller hoac Admin-Seller. |
-| Buyer-Admin | Khong cho tao/guid tin nhan truc tiep Buyer-Admin. |
+| Buyer-Admin | Khong cho tao/gui tin nhan truc tiep Buyer-Admin. |
 | Noi dung | Message text khong duoc rong. |
 
 ## Kiem Tra Can Bang Voi Level 1

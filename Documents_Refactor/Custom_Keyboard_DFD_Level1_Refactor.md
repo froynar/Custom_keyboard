@@ -14,7 +14,7 @@ flowchart LR
 
     D1[("D1\nNguoi dung va vai tro")]
 
-    User -- "(1) Dang ky/dang nhap" --> P11
+    User -- "(1) Buyer dang ky hoac user dang nhap" --> P11
     P11 -- "(2) Du lieu tai khoan da chuan hoa" --> P12
     P12 -- "(3) Tao/kiem tra tai khoan" --> D1
     D1 -- "(4) User, role, active status" --> P12
@@ -110,55 +110,64 @@ flowchart LR
     Admin["Admin"]
     Buyer["Buyer"]
 
-    P41(("4.1\nQuan ly user"))
-    P42(("4.2\nQuan ly seller profile"))
-    P43(("4.3\nQuan ly catalog"))
-    P44(("4.4\nTra cuu audit log"))
-    P45(("4.5\nDuyet don xin seller"))
+    P41(("4.1\nTra cuu dashboard admin"))
+    P42(("4.2\nQuan ly user"))
+    P43(("4.3\nQuan ly seller profile"))
+    P44(("4.4\nQuan ly catalog"))
+    P45(("4.5\nTra cuu audit log"))
+    P46(("4.6\nDuyet don xin seller"))
 
     D1[("D1\nNguoi dung va vai tro")]
     D2[("D2\nHo so seller")]
     D3[("D3\nCatalog keyboard")]
+    D5[("D5\nRequest build")]
     D6[("D6\nAudit log")]
     D8[("D8\nDon xin seller")]
 
-    Admin -- "(1) Yeu cau user/role" --> P41
-    P41 -- "(2) Lay/cap nhat user" --> D1
-    D1 -- "(3) User/role hien tai" --> P41
-    P41 -- "(4) Log user action" --> D6
-    P41 -- "(5) Ket qua user" --> Admin
+    Admin -- "(1) Yeu cau dashboard admin" --> P41
+    D1 -- "(2) Tong quan user/role" --> P41
+    D2 -- "(3) Tong quan seller profile" --> P41
+    D3 -- "(4) Tong quan catalog" --> P41
+    D5 -- "(5) Tong quan request" --> P41
+    P41 -- "(6) Du lieu dashboard" --> Admin
 
-    Admin -- "(6) Yeu cau seller profile" --> P42
-    P42 -- "(7) Lay/cap nhat seller profile" --> D2
-    D2 -- "(8) Seller profile" --> P42
-    P42 -- "(9) Kiem tra user seller" --> D1
-    D1 -- "(10) User seller" --> P42
-    P42 -- "(11) Log seller action" --> D6
-    P42 -- "(12) Ket qua seller" --> Admin
+    Admin -- "(7) Yeu cau user/role" --> P42
+    P42 -- "(8) Lay/cap nhat user" --> D1
+    D1 -- "(9) User/role hien tai" --> P42
+    P42 -- "(10) Log user action" --> D6
+    P42 -- "(11) Ket qua user" --> Admin
 
-    Admin -- "(13) Yeu cau catalog" --> P43
-    P43 -- "(14) Lay/cap nhat catalog" --> D3
-    D3 -- "(15) Catalog hien tai" --> P43
-    P43 -- "(16) Log catalog action" --> D6
-    P43 -- "(17) Ket qua catalog" --> Admin
+    Admin -- "(12) Yeu cau seller profile" --> P43
+    P43 -- "(13) Lay/cap nhat seller profile" --> D2
+    D2 -- "(14) Seller profile" --> P43
+    P43 -- "(15) Kiem tra user seller" --> D1
+    D1 -- "(16) User seller" --> P43
+    P43 -- "(17) Log seller action" --> D6
+    P43 -- "(18) Ket qua seller" --> Admin
 
-    Admin -- "(18) Yeu cau audit log" --> P44
-    P44 -- "(19) Lay audit log" --> D6
-    D6 -- "(20) Audit log" --> P44
-    P44 -- "(21) Audit log hien thi" --> Admin
+    Admin -- "(19) Yeu cau catalog" --> P44
+    P44 -- "(20) Lay/cap nhat catalog" --> D3
+    D3 -- "(21) Catalog hien tai" --> P44
+    P44 -- "(22) Log catalog action" --> D6
+    P44 -- "(23) Ket qua catalog" --> Admin
 
-    Buyer -- "(22) Nop don xin lam seller" --> P45
-    P45 -- "(23) Luu don Pending" --> D8
-    D8 -- "(24) Don can duyet" --> P45
-    P45 -- "(25) Kiem tra applicant con Buyer active" --> D1
-    D1 -- "(26) User/role/active" --> P45
-    P45 -- "(27) Duyet: doi role -> Seller" --> D1
-    P45 -- "(28) Duyet: tao seller profile verified" --> D2
-    P45 -- "(29) Cap nhat trang thai don (Approved/Rejected)" --> D8
-    P45 -- "(30) Log duyet/tu choi" --> D6
-    P45 -- "(31) Trang thai don" --> Buyer
-    Admin -- "(32) Duyet/tu choi don" --> P45
-    P45 -- "(33) Ket qua duyet" --> Admin
+    Admin -- "(24) Yeu cau audit log" --> P45
+    P45 -- "(25) Lay audit log" --> D6
+    D6 -- "(26) Audit log" --> P45
+    P45 -- "(27) Audit log hien thi" --> Admin
+
+    Buyer -- "(28) Nop don xin lam seller" --> P46
+    P46 -- "(29) Luu don Pending" --> D8
+    D8 -- "(30) Don can duyet" --> P46
+    P46 -- "(31) Kiem tra applicant con Buyer active" --> D1
+    D1 -- "(32) User/role/active" --> P46
+    P46 -- "(33) Duyet: doi role -> Seller" --> D1
+    P46 -- "(34) Duyet: tao seller profile verified" --> D2
+    P46 -- "(35) Cap nhat trang thai don (Approved/Rejected)" --> D8
+    P46 -- "(36) Log duyet/tu choi" --> D6
+    P46 -- "(37) Trang thai don" --> Buyer
+    Admin -- "(38) Duyet/tu choi don" --> P46
+    P46 -- "(39) Ket qua duyet" --> Admin
 ```
 
 ## DFD Level 1 - 5.0 Quan Ly Chat
@@ -204,7 +213,7 @@ flowchart LR
 | 1.0 Quan ly tai khoan | 1.1 Tiep nhan thong tin tai khoan; 1.2 Xac thuc va phan quyen; 1.3 Tra cuu tai khoan |
 | 2.0 Quan ly build keyboard | 2.1 Tra cuu catalog; 2.2 Xu ly cau hinh build; 2.3 Tinh tong gia snapshot; 2.4 Luu va tra cuu build |
 | 3.0 Quan ly request build | 3.1 Tiep nhan request moi; 3.2 Tao request build; 3.3 Tra cuu request; 3.4 Cap nhat trang thai request |
-| 4.0 Quan tri he thong | 4.1 Quan ly user; 4.2 Quan ly seller profile; 4.3 Quan ly catalog; 4.4 Tra cuu audit log |
+| 4.0 Quan tri he thong | 4.1 Tra cuu dashboard admin; 4.2 Quan ly user; 4.3 Quan ly seller profile; 4.4 Quan ly catalog; 4.5 Tra cuu audit log; 4.6 Duyet don xin seller |
 | 5.0 Quan ly chat | 5.1 Mo hoac tao hoi thoai; 5.2 Kiem tra quyen chat; 5.3 Luu tin nhan; 5.4 Tra cuu lich su chat |
 
 ## Ranh Gioi
@@ -212,4 +221,3 @@ flowchart LR
 - Level 1 khong tach tung thao tac UI nhu bam luu, bam gui request hay filter catalog.
 - D3 khong co seller inventory va khong co case/PCB/plate rieng le.
 - Chat chi co Buyer-Seller va Seller-Admin/Admin-Seller.
-
