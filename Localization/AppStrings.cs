@@ -304,6 +304,12 @@ public static class AppStrings
         ["Snapshot_SwitchNeeded"] = ("Số switch cần", "Switches needed"),
         ["Snapshot_Items"] = ("Linh kiện:", "Parts:"),
         ["Snapshot_NoItems"] = ("Chưa có linh kiện.", "No parts yet."),
+        ["Snapshot_KitPrice"] = ("Giá kit", "Kit price"),
+        ["Snapshot_Included"] = ("Đã gồm", "Included"),
+        ["Snapshot_Mods"] = ("Mod:", "Mods:"),
+        ["Snapshot_Note"] = ("Ghi chú", "Note"),
+        ["Snapshot_SellerPhone"] = ("SĐT seller", "Seller phone"),
+        ["Snapshot_SellerAddress"] = ("Địa chỉ seller", "Seller address"),
 
         // ===== Seller dashboard =====
         ["Seller_Title"] = ("Bảng điều khiển Seller", "Seller dashboard"),
@@ -524,6 +530,15 @@ public static class AppStrings
         ["Service_ActuationForcePositive"] = ("Actuation force phải lớn hơn 0.", "Actuation force must be greater than 0."),
         ["Service_TargetComponentInvalid"] = ("Target component phải là Switch, Stabilizer, Kit hoặc General.", "Target component must be Switch, Stabilizer, Kit or General."),
         ["Service_ReviewNoteField"] = ("ghi chú duyệt", "review note"),
+
+        // ===== Analytics charts (series / axis names baked into LiveCharts objects) =====
+        ["Chart_Revenue"] = ("Doanh thu (USD)", "Revenue (USD)"),
+        ["Chart_Orders"] = ("Số đơn", "Orders"),
+
+        // ===== Diagnostics (error dialog / infrastructure messages) =====
+        ["Error_DialogTitle"] = ("Đã xảy ra lỗi ({0})", "An error occurred ({0})"),
+        ["Error_LogHint"] = ("Chi tiết kỹ thuật đã được ghi vào file log.\nMở file log để xem chi tiết?", "Technical details were written to the log file.\nOpen the log file to view them?"),
+        ["Error_DatabaseUnavailable"] = ("Không thể truy cập cơ sở dữ liệu. Kiểm tra SQL Server và chuỗi kết nối rồi thử lại.", "Cannot reach the database. Check SQL Server and the connection string, then try again."),
 
         // ===== END OF TABLE (insert new keys above this line) =====
     };

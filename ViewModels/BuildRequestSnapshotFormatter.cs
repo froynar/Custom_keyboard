@@ -69,8 +69,8 @@ internal static class BuildRequestSnapshotFormatter
         AppendLine(text, "PCB", GetString(kit, "pcbTechnology"));
         AppendLine(text, "Switch mount", GetString(kit, "switchMount"));
         AppendLine(text, Loc.Instance["Snapshot_SwitchNeeded"], GetInt(kit, "requiredSwitchQuantity")?.ToString(CultureInfo.InvariantCulture));
-        AppendLine(text, "Kit price", FormatMoney(GetDecimal(kit, "priceUsd")));
-        AppendLine(text, "Included", GetString(kit, "includedParts"));
+        AppendLine(text, Loc.Instance["Snapshot_KitPrice"], FormatMoney(GetDecimal(kit, "priceUsd")));
+        AppendLine(text, Loc.Instance["Snapshot_Included"], GetString(kit, "includedParts"));
         text.AppendLine();
     }
 
@@ -119,7 +119,7 @@ internal static class BuildRequestSnapshotFormatter
             }
 
             text.AppendLine();
-            AppendIndented(text, "Note", GetString(item, "notes"));
+            AppendIndented(text, Loc.Instance["Snapshot_Note"], GetString(item, "notes"));
         }
 
         text.AppendLine();
@@ -132,12 +132,12 @@ internal static class BuildRequestSnapshotFormatter
             return;
         }
 
-        text.AppendLine("Mods:");
+        text.AppendLine(Loc.Instance["Snapshot_Mods"]);
         foreach (var mod in mods.EnumerateArray())
         {
             var label = JoinNonEmpty(GetString(mod, "modType"), GetString(mod, "targetComponent"));
             text.Append("- ").Append(string.IsNullOrWhiteSpace(label) ? "Mod" : label).AppendLine();
-            AppendIndented(text, "Note", GetString(mod, "notes"));
+            AppendIndented(text, Loc.Instance["Snapshot_Note"], GetString(mod, "notes"));
         }
 
         text.AppendLine();
@@ -153,8 +153,8 @@ internal static class BuildRequestSnapshotFormatter
         AppendLine(text, "Seller", JoinNonEmpty(
             GetString(seller, "shopName"),
             FormatParen(GetInt(seller, "sellerUserId")?.ToString(CultureInfo.InvariantCulture))));
-        AppendLine(text, "Seller phone", GetString(seller, "phone"));
-        AppendLine(text, "Seller address", GetString(seller, "address"));
+        AppendLine(text, Loc.Instance["Snapshot_SellerPhone"], GetString(seller, "phone"));
+        AppendLine(text, Loc.Instance["Snapshot_SellerAddress"], GetString(seller, "address"));
     }
 
     private static void AppendLine(StringBuilder text, string label, string? value)

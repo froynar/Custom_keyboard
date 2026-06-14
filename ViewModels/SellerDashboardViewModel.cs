@@ -178,10 +178,8 @@ public sealed class SellerDashboardViewModel : RoleDashboardViewModel
         OnPropertyChanged(nameof(InProgressOrders));
         OnPropertyChanged(nameof(AvgCompletionText));
 
-        RevenueSeries = ChartFactory.SellerRevenueOrders(stats.TimeSeries);
         RevenueXAxes = ChartFactory.LabelAxis(stats.TimeSeries.Select(bucket => bucket.Label));
-        RevenueYAxes = ChartFactory.RevenueOrdersYAxes();
-        StatusSeries = ChartFactory.StatusDonut(stats.StatusBreakdown);
+        RebuildCharts();
 
         TopKits.Clear();
         foreach (var kit in stats.TopKits)
@@ -189,6 +187,17 @@ public sealed class SellerDashboardViewModel : RoleDashboardViewModel
             TopKits.Add(kit);
         }
     }
+
+    // Rebuilds the chart series (whose localized labels are baked in at construction time) from the
+    // last-loaded stats. Safe to call any time: _stats defaults to an empty snapshot.
+    private void RebuildCharts()
+    {
+        RevenueSeries = ChartFactory.SellerRevenueOrders(_stats.TimeSeries);
+        RevenueYAxes = ChartFactory.RevenueOrdersYAxes();
+        StatusSeries = ChartFactory.StatusDonut(_stats.StatusBreakdown);
+    }
+
+    protected override void OnLanguageChangedCore() => RebuildCharts();
 
     /// <summary>Reload requests in response to a realtime "new request" event.</summary>
     public Task ReloadRequestsAsync()

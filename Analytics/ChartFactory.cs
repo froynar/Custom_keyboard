@@ -1,3 +1,4 @@
+using Custom_keyboard.Localization;
 using Custom_keyboard.Services.Stats;
 using LiveChartsCore;
 using LiveChartsCore.Measure;
@@ -21,7 +22,7 @@ public static class ChartFactory
     [
         new ColumnSeries<double>
         {
-            Name = "Doanh thu (USD)",
+            Name = Loc.Instance["Chart_Revenue"],
             Values = buckets.Select(b => (double)b.Revenue).ToArray(),
             Fill = new SolidColorPaint(Accent),
             MaxBarWidth = 46,
@@ -29,7 +30,7 @@ public static class ChartFactory
         },
         new LineSeries<double>
         {
-            Name = "So don",
+            Name = Loc.Instance["Chart_Orders"],
             Values = buckets.Select(b => (double)b.Orders).ToArray(),
             Stroke = new SolidColorPaint(Info, 3),
             Fill = null,
@@ -46,7 +47,7 @@ public static class ChartFactory
     [
         new LineSeries<double>
         {
-            Name = "Doanh thu (USD)",
+            Name = Loc.Instance["Chart_Revenue"],
             Values = buckets.Select(b => (double)b.Revenue).ToArray(),
             Stroke = new SolidColorPaint(Accent, 3),
             Fill = new SolidColorPaint(new SKColor(0x1A, 0xBB, 0x9C, 38)),
@@ -62,7 +63,7 @@ public static class ChartFactory
     [
         new ColumnSeries<double>
         {
-            Name = "Doanh thu (USD)",
+            Name = Loc.Instance["Chart_Revenue"],
             Values = sellers.Select(s => (double)s.Revenue).ToArray(),
             Fill = new SolidColorPaint(Info),
             MaxBarWidth = 42
@@ -73,7 +74,7 @@ public static class ChartFactory
     public static ISeries[] StatusDonut(IReadOnlyList<StatusSlice> slices) =>
         slices.Select(s => (ISeries)new PieSeries<double>
         {
-            Name = $"{Humanize(s.Status)} ({s.Count})",
+            Name = $"{Loc.Instance["Status_" + s.Status]} ({s.Count})",
             Values = [(double)s.Count],
             InnerRadius = 55,
             Fill = new SolidColorPaint(StatusColor(s.Status))
@@ -106,7 +107,7 @@ public static class ChartFactory
         },
         new Axis
         {
-            Name = "So don",
+            Name = Loc.Instance["Chart_Orders"],
             Position = AxisPosition.End,
             TextSize = 11,
             MinLimit = 0,
@@ -139,6 +140,4 @@ public static class ChartFactory
         "Cancelled" => new SKColor(0xE7, 0x4C, 0x3C),
         _ => new SKColor(0xBD, 0xC3, 0xC7)
     };
-
-    private static string Humanize(string status) => status.Replace('_', ' ');
 }

@@ -43,5 +43,15 @@ public abstract class ViewModelBase : INotifyPropertyChanged
     {
         // Empty property name => refresh all bindings, so computed Tr-based labels pick up the new language.
         OnPropertyChanged(string.Empty);
+        OnLanguageChangedCore();
+    }
+
+    /// <summary>
+    /// Hook for subclasses to refresh artifacts that bindings alone can't (e.g. chart series whose
+    /// localized labels are baked into a cached object instance). Called after the blanket
+    /// PropertyChanged on every language change.
+    /// </summary>
+    protected virtual void OnLanguageChangedCore()
+    {
     }
 }

@@ -1,5 +1,6 @@
 using System.Diagnostics;
 using System.Windows;
+using Custom_keyboard.Localization;
 
 namespace Custom_keyboard.Diagnostics;
 
@@ -15,8 +16,8 @@ public static class ErrorReporter
         AppLog.Error(source, ex);
 
         var result = MessageBox.Show(
-            $"{AppLog.ToUserMessage(ex)}\n\nChi tiet ky thuat da duoc ghi vao file log.\nMo file log de xem chi tiet?",
-            $"Da xay ra loi ({source})",
+            $"{AppLog.ToUserMessage(ex)}\n\n{Loc.Instance["Error_LogHint"]}",
+            Loc.Instance.Format("Error_DialogTitle", source),
             MessageBoxButton.YesNo,
             MessageBoxImage.Error,
             MessageBoxResult.No);

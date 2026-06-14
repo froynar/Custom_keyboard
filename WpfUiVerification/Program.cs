@@ -18,9 +18,10 @@ internal sealed class WpfUiRunner
         await RunScenarioAsync("UI login smoke: buyer dashboard", appPath, "buyer_refactor", "Password123", "BuyerDashboardRoot");
         await RunScenarioAsync("UI login smoke: seller dashboard", appPath, "seller_soigear", "Password123", "SellerDashboardRoot");
         await RunScenarioAsync("UI login smoke: admin dashboard", appPath, "admin_refactor", "Password123", "AdminDashboardRoot");
+        await RunLanguageSwitchScenarioAsync("UI i18n: live language switch + persistence", appPath);
 
         Console.WriteLine();
-        Console.WriteLine($"Passed: {3 - _failures.Count}");
+        Console.WriteLine($"Passed: {4 - _failures.Count}");
         Console.WriteLine($"Failed: {_failures.Count}");
 
         if (_failures.Count > 0)
@@ -62,6 +63,113 @@ internal sealed class WpfUiRunner
             WaitForDashboard(window, expectedDashboardAutomationId, username, TimeSpan.FromSeconds(20));
             OpenProfileMenu(process.Id, window, TimeSpan.FromSeconds(10));
             Console.WriteLine($"PASS {name}");
+        }
+        catch (Exception ex)
+        {
+            _failures.Add($"{name}: {ex.Message}");
+        }
+        finally
+        {
+            if (process is not null && !process.HasExited)
+            {
+                process.CloseMainWindow();
+                await Task.Delay(500);
+                if (!process.HasExited)
+                {
+                    process.Kill(entireProcessTree: true);
+                }
+            }
+        }
+    }
+
+    private async Task RunLanguageSwitchScenarioAsync(string name, string appPath)
+    {
+        Process? process = null;
+        try
+        {
+            process = Process.Start(new ProcessStartInfo
+            {
+                FileName = appPath,
+                WorkingDirectory = Path.GetDirectoryName(appPath) ?? Environment.CurrentDirectory,
+                UseShellExecute = false
+            }) ?? throw new InvalidOperationException("Could not start WPF app.");
+
+            var window = WaitForMainWindow(process.Id, TimeSpan.FromSeconds(20));
+
+            // 1) Default language on the login screen should be Vietnamese.
+            var loginBtn = WaitForElement(window, "LoginSubmitButton", TimeSpan.FromSeconds(10));
+            var loginText = loginBtn.Current.Name?.Trim() ?? string.Empty;
+            Console.WriteLine($"[i18n] login button (default): '{loginText}'");
+
+            SetValue(window, "LoginEmailOrUsernameTextBox", "admin_refactor");
+            SetValue(window, "LoginPasswordBox", "Password123");
+            Invoke(window, "LoginSubmitButton");
+            WaitForDashboard(window, "AdminDashboardRoot", "admin_refactor", TimeSpan.FromSeconds(20));
+
+            // Dashboard title is a ViewModel-computed Tr() property: a strong live-refresh signal.
+            const string titleVi = "Bảng điều khiển Admin";
+            const string titleEn = "Admin dashboard";
+            var titleViBefore = FindByName(window, titleVi) is not null;
+            var titleEnBefore = FindByName(window, titleEn) is not null;
+            Console.WriteLine($"[i18n] dashboard title before switch -> VI:{titleViBefore} EN:{titleEnBefore}");
+
+            // 2) Open the user menu, expand Preferences, switch to English; title must change live.
+            InvokeOrToggle(WaitForElement(window, "UserMenuButton", TimeSpan.FromSeconds(10)), "UserMenuButton");
+            InvokeOrToggle(WaitForElementInProcess(process.Id, "UserMenuPreferencesButton", TimeSpan.FromSeconds(10)), "UserMenuPreferencesButton");
+            InvokeOrToggle(WaitForElementInProcess(process.Id, "LanguageEnglishOption", TimeSpan.FromSeconds(10)), "LanguageEnglishOption");
+            Thread.Sleep(800);
+            var titleViAfterEn = FindByName(window, titleVi) is not null;
+            var titleEnAfterEn = FindByName(window, titleEn) is not null;
+            Console.WriteLine($"[i18n] dashboard title after EN -> VI:{titleViAfterEn} EN:{titleEnAfterEn}");
+
+            var prefPath = Path.Combine(
+                Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData),
+                "CustomKeyboard", "preferences.txt");
+            var prefAfterEn = File.Exists(prefPath) ? File.ReadAllText(prefPath).Trim() : "(missing)";
+            Console.WriteLine($"[i18n] preferences.txt after EN: '{prefAfterEn}'");
+
+            // 3) Switch back to Vietnamese; title and persistence must revert.
+            InvokeOrToggle(WaitForElementInProcess(process.Id, "LanguageVietnameseOption", TimeSpan.FromSeconds(10)), "LanguageVietnameseOption");
+            Thread.Sleep(800);
+            var titleViAfterVi = FindByName(window, titleVi) is not null;
+            var prefAfterVi = File.Exists(prefPath) ? File.ReadAllText(prefPath).Trim() : "(missing)";
+            Console.WriteLine($"[i18n] dashboard title after back-to-VI -> VI:{titleViAfterVi}");
+            Console.WriteLine($"[i18n] preferences.txt after VI: '{prefAfterVi}'");
+
+            var problems = new List<string>();
+            if (loginText.Contains("Sign in", StringComparison.OrdinalIgnoreCase))
+            {
+                problems.Add("login screen defaulted to English, expected Vietnamese");
+            }
+            if (!titleViBefore)
+            {
+                problems.Add("dashboard title was not Vietnamese by default");
+            }
+            if (!titleEnAfterEn || titleViAfterEn)
+            {
+                problems.Add("dashboard title did not switch to English live");
+            }
+            if (prefAfterEn != "English")
+            {
+                problems.Add($"preferences.txt not persisted as English (got '{prefAfterEn}')");
+            }
+            if (!titleViAfterVi)
+            {
+                problems.Add("dashboard title did not revert to Vietnamese");
+            }
+            if (prefAfterVi != "Vietnamese")
+            {
+                problems.Add($"preferences.txt not persisted back to Vietnamese (got '{prefAfterVi}')");
+            }
+
+            if (problems.Count == 0)
+            {
+                Console.WriteLine($"PASS {name}");
+            }
+            else
+            {
+                _failures.Add($"{name}: {string.Join("; ", problems)}");
+            }
         }
         catch (Exception ex)
         {
@@ -333,6 +441,12 @@ internal sealed class WpfUiRunner
             return;
         }
 
-        throw new InvalidOperationException($"Element '{automationId}' supports neither InvokePattern nor TogglePattern.");
+        if (element.TryGetCurrentPattern(SelectionItemPattern.Pattern, out var selectionPattern))
+        {
+            ((SelectionItemPattern)selectionPattern).Select();
+            return;
+        }
+
+        throw new InvalidOperationException($"Element '{automationId}' supports neither Invoke, Toggle, nor SelectionItem.");
     }
 }

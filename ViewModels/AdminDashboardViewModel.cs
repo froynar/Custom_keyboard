@@ -420,12 +420,9 @@ public sealed class AdminDashboardViewModel : RoleDashboardViewModel
         OnPropertyChanged(nameof(TotalRevenue));
         OnPropertyChanged(nameof(CompletedOrders));
 
-        StatusSeries = ChartFactory.StatusDonut(overview.StatusBreakdown);
-        RevenueSeries = ChartFactory.RevenueLine(overview.RevenueSeries);
         RevenueXAxes = ChartFactory.LabelAxis(overview.RevenueSeries.Select(bucket => bucket.Label));
-        RevenueYAxes = ChartFactory.RevenueYAxis();
-        TopSellersSeries = ChartFactory.TopSellersColumns(overview.TopSellers);
         TopSellersXAxes = ChartFactory.LabelAxis(overview.TopSellers.Select(seller => seller.ShopName));
+        RebuildCharts();
 
         TopSellers.Clear();
         foreach (var seller in overview.TopSellers)
@@ -433,6 +430,18 @@ public sealed class AdminDashboardViewModel : RoleDashboardViewModel
             TopSellers.Add(seller);
         }
     }
+
+    // Rebuilds the chart series (localized labels are baked in at construction) from the last-loaded
+    // overview. Safe to call any time: _overview defaults to an empty snapshot.
+    private void RebuildCharts()
+    {
+        StatusSeries = ChartFactory.StatusDonut(_overview.StatusBreakdown);
+        RevenueSeries = ChartFactory.RevenueLine(_overview.RevenueSeries);
+        RevenueYAxes = ChartFactory.RevenueYAxis();
+        TopSellersSeries = ChartFactory.TopSellersColumns(_overview.TopSellers);
+    }
+
+    protected override void OnLanguageChangedCore() => RebuildCharts();
 
     private async Task RefreshUsersAsync()
     {

@@ -1,5 +1,6 @@
 using System.Data.Common;
 using System.IO;
+using Custom_keyboard.Localization;
 
 namespace Custom_keyboard.Diagnostics;
 
@@ -45,7 +46,7 @@ public static class AppLog
     public static string ToUserMessage(Exception ex)
     {
         return IsDatabaseError(ex)
-            ? "Khong the truy cap co so du lieu. Kiem tra SQL Server va chuoi ket noi roi thu lai."
+            ? Loc.Instance["Error_DatabaseUnavailable"]
             : ex.Message;
     }
 
