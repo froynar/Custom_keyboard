@@ -4,9 +4,10 @@ Tai lieu nay la ban rut gon cua `Custom_Keyboard_Activity_Diagrams_Refactor.md`.
 Muc tieu la de trinh bay nhanh cac luong chinh theo ERD/FHD refactor, giu dung pham vi:
 
 - Buyer tao build tu keyboard kit, gui request va co the nop don tro thanh seller.
-- Seller xu ly request duoc gan.
+- Seller xu ly request duoc gan va chay QC test mo phong truoc khi hoan thanh.
 - Admin quan tri user/seller profile/catalog/audit va duyet don seller.
 - Chat chi ho tro Buyer-Seller va Seller-Admin/Admin-Seller.
+- Device/QC mo phong ket qua test tung phim qua MQTT hoac fallback in-process.
 
 ## AD-S01: Tai Khoan
 
@@ -104,7 +105,9 @@ flowchart TD
         Action{Chon xu ly}
         Accept[Chap nhan]
         Progress[Cap nhat dang xu ly]
-        Complete[Hoan thanh]
+        StartQc[Bat dau QC test]
+        ReviewQc[Xem ket qua QC tung phim]
+        Complete[Hoan thanh sau QC]
         Cancel[Huy request]
         End((Ket thuc))
     end
@@ -114,13 +117,19 @@ flowchart TD
         LoadRequest[Hien thi request/build snapshot]
         ValidateStatus{Trang thai hop le?}
         UpdateStatus[Cap nhat request]
+        RunQc[Mo phong test signal/latency/noise]
+        SaveQc[Luu ket qua tung phim va tong hop QC]
+        QcOk{QC chap nhan duoc?}
+        ShowQcResult[Hien thi ket qua QC]
         ShowResult[Hien thi ket qua]
     end
 
     Start --> OpenDashboard --> ShowDashboard --> ViewRequests --> OpenDetail --> LoadRequest --> Action
     Action -- Chap nhan --> Accept --> ValidateStatus
     Action -- Dang xu ly --> Progress --> ValidateStatus
-    Action -- Hoan thanh --> Complete --> ValidateStatus
+    Action -- QC test --> StartQc --> RunQc --> SaveQc --> ReviewQc --> QcOk
+    QcOk -- Khong --> ShowQcResult --> Action
+    QcOk -- Co --> Complete --> ValidateStatus
     Action -- Huy --> Cancel --> ValidateStatus
     ValidateStatus -- Co --> UpdateStatus --> ShowResult --> End
     ValidateStatus -- Khong --> ShowResult --> Action
@@ -130,6 +139,8 @@ flowchart TD
 | --- | --- |
 | 3.1-3.3 | Xem dashboard, danh sach request va chi tiet request. |
 | 3.4-3.7 | Chap nhan, cap nhat dang xu ly, hoan thanh hoac huy request. |
+| 3.8-3.10 | Bat dau QC, xem ket qua tung phim va xac nhan hoan thanh sau QC. |
+| 6.1-6.7 | Tao/lay tram QC, tao session, kiem tra signal/latency/noise va tong hop ket qua. |
 
 ## AD-S04: Admin Quan Tri
 
@@ -208,8 +219,54 @@ flowchart TD
 | 5.3 | Seller chat voi admin. |
 | 5.4 | Admin chat voi seller. |
 
+## AD-S06: Device/QC Kiem Tra Keyboard
+
+```mermaid
+flowchart TD
+    subgraph SellerLane["Nguoi dung - Seller"]
+        Start((Bat dau))
+        SelectRequest[Chon request In_progress]
+        StartQc[Bat dau QC test]
+        Review[Review ket qua QC]
+        Decide{Dat yeu cau?}
+        Fix[Khac phuc phim loi]
+        Complete[Hoan thanh request]
+        End((Ket thuc))
+    end
+
+    subgraph SystemLane["He thong"]
+        CreateDevice[Tao/lay QC_STATION]
+        CreateSession[Tao session Running]
+        ReceiveData[Nhan telemetry tung phim]
+        SaveResult[Luu ket qua tung phim]
+        Aggregate[Tong hop session]
+        ShowFail[Hien phim fail/warning]
+        ShowPass[Cho phep hoan thanh]
+    end
+
+    subgraph DeviceLane["Device Simulator"]
+        Generate[Sinh signal, latency, noise]
+        Publish[Gui MQTT hoac fallback]
+    end
+
+    Start --> SelectRequest --> StartQc --> CreateDevice --> CreateSession --> Generate --> Publish --> ReceiveData --> SaveResult --> Aggregate --> Review --> Decide
+    Decide -- Khong --> ShowFail --> Fix --> StartQc
+    Decide -- Co --> ShowPass --> Complete --> End
+```
+
+| FHD | Pham vi |
+| --- | --- |
+| 6.1 | Tao hoac lay tram QC mo phong cua seller. |
+| 6.2 | Tao phien QC gan voi request dang In_progress. |
+| 6.3 | Kiem tra press/release signal, wrong key, no signal. |
+| 6.4 | Kiem tra latency tung phim, dac biet phim HE. |
+| 6.5 | Kiem tra do on tung phim. |
+| 6.6 | Xem ket qua tung phim va failure_type. |
+| 6.7 | Tong hop session Passed/Warning/Failed. |
+
 ## Ranh Gioi
 
 - Ban rut gon nay khong thay the ban chi tiet; dung de tong quan va trinh bay.
 - Khong mo ta tung nut UI, DTO, service method, database column hoac realtime detail.
 - Logic validation chi tiet van nam trong `Keyboard_Build_Validation_Logic.md`, DFD Level 2 va code service.
+- Device/QC trong phase nay la mo phong du lieu, khong nhung phan cung that; MQTT la transport chinh, fallback in-process chi dung khi MQTT tat/khong kha dung hoac khi test.

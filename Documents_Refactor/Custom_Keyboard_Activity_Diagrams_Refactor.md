@@ -1,12 +1,13 @@
 # Custom Keyboard Builder - Activity Diagrams Refactor
 
-Tai lieu nay mo ta Activity Diagram theo ERD/FHD refactor trong `Documents_Refactor` (mo hinh kit-based): buyer chon mot keyboard kit roi them switch/keycap/stabilizer/accessory va mod. Anh xa 5 nhom chuc nang trong FHD refactor:
+Tai lieu nay mo ta Activity Diagram theo ERD/FHD refactor trong `Documents_Refactor` (mo hinh kit-based): buyer chon mot keyboard kit roi them switch/keycap/stabilizer/accessory va mod. Tai lieu da bo sung Device Layer de mo phong tram QC keyboard truoc khi seller hoan thanh request. Anh xa 6 nhom chuc nang trong FHD refactor:
 
 - 1. Tai khoan.
 - 2. Buyer - Tao build tu kit va gui request.
 - 3. Seller - Xu ly request.
 - 4. Admin - Quan tri.
 - 5. Chat.
+- 6. Device/QC - Kiem tra keyboard.
 
 Phan nay bat dau voi muc `1. Tai khoan`.
 
@@ -133,6 +134,8 @@ flowchart LR
         ChooseSeller[Chon seller verified]
         ClickSendRequest[Bam Gui request]
         ViewRequestStatus[Theo doi trang thai request]
+        OpenQcSummary[Mo tom tat QC neu seller da test]
+        ReadQcSummary[Xem so phim pass/warning/fail, latency va do on]
         OpenRegisterSeller[Chon Dang ky Seller]
         SubmitApplication[Gui don xin lam seller]
         ViewApplicationStatus[Xem trang thai don]
@@ -160,6 +163,7 @@ flowchart LR
         ShowSellerError[Hien thi thong bao chua chon seller]
         CreateRequest[Tao request Pending va gui den seller]
         ShowRequestStatus[Hien thi trang thai request]
+        LoadQcSummary[Load tom tat QC gan voi request]
         ShowRegisterSellerForm[Hien thi form dang ky seller]
         SaveApplication[Luu don Pending cho admin duyet]
         ShowApplicationStatus[Hien thi trang thai don: Pending/Approved/Rejected]
@@ -187,7 +191,7 @@ flowchart LR
     ShowSellerList --> ChooseSeller --> SellerSelected
     SellerSelected -- Khong --> ShowSellerError --> ShowSellerList
     SellerSelected -- Co --> ClickSendRequest --> CreateRequest
-    CreateRequest --> ShowRequestStatus --> ViewRequestStatus --> EndBuyer
+    CreateRequest --> ShowRequestStatus --> ViewRequestStatus --> OpenQcSummary --> LoadQcSummary --> ReadQcSummary --> EndBuyer
 
     ChooseHomeAction -- Dang ky Seller --> OpenRegisterSeller --> ShowRegisterSellerForm
     ShowRegisterSellerForm --> SubmitApplication --> SaveApplication --> ShowApplicationStatus
@@ -213,7 +217,7 @@ flowchart LR
 | 13 | Buyer chon seller verified de gui request tu build da luu. | 2.9 |
 | 14 | Buyer bam Gui request; neu chua chon seller, he thong hien loi. | 2.9, 2.10 |
 | 15 | He thong tao request Pending va gui den seller. | 2.10 |
-| 16 | Buyer theo doi trang thai request o muc Request da gui. | 2.11 |
+| 16 | Buyer theo doi trang thai request o muc Request da gui; neu seller da chay QC, Buyer co the xem tom tat QC cua request. | 2.11, 6.7 |
 | 17 | Buyer co the luu tru build khong con can khoi danh sach chinh. | 2.12 |
 | 18 | Buyer co the chon Dang ky Seller, nhap ten shop/phone/dia chi/ghi chu va gui don. | 2.13 |
 | 19 | He thong luu don Pending va hien trang thai don (Pending/Approved/Rejected) cho admin duyet. | 2.13 |
@@ -223,7 +227,7 @@ flowchart LR
 - Activity Diagram nay chi the hien cac thao tac Buyer nhin thay va thuc hien tren UI.
 - Theo ERD refactor, buyer chon mot keyboard kit (da gom case/PCB/plate/foam/cable) roi them switch/keycap/stabilizer/accessory va mod preset; khong chon case/PCB/plate rieng le.
 - Buoc gui request thuc hien tren build da luu va chi chon duoc seller verified active; neu dang sua build trong configurator thi can luu build truoc khi gui.
-- Trang thai build: Draft, Saved, Requested, Archived. Trang thai request hien cho Buyer: Pending, Accepted, In_progress, Completed, Cancelled.
+- Trang thai build: Draft, Saved, Requested, Archived. Trang thai request hien cho Buyer: Pending, Accepted, In_progress, Completed, Cancelled. Ket qua QC hien theo request gom tong phim Pass/Warning/Fail, latency va noise; chi tiet tung phim chu yeu phuc vu Seller.
 
 ## AD-03: Seller - Xu Ly Request
 
@@ -236,6 +240,9 @@ Activity Diagram nay duoc trinh bay theo dang swimlane gom `Seller` va `He thong
 - `3.5 Cap nhat dang xu ly`
 - `3.6 Hoan thanh request`
 - `3.7 Huy request`
+- `3.8 Bat dau QC test`
+- `3.9 Xem ket qua QC tung phim`
+- `3.10 Xac nhan hoan thanh sau QC`
 
 ```mermaid
 flowchart LR
@@ -247,7 +254,10 @@ flowchart LR
         ViewRequestDetail[Xem chi tiet request]
         ChooseStatusAction{Chon thao tac xu ly}
         UpdateStatus[Cap nhat trang thai: Chap nhan, Bat dau lam, Huy]
-        MarkCompleted[Bam Danh dau hoan thanh]
+        StartQc[Bam Bat dau QC test]
+        ReviewQc[Xem ket qua QC tung phim]
+        FixIssue[Khac phuc phim loi va test lai]
+        MarkCompleted[Bam Xac nhan hoan thanh sau QC]
         EndSeller((Ket thuc))
     end
 
@@ -257,6 +267,14 @@ flowchart LR
         ShowRequestDetail[Hien thi chi tiet cau hinh build]
         ShowStatusOptions[Hien thi cac tuy chon trang thai]
         UpdateRequestStatus[Cap nhat/hien thi trang thai request]
+        GetOrCreateQcStation[Tao/lay device QC_STATION mo phong]
+        StartQcSession[Tao device_test_session]
+        ReceiveTelemetry[Nhan telemetry tung phim qua MQTT hoac fallback]
+        SaveKeyResults[Luu device_key_test_results]
+        CompleteQcSession[Tong hop pass/warning/fail, latency, noise]
+        QcPassed{Co loi fail nghiem trong?}
+        ShowQcFailed[Hien thi phim loi: NoSignal, WrongKey, Chatter, StuckKey, HighLatency, TooNoisy]
+        AllowComplete[Cho phep seller xac nhan hoan thanh]
         ShowCompleted[Hien thi request da hoan thanh]
     end
 
@@ -266,7 +284,9 @@ flowchart LR
     ViewRequestDetail --> ShowStatusOptions --> ChooseStatusAction
 
     ChooseStatusAction -- Cap nhat trang thai --> UpdateStatus --> UpdateRequestStatus --> ShowSellerDashboard
-    ChooseStatusAction -- Hoan thanh --> MarkCompleted --> ShowCompleted --> EndSeller
+    ChooseStatusAction -- Bat dau QC --> StartQc --> GetOrCreateQcStation --> StartQcSession --> ReceiveTelemetry --> SaveKeyResults --> CompleteQcSession --> ReviewQc --> QcPassed
+    QcPassed -- Co --> ShowQcFailed --> FixIssue --> StartQc
+    QcPassed -- Khong --> AllowComplete --> MarkCompleted --> ShowCompleted --> EndSeller
 ```
 
 ### Mo Ta Luong
@@ -279,16 +299,22 @@ flowchart LR
 | 4 | He thong hien thi danh sach request duoc gan cho seller. | 3.2 Xem danh sach request |
 | 5 | Seller chon mot request de xem chi tiet. | 3.3 Xem chi tiet request |
 | 6 | He thong hien thi kit, build items, mod, ghi chu va tong gia snapshot. | 3.3 |
-| 7 | Seller chon thao tac theo trang thai hien tai: Chap nhan, Bat dau lam, Hoan thanh hoac Huy. | 3.4, 3.5, 3.6, 3.7 |
-| 8 | He thong cap nhat trang thai request theo state machine va hien ket qua. | 3.4, 3.5, 3.6, 3.7 |
-| 9 | Seller hoan thanh request khi xu ly xong. | 3.6 |
-| 10 | He thong hien thi request da hoan thanh. | 3.6 |
+| 7 | Seller chon thao tac theo trang thai hien tai: Chap nhan, Bat dau lam, Bat dau QC, Hoan thanh sau QC hoac Huy. | 3.4, 3.5, 3.6, 3.7, 3.8 |
+| 8 | He thong cap nhat trang thai request theo state machine va hien ket qua. | 3.4, 3.5, 3.7 |
+| 9 | Khi request dang In_progress, Seller bat dau QC test. | 3.8, 6.2 |
+| 10 | He thong tao/lay device QC_STATION, tao phien QC va nhan telemetry tung phim. | 6.1, 6.2, 6.3, 6.4, 6.5 |
+| 11 | He thong luu ket qua tung phim va tong hop phien QC. | 6.6, 6.7 |
+| 12 | Seller xem phim nao loi NoSignal, WrongKey, Chatter/double click, StuckKey, HighLatency hoac TooNoisy. | 3.9, 6.6 |
+| 13 | Neu co loi fail nghiem trong, Seller khac phuc va chay QC lai. | 3.8, 3.9 |
+| 14 | Neu QC dat hoac chi con warning chap nhan duoc, Seller xac nhan hoan thanh request. | 3.10, 3.6 |
+| 15 | He thong hien thi request da hoan thanh. | 3.6 |
 
 ### Ghi Chu
 
 - Activity Diagram nay chi mo ta thao tac Seller nhin thay va thuc hien tren UI.
 - Cac trang thai request dung theo FHD: Pending, Accepted, In_progress, Completed, Cancelled.
-- Diagram khong mo ta co che realtime hay xu ly ky thuat ben trong.
+- QC chi ap dung khi request dang In_progress. Device Layer dung du lieu mo phong, MQTT la duong chinh de gui telemetry; fallback in-process chi dung khi MQTT tat/khong kha dung hoac khi test.
+- Chatter/double click chi tinh khi co chu ky press-release hoan tat; StuckKey la truong hop release_signal_detected=false va khong can bounce_count.
 
 ## AD-04: Admin - Quan Tri
 
@@ -434,3 +460,78 @@ flowchart LR
 - Khong can hien thi unread, online/offline hay typing indicator trong phase phu nay.
 - Chat khong thay doi status request va khong sua build goc.
 - UI chi an/hien nut theo role de tranh thao tac sai, nhung service van phai validate lai tat ca dieu kien chat.
+
+## AD-06: Device/QC - Kiem Tra Keyboard
+
+Activity Diagram nay mo ta luong Device Layer mo phong cho request dang `In_progress`. Device khong phai phan cung that trong phase nay; no sinh telemetry de he thong luu ket qua QC tung phim va tong hop cho Seller/Buyer xem.
+
+```mermaid
+flowchart LR
+    subgraph SellerLane["Seller"]
+        StartQcFlow((Bat dau))
+        SelectRequest[Chon request dang In_progress]
+        ClickStartQc[Bam Bat dau QC test]
+        ReviewSummary[Xem tom tat QC]
+        ReviewPerKey[Xem ket qua tung phim]
+        Decide{Ket qua chap nhan duoc?}
+        FixKeyboard[Khac phuc switch/phim loi]
+        ConfirmComplete[Xac nhan hoan thanh request]
+        EndQcFlow((Ket thuc))
+    end
+
+    subgraph SystemLane["He thong"]
+        ValidateRequest{Request hop le de QC?}
+        GetOrCreateDevice[Tao/lay QC_STATION cua seller]
+        CreateSession[Tao device_test_session Running]
+        SelectTransport{MQTT dang bat va broker kha dung?}
+        SubscribeTelemetry[Subscriber nhan telemetry]
+        DirectFallback[Goi DeviceService in-process fallback]
+        PersistKeyResult[Luu device_key_test_results]
+        AllKeysDone{Da du total_keys?}
+        AggregateSession[Tong hop session Passed/Warning/Failed]
+        PersistSummary[Luu tested/pass/warning/fail, latency, noise]
+        BlockComplete[Chan hoan thanh va hien phim fail]
+        AllowComplete[Cho phep hoan thanh]
+    end
+
+    subgraph DeviceLane["Device Simulator"]
+        SimulateKeys[Sinh du lieu tung phim theo request_payload_json]
+        PublishKeyTelemetry[Publish key telemetry MQTT]
+        PublishSessionSummary[Publish session summary]
+    end
+
+    StartQcFlow --> SelectRequest --> ClickStartQc --> ValidateRequest
+    ValidateRequest -- Khong --> BlockComplete --> ReviewPerKey
+    ValidateRequest -- Co --> GetOrCreateDevice --> CreateSession --> SelectTransport
+    SelectTransport -- Co --> SimulateKeys --> PublishKeyTelemetry --> SubscribeTelemetry
+    SelectTransport -- Khong --> DirectFallback
+    SubscribeTelemetry --> PersistKeyResult
+    DirectFallback --> PersistKeyResult
+    PersistKeyResult --> AllKeysDone
+    AllKeysDone -- Chua --> SimulateKeys
+    AllKeysDone -- Roi --> PublishSessionSummary --> AggregateSession --> PersistSummary --> ReviewSummary --> ReviewPerKey --> Decide
+    Decide -- Khong --> BlockComplete --> FixKeyboard --> ClickStartQc
+    Decide -- Co --> AllowComplete --> ConfirmComplete --> EndQcFlow
+```
+
+### Mo Ta Luong
+
+| Buoc | Hoat dong | FHD |
+| --- | --- | --- |
+| 1 | Seller chon request dang In_progress va bat dau QC test. | 3.8, 6.2 |
+| 2 | He thong kiem tra request co hop le, tao/lay device QC_STATION cho seller. | 6.1 |
+| 3 | He thong tao device_test_session Running, lay total_keys va switch_technology tu request/build payload. | 6.2 |
+| 4 | Device simulator sinh du lieu tung phim: signal press/release, latency, press_event_count, bounce_count, hold_duration, noise. | 6.3, 6.4, 6.5 |
+| 5 | Neu MQTT bat va broker kha dung, simulator publish telemetry; app subscriber nhan va goi service luu DB. | 6.3 |
+| 6 | Neu MQTT tat/khong kha dung hoac dang unit test, he thong dung fallback in-process de luu cung mot model du lieu. | 6.3 |
+| 7 | He thong luu device_key_test_results va lap lai den khi tested_keys = total_keys. | 6.6 |
+| 8 | He thong tong hop session: pass/warning/fail, latency trung binh/cao nhat, do on trung binh/cao nhat. | 6.7 |
+| 9 | Seller xem ket qua tung phim; neu co fail thi sua switch/phim va chay QC lai. | 3.9, 6.6 |
+| 10 | Neu ket qua dat, Seller xac nhan hoan thanh request. | 3.10, 3.6 |
+
+### Ghi Chu
+
+- NoSignal dua tren press_signal_detected=false; stuck dua tren release_signal_detected=false.
+- Chatter/double click dua tren press_event_count > 1 va/hoac bounce_count > nguong sau khi da co press-release hoan tat.
+- HE switch dung nguong latency chat hon, vi du <= 3ms Pass, > 3ms den <= 6ms Warning, > 6ms Fail.
+- SQL Server la source of truth; MQTT chi la transport cho telemetry mo phong.

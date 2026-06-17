@@ -1,7 +1,7 @@
 // Custom Keyboard Builder - ERD refactor proposal, compact version
 // Muc tieu: buyer chon keyboard kit, sau do mix switch/keycap/stabilizer/accessory.
 // Giu ERD gon de bat dau refactor tung buoc, tranh qua nhieu lien ket.
-// Link count: 26.
+// Link count: 33.
 
 Table roles {
   role_id int [pk, increment]
@@ -157,6 +157,65 @@ Table build_requests {
   accepted_at datetime
   completed_at datetime
   updated_at datetime
+}
+
+Table devices {
+  device_id varchar(50) [pk]
+  seller_user_id int [not null, ref: > users.user_id]
+  device_name varchar(100) [not null]
+  device_type varchar(50) [not null] // QC_STATION, KEY_SIGNAL_TESTER, LATENCY_TESTER, NOISE_SENSOR
+  is_active boolean [not null]
+  last_seen_at datetime
+  created_at datetime [not null]
+
+  Note: 'Device rows are created on demand for the seller QC station. This phase uses simulated telemetry, not embedded hardware.'
+}
+
+Table device_test_sessions {
+  session_id varchar(50) [pk]
+  request_id varchar(50) [not null, ref: > build_requests.request_id]
+  device_id varchar(50) [not null, ref: > devices.device_id]
+  seller_user_id int [not null, ref: > users.user_id]
+  switch_technology varchar(50) [not null] // Mechanical, HE, Topre, Optical
+  total_keys int [not null]
+  tested_keys int [not null]
+  passed_keys int [not null]
+  warning_keys int [not null]
+  failed_keys int [not null]
+  average_latency_ms decimal(8,2)
+  max_latency_ms decimal(8,2)
+  average_noise_db decimal(8,2)
+  max_noise_db decimal(8,2)
+  status varchar(20) [not null] // Running, Passed, Warning, Failed
+  started_at datetime [not null]
+  completed_at datetime
+
+  Note: 'One QC session belongs to one build request and one seller QC device. Completion is allowed only when tested_keys reaches total_keys.'
+}
+
+Table device_key_test_results {
+  key_test_id bigint [pk, increment]
+  session_id varchar(50) [not null, ref: > device_test_sessions.session_id]
+  request_id varchar(50) [not null, ref: > build_requests.request_id]
+  device_id varchar(50) [not null, ref: > devices.device_id]
+  key_code varchar(30) [not null]
+  expected_key varchar(30) [not null]
+  received_key varchar(30)
+  press_signal_detected boolean [not null]
+  latency_ms decimal(8,2)
+  press_event_count int [not null]
+  bounce_count int
+  release_signal_detected boolean [not null]
+  hold_duration_ms int
+  is_stuck boolean [not null]
+  noise_db decimal(8,2)
+  switch_technology varchar(50) [not null]
+  result varchar(20) [not null] // Pass, Warning, Fail
+  failure_type varchar(30) // NoSignal, WrongKey, Chatter, StuckKey, HighLatency, TooNoisy
+  failure_reason varchar(255)
+  recorded_at datetime [not null]
+
+  Note: 'request_id and device_id are denormalized from the session for faster per-request QC lookup. Chatter/double click uses press_event_count and bounce_count after a completed press-release cycle; StuckKey uses release_signal_detected=false and bounce_count should remain null.'
 }
 
 Table audit_log {
