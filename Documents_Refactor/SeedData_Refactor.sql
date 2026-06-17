@@ -5,6 +5,7 @@
 
 SET NOCOUNT ON;
 SET XACT_ABORT ON;
+SET QUOTED_IDENTIFIER ON;   -- required to INSERT into seller_applications (filtered index UX_seller_applications_pending_buyer)
 
 BEGIN TRANSACTION;
 
@@ -252,14 +253,14 @@ WHEN NOT MATCHED THEN
 
 MERGE builds AS target
 USING (
-    SELECT buyer.user_id AS buyer_id, v.build_id, v.kit_id, v.name, v.notes, v.status, v.total_cost_snapshot, v.created_at, v.updated_at
+    SELECT buyer.user_id AS buyer_id, v.build_id, v.kit_id, v.name, v.notes, v.noise_requirement, v.status, v.total_cost_snapshot, v.created_at, v.updated_at
     FROM (VALUES
-        ('BUILD_REF_NEO65_MECH', 'KIT_NEO65', 'Neo65 Cream Linear Build', 'Neo65 with Neo Azure switches, PBT keycaps, Durock stabs and switch lube.', 'Saved', 225.30, CAST('2026-06-03T08:00:00' AS datetime), CAST('2026-06-03T08:30:00' AS datetime)),
-        ('BUILD_REF_BOOG75_HE', 'KIT_BOOG75_HE', 'BOOG75 HE Gaming Build', 'HE kit with Magnetic Jade switches and coiled cable.', 'Requested', 384.00, CAST('2026-06-04T09:00:00' AS datetime), CAST('2026-06-04T09:20:00' AS datetime)),
-        ('BUILD_REF_QK65_THOCK', 'KIT_QK65', 'QK65 Thock Build', 'QK65 3-pin build with Oil King switches and switch films.', 'Requested', 368.60, CAST('2026-06-05T10:00:00' AS datetime), CAST('2026-06-05T10:15:00' AS datetime)),
-        ('BUILD_REF_AULA_DRAFT', 'KIT_AULA_S75_PRO', 'AULA Budget Draft', 'Draft build missing keycap and stabilizer choices for UI warning tests.', 'Draft', 89.30, CAST('2026-06-06T11:00:00' AS datetime), NULL),
-        ('BUILD_REF_ARCHIVED_NEO80', 'KIT_NEO80', 'Archived Neo80 Office Build', 'Archived sample build for build list filtering.', 'Archived', 349.40, CAST('2026-06-01T07:00:00' AS datetime), CAST('2026-06-07T12:00:00' AS datetime))
-    ) AS v (build_id, kit_id, name, notes, status, total_cost_snapshot, created_at, updated_at)
+        ('BUILD_REF_NEO65_MECH', 'KIT_NEO65', 'Neo65 Cream Linear Build', 'Neo65 with Neo Azure switches, PBT keycaps, Durock stabs and switch lube.', 'Quiet', 'Saved', 225.30, CAST('2026-06-03T08:00:00' AS datetime), CAST('2026-06-03T08:30:00' AS datetime)),
+        ('BUILD_REF_BOOG75_HE', 'KIT_BOOG75_HE', 'BOOG75 HE Gaming Build', 'HE kit with Magnetic Jade switches and coiled cable.', 'Silent', 'Requested', 384.00, CAST('2026-06-04T09:00:00' AS datetime), CAST('2026-06-04T09:20:00' AS datetime)),
+        ('BUILD_REF_QK65_THOCK', 'KIT_QK65', 'QK65 Thock Build', 'QK65 3-pin build with Oil King switches and switch films.', 'Normal', 'Requested', 368.60, CAST('2026-06-05T10:00:00' AS datetime), CAST('2026-06-05T10:15:00' AS datetime)),
+        ('BUILD_REF_AULA_DRAFT', 'KIT_AULA_S75_PRO', 'AULA Budget Draft', 'Draft build missing keycap and stabilizer choices for UI warning tests.', 'Normal', 'Draft', 89.30, CAST('2026-06-06T11:00:00' AS datetime), NULL),
+        ('BUILD_REF_ARCHIVED_NEO80', 'KIT_NEO80', 'Archived Neo80 Office Build', 'Archived sample build for build list filtering.', 'Quiet', 'Archived', 349.40, CAST('2026-06-01T07:00:00' AS datetime), CAST('2026-06-07T12:00:00' AS datetime))
+    ) AS v (build_id, kit_id, name, notes, noise_requirement, status, total_cost_snapshot, created_at, updated_at)
     CROSS JOIN users AS buyer
     WHERE buyer.username = 'buyer_refactor'
 ) AS source
@@ -270,13 +271,14 @@ WHEN MATCHED THEN
         kit_id = source.kit_id,
         name = source.name,
         notes = source.notes,
+        noise_requirement = source.noise_requirement,
         status = source.status,
         total_cost_snapshot = source.total_cost_snapshot,
         created_at = source.created_at,
         updated_at = source.updated_at
 WHEN NOT MATCHED THEN
-    INSERT (build_id, buyer_id, kit_id, name, notes, status, total_cost_snapshot, created_at, updated_at)
-    VALUES (source.build_id, source.buyer_id, source.kit_id, source.name, source.notes, source.status, source.total_cost_snapshot, source.created_at, source.updated_at);
+    INSERT (build_id, buyer_id, kit_id, name, notes, noise_requirement, status, total_cost_snapshot, created_at, updated_at)
+    VALUES (source.build_id, source.buyer_id, source.kit_id, source.name, source.notes, source.noise_requirement, source.status, source.total_cost_snapshot, source.created_at, source.updated_at);
 
 INSERT INTO build_items (build_id, switch_id, keycap_id, stab_id, accessory_id, quantity, unit_price_snapshot, notes)
 SELECT source.build_id, source.switch_id, source.keycap_id, source.stab_id, source.accessory_id, source.quantity, source.unit_price_snapshot, source.notes
@@ -340,7 +342,7 @@ USING (
             'REQ_REF_BOOG75_PENDING',
             'BUILD_REF_BOOG75_HE',
             'seller_soigear',
-            N'{"build_id":"BUILD_REF_BOOG75_HE","kit_id":"KIT_BOOG75_HE","seller":"seller_soigear","items":[{"switch_id":"SW_GATERON_MAGNETIC_JADE_PRO","quantity":85},{"keycap_id":"KC_AKKO_MDA_75PLUS","quantity":1},{"stab_id":"ST_EVERGLIDE_PANDA_UNIVERSAL","quantity":1},{"accessory_id":"ACC_USB_C_COIL","quantity":1}],"total_cost_snapshot":384.00}',
+            N'{"build":{"buildId":"BUILD_REF_BOOG75_HE","name":"BOOG75 HE Gaming Build","notes":"HE kit with Magnetic Jade switches and coiled cable.","noiseRequirement":"Silent","status":"Requested","totalCostSnapshot":384.00,"createdAt":"2026-06-04T09:00:00","updatedAt":"2026-06-04T09:20:00"},"seller":{"sellerUserId":6,"shopName":"Soigear Refactor Shop","phone":"0900000201","address":"District 1, Ho Chi Minh City"},"kit":{"kitId":"KIT_BOOG75_HE","kitName":"BOOG75 Hall Effect Kit","brandId":9,"layoutId":"LAYOUT_75","pcbTechnology":"HE","switchMount":"HE","requiredSwitchQuantity":85,"includedParts":"Case, HE PCB, plate, foam, cable","priceUsd":220.00},"items":[{"productType":"Switch","productId":"SW_GATERON_MAGNETIC_JADE_PRO","productName":"Gateron Magnetic Jade Pro HE","quantity":85,"unitPriceSnapshot":1.00,"lineTotal":85.00,"notes":"85 HE switches for BOOG75"},{"productType":"Keycap","productId":"KC_AKKO_MDA_75PLUS","productName":"AKKO MDA 75/TKL Keycap Set","quantity":1,"unitPriceSnapshot":45.00,"lineTotal":45.00,"notes":"75/TKL compatible keycaps"},{"productType":"Stabilizer","productId":"ST_EVERGLIDE_PANDA_UNIVERSAL","productName":"Everglide Panda Stabilizer Package","quantity":1,"unitPriceSnapshot":16.00,"lineTotal":16.00,"notes":"Universal stabilizer package"},{"productType":"Accessory","productId":"ACC_USB_C_COIL","productName":"USB-C Coiled Cable","quantity":1,"unitPriceSnapshot":18.00,"lineTotal":18.00,"notes":"Cable accessory"}],"mods":[{"modType":"Calibration","targetComponent":"Build","notes":"Run HE switch calibration after assembly."}]}',
             'Pending',
             'Please confirm HE calibration after assembly.',
             CAST('2026-06-04T09:30:00' AS datetime),
@@ -352,7 +354,7 @@ USING (
             'REQ_REF_QK65_COMPLETED',
             'BUILD_REF_QK65_THOCK',
             'seller_keyboardlab',
-            N'{"build_id":"BUILD_REF_QK65_THOCK","kit_id":"KIT_QK65","seller":"seller_keyboardlab","items":[{"switch_id":"SW_GATERON_OIL_KING","quantity":70},{"keycap_id":"KC_GENERIC_ABS_OEM_DARK","quantity":1},{"stab_id":"ST_DUROCK_V2_65_75","quantity":1},{"accessory_id":"ACC_SWITCH_FILMS","quantity":1}],"total_cost_snapshot":368.60}',
+            N'{"build":{"buildId":"BUILD_REF_QK65_THOCK","name":"QK65 Thock Build","notes":"QK65 3-pin build with Oil King switches and switch films.","noiseRequirement":"Normal","status":"Requested","totalCostSnapshot":368.60,"createdAt":"2026-06-05T10:00:00","updatedAt":"2026-06-05T10:15:00"},"seller":{"sellerUserId":5,"shopName":"Keyboard Lab VN","phone":"0900000202","address":"Cau Giay, Ha Noi"},"kit":{"kitId":"KIT_QK65","kitName":"QK65 Barebone Kit","brandId":12,"layoutId":"LAYOUT_65","pcbTechnology":"Mechanical","switchMount":"MX 3-pin","requiredSwitchQuantity":70,"includedParts":"Case, PCB, plate, foam, carrying case","priceUsd":274.40},"items":[{"productType":"Switch","productId":"SW_GATERON_OIL_KING","productName":"Gateron Oil King","quantity":70,"unitPriceSnapshot":0.66,"lineTotal":46.20,"notes":"70 switches for 65% kit"},{"productType":"Keycap","productId":"KC_GENERIC_ABS_OEM_DARK","productName":"Generic ABS OEM Dark","quantity":1,"unitPriceSnapshot":25.00,"lineTotal":25.00,"notes":"OEM keycap set"},{"productType":"Stabilizer","productId":"ST_DUROCK_V2_65_75","productName":"Durock V2 Stabilizer Package","quantity":1,"unitPriceSnapshot":18.00,"lineTotal":18.00,"notes":"Stabilizer package for 65% layout"},{"productType":"Accessory","productId":"ACC_SWITCH_FILMS","productName":"HTV Switch Films Pack","quantity":1,"unitPriceSnapshot":5.00,"lineTotal":5.00,"notes":"Switch film pack"}],"mods":[{"modType":"Film","targetComponent":"Switch","notes":"Install switch films before lubing."}]}',
             'Completed',
             'Completed seed request for seller dashboard history.',
             CAST('2026-06-05T10:30:00' AS datetime),

@@ -4,6 +4,7 @@ using Custom_keyboard.Models.Accounts;
 using Custom_keyboard.Models.Enums;
 using Custom_keyboard.Realtime;
 using Custom_keyboard.Services;
+using Custom_keyboard.Services.Devices;
 
 namespace Custom_keyboard.ViewModels;
 
@@ -18,6 +19,8 @@ public sealed class MainShellViewModel : ViewModelBase
     private readonly IStatsService _statsService;
     private readonly ISellerApplicationService _sellerApplicationService;
     private readonly IRealtimeSubscriber _realtime;
+    private readonly IDeviceService _deviceService;
+    private readonly DeviceSimulator _deviceSimulator;
     private ViewModelBase _currentViewModel = null!;
     private User? _currentUser;
     private Func<Task>? _realtimeReload;
@@ -31,7 +34,9 @@ public sealed class MainShellViewModel : ViewModelBase
         IChatService chatService,
         IStatsService statsService,
         ISellerApplicationService sellerApplicationService,
-        IRealtimeSubscriber realtime)
+        IRealtimeSubscriber realtime,
+        IDeviceService deviceService,
+        DeviceSimulator deviceSimulator)
     {
         _accountService = accountService;
         _adminService = adminService;
@@ -42,6 +47,8 @@ public sealed class MainShellViewModel : ViewModelBase
         _statsService = statsService;
         _sellerApplicationService = sellerApplicationService;
         _realtime = realtime;
+        _deviceService = deviceService;
+        _deviceSimulator = deviceSimulator;
         _realtime.SellerRequestsChanged += OnRealtimeReloadAsync;
         _realtime.BuyerRequestsChanged += OnRealtimeReloadAsync;
         LogoutCommand = new RelayCommand(_ => Logout(), _ => CurrentUser is not null);
@@ -101,7 +108,7 @@ public sealed class MainShellViewModel : ViewModelBase
         switch (user.Role)
         {
             case UserRole.Seller:
-                var seller = new SellerDashboardViewModel(user, LogoutCommand, _requestService, _statsService, chat);
+                var seller = new SellerDashboardViewModel(user, LogoutCommand, _requestService, _statsService, chat, _deviceService, _deviceSimulator);
                 _realtimeReload = seller.ReloadRequestsAsync;
                 CurrentViewModel = seller;
                 break;
@@ -118,7 +125,8 @@ public sealed class MainShellViewModel : ViewModelBase
                     _requestService,
                     _statsService,
                     _sellerApplicationService,
-                    chat);
+                    chat,
+                    _deviceService);
                 _realtimeReload = buyer.ReloadRequestsAsync;
                 CurrentViewModel = buyer;
                 break;

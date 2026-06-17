@@ -5,11 +5,13 @@ using Custom_keyboard.Models.Admin;
 using Custom_keyboard.Models.Builds;
 using Custom_keyboard.Models.Chat;
 using Custom_keyboard.Models.Components;
+using Custom_keyboard.Models.Devices;
 using Custom_keyboard.Models.Enums;
 using Custom_keyboard.Realtime;
 using Custom_keyboard.Repositories;
 using Custom_keyboard.Repositories.SqlServer;
 using Custom_keyboard.Services;
+using Custom_keyboard.Services.Devices;
 using Custom_keyboard.Services.Security;
 using Custom_keyboard.Services.Stats;
 using Custom_keyboard.ViewModels;
@@ -494,7 +496,8 @@ internal sealed class Phase6Runner
             requestService,
             statsService,
             sellerApplicationService,
-            chat);
+            chat,
+            new FakeDeviceService());
 
         foreach (var kit in catalog.Kits.Values)
         {
@@ -1494,6 +1497,7 @@ internal sealed class FakeBuildRepository : IBuildRepository
             KitId = build.KitId,
             Name = build.Name,
             Notes = build.Notes,
+            NoiseRequirement = build.NoiseRequirement,
             Status = build.Status,
             TotalCostSnapshot = build.TotalCostSnapshot,
             CreatedAt = build.CreatedAt,
@@ -1569,6 +1573,79 @@ internal sealed class FakeRequestRepository : IRequestRepository
             UpdatedAt = request.UpdatedAt
         };
     }
+}
+
+internal sealed class FakeDeviceService : IDeviceService
+{
+    public Task<Device> GetOrCreateQcStationAsync(int sellerUserId, CancellationToken cancellationToken = default)
+        => Task.FromResult(new Device
+        {
+            DeviceId = $"DEV_UNIT_{sellerUserId}",
+            SellerUserId = sellerUserId,
+            DeviceName = "Unit QC Station",
+            DeviceType = DeviceType.QC_STATION,
+            IsActive = true,
+            CreatedAt = DateTime.UtcNow
+        });
+
+    public Task<DeviceTestSession> StartSessionAsync(
+        string requestId,
+        int sellerUserId,
+        string deviceId,
+        string switchTechnology,
+        NoiseRequirement noiseRequirement,
+        int totalKeys,
+        CancellationToken cancellationToken = default)
+        => Task.FromResult(new DeviceTestSession
+        {
+            SessionId = $"QCSESS_UNIT_{Guid.NewGuid():N}",
+            RequestId = requestId,
+            SellerUserId = sellerUserId,
+            DeviceId = deviceId,
+            SwitchTechnology = switchTechnology,
+            NoiseRequirement = noiseRequirement,
+            TotalKeys = totalKeys,
+            Status = TestSessionStatus.Running,
+            StartedAt = DateTime.UtcNow
+        });
+
+    public Task<DeviceKeyTestResult> RecordKeyResultAsync(KeyTelemetry telemetry, CancellationToken cancellationToken = default)
+        => Task.FromResult(new DeviceKeyTestResult
+        {
+            KeyTestId = 1,
+            SessionId = telemetry.SessionId,
+            RequestId = telemetry.RequestId,
+            DeviceId = telemetry.DeviceId,
+            KeyCode = telemetry.KeyCode,
+            ExpectedKey = telemetry.ExpectedKey,
+            ReceivedKey = telemetry.ReceivedKey,
+            PressSignalDetected = telemetry.PressSignalDetected,
+            LatencyMs = telemetry.LatencyMs,
+            PressEventCount = telemetry.PressEventCount,
+            BounceCount = telemetry.BounceCount,
+            ReleaseSignalDetected = telemetry.ReleaseSignalDetected,
+            HoldDurationMs = telemetry.HoldDurationMs,
+            IsStuck = telemetry.IsStuck,
+            NoiseDb = telemetry.NoiseDb,
+            SwitchTechnology = telemetry.SwitchTechnology,
+            Result = KeyTestResult.Pass,
+            RecordedAt = DateTime.UtcNow
+        });
+
+    public Task<DeviceTestSession> CompleteSessionAsync(string sessionId, CancellationToken cancellationToken = default)
+        => Task.FromResult(new DeviceTestSession
+        {
+            SessionId = sessionId,
+            Status = TestSessionStatus.Passed,
+            StartedAt = DateTime.UtcNow,
+            CompletedAt = DateTime.UtcNow
+        });
+
+    public Task<DeviceTestSession?> GetLatestSessionByRequestAsync(string requestId, CancellationToken cancellationToken = default)
+        => Task.FromResult<DeviceTestSession?>(null);
+
+    public Task<IReadOnlyList<DeviceKeyTestResult>> GetKeyResultsAsync(string sessionId, CancellationToken cancellationToken = default)
+        => Task.FromResult<IReadOnlyList<DeviceKeyTestResult>>([]);
 }
 
 internal sealed class FakeChatRepository : IChatRepository

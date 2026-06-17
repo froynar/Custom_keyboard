@@ -26,6 +26,15 @@ internal static class SqlRepositoryHelpers
         return parameter;
     }
 
+    public static SqlParameter AddNullableDecimalParameter(this SqlCommand command, string name, decimal? value)
+    {
+        var parameter = command.Parameters.Add(name, SqlDbType.Decimal);
+        parameter.Precision = 10;
+        parameter.Scale = 2;
+        parameter.Value = (object?)value ?? DBNull.Value;
+        return parameter;
+    }
+
     public static string GetStringValue(this SqlDataReader reader, string columnName)
     {
         return reader.GetString(reader.GetOrdinal(columnName));
@@ -51,6 +60,17 @@ internal static class SqlRepositoryHelpers
     public static decimal GetDecimalValue(this SqlDataReader reader, string columnName)
     {
         return reader.GetDecimal(reader.GetOrdinal(columnName));
+    }
+
+    public static decimal? GetNullableDecimalValue(this SqlDataReader reader, string columnName)
+    {
+        var ordinal = reader.GetOrdinal(columnName);
+        return reader.IsDBNull(ordinal) ? null : reader.GetDecimal(ordinal);
+    }
+
+    public static long GetLongValue(this SqlDataReader reader, string columnName)
+    {
+        return reader.GetInt64(reader.GetOrdinal(columnName));
     }
 
     public static bool GetBoolValue(this SqlDataReader reader, string columnName)
@@ -97,5 +117,12 @@ internal static class SqlRepositoryHelpers
         }
 
         return Enum.Parse<TEnum>(value, ignoreCase: true);
+    }
+
+    public static TEnum? GetNullableEnumValue<TEnum>(this SqlDataReader reader, string columnName)
+        where TEnum : struct, Enum
+    {
+        var ordinal = reader.GetOrdinal(columnName);
+        return reader.IsDBNull(ordinal) ? null : reader.GetEnumValue<TEnum>(columnName);
     }
 }

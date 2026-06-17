@@ -9,6 +9,7 @@ public sealed class KeyboardBuild
     public string KitId { get; set; } = string.Empty;
     public string Name { get; set; } = string.Empty;
     public string? Notes { get; set; }
+    public NoiseRequirement NoiseRequirement { get; set; } = NoiseRequirement.Normal;
     public BuildStatus Status { get; set; } = BuildStatus.Draft;
     public decimal TotalCostSnapshot { get; set; }
     public DateTime CreatedAt { get; set; }

@@ -31,6 +31,13 @@ public sealed class StatusToBrushConverter : IValueConverter
             // SellerApplicationStatus
             "Approved" => "SuccessBrush",
             "Rejected" => "DangerBrush",
+            // Device QC: TestSessionStatus (Running/Passed/Warning/Failed) + KeyTestResult (Pass/Warning/Fail)
+            "Passed" => "SuccessBrush",
+            "Pass" => "SuccessBrush",
+            "Warning" => "WarningBrush",
+            "Failed" => "DangerBrush",
+            "Fail" => "DangerBrush",
+            "Running" => "InfoBrush",
             _ => "DefaultBadgeBrush"
         };
 

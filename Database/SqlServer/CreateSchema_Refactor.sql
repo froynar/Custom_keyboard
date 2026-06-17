@@ -1,12 +1,13 @@
 -- Custom Keyboard Builder - Refactor schema (kit-based ERD)
 -- Source of truth: Documents_Refactor/Custom_Keyboard_ERD_Realistic_Kit_Shop_Proposal.dbml
--- Scope: 18 tables / 26 relationships. No cases/pcbs/plates, no compatibility_rules,
+-- Scope: 21 tables / 33 relationships (incl. 3 device QC tables). No cases/pcbs/plates, no compatibility_rules,
 --        no seller_inventory, no legacy switch-mod columns (lube_type/is_filmed/spring_weight_g).
 -- Target: dedicated refactor test database (CustomKeyboard_Refactor). Does NOT touch the legacy runtime DB.
 -- Order: roles -> users -> seller_profiles -> seller_applications -> brands -> layouts -> keyboard_kits
 --        -> switches -> keycap_sets -> stabilizers -> accessories -> builds -> build_items -> build_mods
---        -> build_requests -> audit_log -> chat_conversations -> chat_messages
--- This script is idempotent: it drops the 18 tables (reverse FK order) and recreates them.
+--        -> build_requests -> devices -> device_test_sessions -> device_key_test_results
+--        -> audit_log -> chat_conversations -> chat_messages
+-- This script is idempotent: it drops the 21 tables (reverse FK order) and recreates them.
 
 IF DB_ID(N'CustomKeyboard_Refactor') IS NULL
 BEGIN
@@ -18,11 +19,15 @@ USE CustomKeyboard_Refactor;
 GO
 
 SET XACT_ABORT ON;
+SET QUOTED_IDENTIFIER ON;   -- required by filtered index UX_seller_applications_pending_buyer
 GO
 
 -- ---------------------------------------------------------------------------
 -- Drop in reverse FK-dependency order so a re-run starts from a clean slate.
 -- ---------------------------------------------------------------------------
+DROP TABLE IF EXISTS device_key_test_results;
+DROP TABLE IF EXISTS device_test_sessions;
+DROP TABLE IF EXISTS devices;
 DROP TABLE IF EXISTS chat_messages;
 DROP TABLE IF EXISTS chat_conversations;
 DROP TABLE IF EXISTS audit_log;
@@ -219,12 +224,14 @@ CREATE TABLE builds (
     kit_id VARCHAR(50) NOT NULL,
     name VARCHAR(255) NOT NULL,
     notes VARCHAR(500) NULL,
+    noise_requirement VARCHAR(20) NOT NULL DEFAULT 'Normal', -- Normal / Quiet / Silent
     status VARCHAR(50) NOT NULL,                     -- Draft, Saved, Requested, Archived
     total_cost_snapshot DECIMAL(10,2) NOT NULL,
     created_at DATETIME2 NOT NULL DEFAULT SYSUTCDATETIME(),
     updated_at DATETIME2 NULL,
     CONSTRAINT FK_builds_buyer FOREIGN KEY (buyer_id) REFERENCES users(user_id),
     CONSTRAINT FK_builds_kit FOREIGN KEY (kit_id) REFERENCES keyboard_kits(kit_id),
+    CONSTRAINT CK_builds_noise_requirement CHECK (noise_requirement IN ('Normal','Quiet','Silent')),
     CONSTRAINT CK_builds_status CHECK (status IN ('Draft', 'Saved', 'Requested', 'Archived')),
     CONSTRAINT CK_builds_total CHECK (total_cost_snapshot >= 0)
 );
@@ -290,6 +297,87 @@ CREATE TABLE build_requests (
     CONSTRAINT FK_build_requests_build FOREIGN KEY (build_id) REFERENCES builds(build_id),
     CONSTRAINT FK_build_requests_seller FOREIGN KEY (seller_user_id) REFERENCES users(user_id),
     CONSTRAINT CK_build_requests_status CHECK (status IN ('Pending', 'Accepted', 'In_progress', 'Completed', 'Cancelled'))
+);
+GO
+
+-- ===========================================================================
+-- 14a. devices  (tram QC cua seller)
+-- ===========================================================================
+CREATE TABLE devices (
+    device_id        VARCHAR(50)  PRIMARY KEY,        -- vd DEV_{Guid:N} hoac 'QC-STATION-01'
+    seller_user_id   INT          NOT NULL,
+    device_name      NVARCHAR(100) NOT NULL,
+    device_type      VARCHAR(50)  NOT NULL,           -- QC_STATION (gop) / KEY_SIGNAL_TESTER / LATENCY_TESTER / NOISE_SENSOR
+    is_active        BIT          NOT NULL DEFAULT 1,
+    last_seen_at     DATETIME2    NULL,
+    created_at       DATETIME2    NOT NULL DEFAULT SYSUTCDATETIME(),
+    CONSTRAINT FK_devices_seller FOREIGN KEY (seller_user_id) REFERENCES users(user_id),
+    CONSTRAINT CK_devices_type CHECK (device_type IN ('QC_STATION','KEY_SIGNAL_TESTER','LATENCY_TESTER','NOISE_SENSOR'))
+);
+GO
+
+-- ===========================================================================
+-- 14b. device_test_sessions  (mot phien QC cho mot request)
+-- ===========================================================================
+CREATE TABLE device_test_sessions (
+    session_id         VARCHAR(50) PRIMARY KEY,        -- vd QCSESS_{Guid:N}
+    request_id         VARCHAR(50) NOT NULL,
+    device_id          VARCHAR(50) NOT NULL,
+    seller_user_id     INT         NOT NULL,
+    switch_technology  VARCHAR(50) NOT NULL,           -- Mechanical / HE (lay tu kit.pcbTechnology)
+    noise_requirement  VARCHAR(20) NOT NULL DEFAULT 'Normal', -- Normal / Quiet / Silent (buyer expectation)
+    total_keys         INT         NOT NULL,
+    tested_keys        INT         NOT NULL DEFAULT 0,
+    passed_keys        INT         NOT NULL DEFAULT 0,
+    warning_keys       INT         NOT NULL DEFAULT 0,
+    failed_keys        INT         NOT NULL DEFAULT 0,
+    average_latency_ms DECIMAL(8,2) NULL,
+    max_latency_ms     DECIMAL(8,2) NULL,
+    average_noise_db   DECIMAL(8,2) NULL,
+    max_noise_db       DECIMAL(8,2) NULL,
+    status             VARCHAR(20) NOT NULL,           -- Running / Passed / Warning / Failed
+    started_at         DATETIME2   NOT NULL DEFAULT SYSUTCDATETIME(),
+    completed_at       DATETIME2   NULL,
+    CONSTRAINT FK_dts_request FOREIGN KEY (request_id) REFERENCES build_requests(request_id),
+    CONSTRAINT FK_dts_device  FOREIGN KEY (device_id)  REFERENCES devices(device_id),
+    CONSTRAINT FK_dts_seller  FOREIGN KEY (seller_user_id) REFERENCES users(user_id),
+    CONSTRAINT CK_dts_noise_requirement CHECK (noise_requirement IN ('Normal','Quiet','Silent')),
+    CONSTRAINT CK_dts_status CHECK (status IN ('Running','Passed','Warning','Failed'))
+);
+GO
+
+-- ===========================================================================
+-- 14c. device_key_test_results  (ket qua tung phim -- bang chi tiet chinh)
+-- ===========================================================================
+CREATE TABLE device_key_test_results (
+    key_test_id             BIGINT IDENTITY(1,1) PRIMARY KEY,
+    session_id              VARCHAR(50) NOT NULL,
+    request_id              VARCHAR(50) NOT NULL,
+    device_id               VARCHAR(50) NOT NULL,
+    key_code                VARCHAR(30) NOT NULL,
+    expected_key            VARCHAR(30) NOT NULL,
+    received_key            VARCHAR(30) NULL,
+    press_signal_detected   BIT         NOT NULL,
+    latency_ms              DECIMAL(8,2) NULL,
+    press_event_count       INT         NOT NULL,
+    bounce_count            INT         NULL,           -- null khi chua du chu ky press-release (vd StuckKey)
+    release_signal_detected BIT         NOT NULL,
+    hold_duration_ms        INT         NULL,
+    is_stuck                BIT         NOT NULL,
+    noise_db                DECIMAL(8,2) NULL,
+    switch_technology       VARCHAR(50) NOT NULL,       -- khop guide §6 JSON per-key (denormalize tu session)
+    result                  VARCHAR(20) NOT NULL,       -- Pass / Warning / Fail
+    failure_type            VARCHAR(30) NULL,           -- NoSignal / WrongKey / Chatter / StuckKey / HighLatency / TooNoisy
+    failure_reason          NVARCHAR(255) NULL,
+    recorded_at             DATETIME2   NOT NULL DEFAULT SYSUTCDATETIME(),
+    CONSTRAINT FK_dktr_session FOREIGN KEY (session_id) REFERENCES device_test_sessions(session_id),
+    CONSTRAINT FK_dktr_request FOREIGN KEY (request_id) REFERENCES build_requests(request_id),
+    CONSTRAINT FK_dktr_device  FOREIGN KEY (device_id)  REFERENCES devices(device_id),
+    CONSTRAINT CK_dktr_result CHECK (result IN ('Pass','Warning','Fail')),
+    CONSTRAINT CK_dktr_failure_type CHECK (
+        failure_type IS NULL
+        OR failure_type IN ('NoSignal','WrongKey','Chatter','StuckKey','HighLatency','TooNoisy')
+    )
 );
 GO
 
@@ -396,4 +484,12 @@ CREATE INDEX IX_seller_applications_buyer ON seller_applications(buyer_user_id);
 CREATE UNIQUE INDEX UX_seller_applications_pending_buyer
 ON seller_applications(buyer_user_id)
 WHERE status = 'Pending';
+
+-- Device QC layer
+CREATE INDEX IX_devices_seller ON devices(seller_user_id);
+CREATE INDEX IX_dts_request ON device_test_sessions(request_id);
+CREATE INDEX IX_dts_device ON device_test_sessions(device_id);
+CREATE INDEX IX_dts_seller_status ON device_test_sessions(seller_user_id, status);
+CREATE INDEX IX_dktr_session ON device_key_test_results(session_id);
+CREATE INDEX IX_dktr_request ON device_key_test_results(request_id);
 GO

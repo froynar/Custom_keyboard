@@ -94,7 +94,7 @@
                     <Button Content="{loc:Tr Buyer_NavHome}" Command="{Binding ShowHomeCommand}" Style="{StaticResource NavHome}"/>
                     <Button Content="{loc:Tr Buyer_NavMyBuilds}" Command="{Binding ShowBuildListCommand}" Style="{StaticResource NavBuildList}"/>
                     <Button Content="{loc:Tr Buyer_NavNewBuild}" Command="{Binding NewBuildCommand}" Style="{StaticResource NavConfigurator}"/>
-                    <Button Content="{loc:Tr Buyer_NavSentRequests}" Command="{Binding ShowSentRequestsCommand}" Style="{StaticResource NavRequests}"/>
+                    <Button x:Name="BuyerSentRequestsNavButton" Content="{loc:Tr Buyer_NavSentRequests}" Command="{Binding ShowSentRequestsCommand}" Style="{StaticResource NavRequests}"/>
                     <Button Content="{loc:Tr Nav_Chat}" Command="{Binding ShowChatCommand}" Style="{StaticResource NavChat}"/>
                     <Button Content="{loc:Tr Buyer_NavRegisterSeller}" Command="{Binding ShowRegisterSellerCommand}" Style="{StaticResource NavRegisterSeller}"/>
                 </StackPanel>
@@ -249,6 +249,11 @@
                                 <TextBlock Text="{loc:Tr Common_Notes}" Style="{StaticResource FieldLabel}"/>
                                 <TextBox Text="{Binding BuildNotes, UpdateSourceTrigger=PropertyChanged}" Margin="0,0,0,12"
                                          TextWrapping="Wrap" AcceptsReturn="True" MinHeight="48"/>
+
+                                <TextBlock Text="{loc:Tr Buyer_NoiseRequirementLabel}" Style="{StaticResource FieldLabel}"/>
+                                <ComboBox ItemsSource="{Binding NoiseRequirements}"
+                                          SelectedItem="{Binding SelectedNoiseRequirement}"
+                                          Margin="0,0,0,12"/>
 
                                 <TextBlock Text="{loc:Tr Buyer_KitLabel}" Style="{StaticResource FieldLabel}"/>
                                 <ComboBox ItemsSource="{Binding Kits}" SelectedItem="{Binding SelectedKit}" DisplayMemberPath="KitName" Margin="0,0,0,4"/>
@@ -515,40 +520,101 @@
                         </Grid.RowDefinitions>
                         <TextBlock Text="{loc:Tr Buyer_NavSentRequests}" Style="{StaticResource SectionTitle}"/>
                         <Grid Grid.Row="1">
-                        <DataGrid x:Name="BuyerRequestsGrid"
-                                  ItemsSource="{Binding Requests}"
-                                  AlternationCount="2">
-                            <DataGrid.Columns>
-                                <DataGridTextColumn Header="{loc:Tr Common_ColRequest}" Binding="{Binding RequestId}" Width="*"/>
-                                <DataGridTextColumn Header="{loc:Tr Common_ColBuild}" Binding="{Binding BuildId}" Width="*"/>
-                                <DataGridTextColumn Header="{loc:Tr Common_ColSeller}" Binding="{Binding SellerUserId}" Width="90"/>
-                                <DataGridTemplateColumn Header="{loc:Tr Common_ColStatus}" Width="130">
-                                    <DataGridTemplateColumn.CellTemplate>
-                                        <DataTemplate>
-                                            <Border Style="{StaticResource StatusBadge}">
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="*"/>
+                                <ColumnDefinition Width="16"/>
+                                <ColumnDefinition Width="300"/>
+                            </Grid.ColumnDefinitions>
+
+                            <Grid>
+                                <DataGrid x:Name="BuyerRequestsGrid"
+                                          ItemsSource="{Binding Requests}"
+                                          SelectedItem="{Binding SelectedRequest, Mode=TwoWay}"
+                                          AlternationCount="2">
+                                    <DataGrid.Columns>
+                                        <DataGridTextColumn Header="{loc:Tr Common_ColRequest}" Binding="{Binding RequestId}" Width="*"/>
+                                        <DataGridTextColumn Header="{loc:Tr Common_ColBuild}" Binding="{Binding BuildId}" Width="*"/>
+                                        <DataGridTextColumn Header="{loc:Tr Common_ColSeller}" Binding="{Binding SellerUserId}" Width="90"/>
+                                        <DataGridTemplateColumn Header="{loc:Tr Common_ColStatus}" Width="130">
+                                            <DataGridTemplateColumn.CellTemplate>
+                                                <DataTemplate>
+                                                    <Border Style="{StaticResource StatusBadge}">
+                                                        <TextBlock Style="{StaticResource StatusBadgeText}">
+                                                            <TextBlock.Text>
+                                                                <MultiBinding Converter="{StaticResource LocalizedStatus}">
+                                                                    <Binding Path="Status"/>
+                                                                    <Binding Path="Language" Source="{x:Static loc:Loc.Instance}"/>
+                                                                </MultiBinding>
+                                                            </TextBlock.Text>
+                                                        </TextBlock>
+                                                    </Border>
+                                                </DataTemplate>
+                                            </DataGridTemplateColumn.CellTemplate>
+                                        </DataGridTemplateColumn>
+                                    </DataGrid.Columns>
+                                </DataGrid>
+
+                                <Border Style="{StaticResource EmptyStateCard}"
+                                        Visibility="{Binding Items.Count, ElementName=BuyerRequestsGrid, Converter={StaticResource CountToVisibility}}">
+                                    <StackPanel>
+                                        <TextBlock Text="{loc:Tr Buyer_EmptyRequestsTitle}" Style="{StaticResource EmptyStateTitle}"/>
+                                        <TextBlock Text="{loc:Tr Buyer_EmptyRequestsText}"
+                                                   Style="{StaticResource EmptyStateText}"/>
+                                    </StackPanel>
+                                </Border>
+                            </Grid>
+
+                            <!-- QC summary for the selected request (read-only; no per-key detail for buyers) -->
+                            <Border Grid.Column="2" Background="#F8FAFC" BorderBrush="{StaticResource BorderBrush}"
+                                    BorderThickness="1" CornerRadius="6" Padding="14" VerticalAlignment="Top">
+                                <StackPanel>
+                                    <TextBlock Text="{loc:Tr QcTest_Summary}" Style="{StaticResource SectionTitle}" Margin="0,0,0,10"/>
+
+                                    <StackPanel AutomationProperties.AutomationId="BuyerQcSummaryPanel"
+                                                Visibility="{Binding SelectedRequestQcVisibility}">
+                                        <DockPanel Margin="0,0,0,8">
+                                            <Border DockPanel.Dock="Right" Style="{StaticResource BadgeChrome}"
+                                                    Background="{Binding SelectedRequestQc.Status, Converter={StaticResource StatusToBrushConverter}}">
                                                 <TextBlock Style="{StaticResource StatusBadgeText}">
                                                     <TextBlock.Text>
                                                         <MultiBinding Converter="{StaticResource LocalizedStatus}">
-                                                            <Binding Path="Status"/>
+                                                            <Binding Path="SelectedRequestQc.Status"/>
                                                             <Binding Path="Language" Source="{x:Static loc:Loc.Instance}"/>
                                                         </MultiBinding>
                                                     </TextBlock.Text>
                                                 </TextBlock>
                                             </Border>
-                                        </DataTemplate>
-                                    </DataGridTemplateColumn.CellTemplate>
-                                </DataGridTemplateColumn>
-                            </DataGrid.Columns>
-                        </DataGrid>
+                                            <TextBlock AutomationProperties.AutomationId="BuyerQcSummaryStatusLabel"
+                                                       Text="{loc:Tr QcTest_Status}" FontWeight="SemiBold" VerticalAlignment="Center"/>
+                                        </DockPanel>
+                                        <DockPanel Margin="0,0,0,3">
+                                            <TextBlock DockPanel.Dock="Right" FontWeight="SemiBold">
+                                                <TextBlock.Text>
+                                                    <MultiBinding StringFormat="{}{0}/{1}">
+                                                        <Binding Path="SelectedRequestQc.PassedKeys"/>
+                                                        <Binding Path="SelectedRequestQc.TotalKeys"/>
+                                                    </MultiBinding>
+                                                </TextBlock.Text>
+                                            </TextBlock>
+                                            <TextBlock Text="{loc:Tr QcTest_Passed}" Foreground="{StaticResource TextMutedBrush}" FontSize="12"/>
+                                        </DockPanel>
+                                        <DockPanel Margin="0,0,0,3">
+                                            <TextBlock DockPanel.Dock="Right" FontWeight="SemiBold"
+                                                       Text="{Binding SelectedRequestQc.AverageLatencyMs, StringFormat=N2, TargetNullValue=-}"/>
+                                            <TextBlock Text="{loc:Tr QcTest_AvgLatency}" Foreground="{StaticResource TextMutedBrush}" FontSize="12"/>
+                                        </DockPanel>
+                                        <DockPanel>
+                                            <TextBlock DockPanel.Dock="Right" FontWeight="SemiBold"
+                                                       Text="{Binding SelectedRequestQc.AverageNoiseDb, StringFormat=N2, TargetNullValue=-}"/>
+                                            <TextBlock Text="{loc:Tr QcTest_AvgNoise}" Foreground="{StaticResource TextMutedBrush}" FontSize="12"/>
+                                        </DockPanel>
+                                    </StackPanel>
 
-                        <Border Style="{StaticResource EmptyStateCard}"
-                                Visibility="{Binding Items.Count, ElementName=BuyerRequestsGrid, Converter={StaticResource CountToVisibility}}">
-                            <StackPanel>
-                                <TextBlock Text="{loc:Tr Buyer_EmptyRequestsTitle}" Style="{StaticResource EmptyStateTitle}"/>
-                                <TextBlock Text="{loc:Tr Buyer_EmptyRequestsText}"
-                                           Style="{StaticResource EmptyStateText}"/>
-                            </StackPanel>
-                        </Border>
+                                    <TextBlock AutomationProperties.AutomationId="BuyerQcNoDataMessage"
+                                               Text="{loc:Tr QcTest_NoData}" Foreground="{StaticResource TextMutedBrush}"
+                                               TextWrapping="Wrap" Visibility="{Binding SelectedRequestQcEmptyVisibility}"/>
+                                </StackPanel>
+                            </Border>
                         </Grid>
                     </Grid>
                 </Border>

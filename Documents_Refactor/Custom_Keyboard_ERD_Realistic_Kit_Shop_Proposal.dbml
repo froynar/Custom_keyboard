@@ -118,6 +118,7 @@ Table builds {
   kit_id varchar(50) [not null, ref: > keyboard_kits.kit_id]
   name varchar(255) [not null]
   notes varchar(500)
+  noise_requirement varchar(20) [not null] // Normal, Quiet, Silent
   status varchar(50) [not null] // Draft, Saved, Requested, Archived
   total_cost_snapshot decimal(10,2) [not null]
   created_at datetime [not null]
@@ -177,6 +178,7 @@ Table device_test_sessions {
   device_id varchar(50) [not null, ref: > devices.device_id]
   seller_user_id int [not null, ref: > users.user_id]
   switch_technology varchar(50) [not null] // Mechanical, HE, Topre, Optical
+  noise_requirement varchar(20) [not null] // Normal, Quiet, Silent
   total_keys int [not null]
   tested_keys int [not null]
   passed_keys int [not null]

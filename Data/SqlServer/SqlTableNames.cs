@@ -29,4 +29,9 @@ public static class SqlTableNames
     // Chat
     public const string ChatConversations = "chat_conversations";
     public const string ChatMessages = "chat_messages";
+
+    // Device
+    public const string Devices = "devices";
+    public const string DeviceTestSessions = "device_test_sessions";
+    public const string DeviceKeyTestResults = "device_key_test_results";
 }

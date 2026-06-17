@@ -41,8 +41,8 @@ Không cần thiết bị vật lý — `DeviceSimulator` sinh dữ liệu test 
 ### Out of scope (phase này)
 
 - Kết nối keyboard vật lý / đọc HID-USB / micro thật / robot bấm phím / AI chọn switch phức tạp.
-- **Buyer requirement UI/schema** (noise/latency do buyer nhập) — chưa có trong dự án, để phase sau.
-  Phase này dùng **requirement mặc định** (xem [§6.1](#61-deviceqcrules-static-thuần--không-io)).
+- **Buyer latency requirement UI/schema** — chưa có trong dự án, để phase sau. Noise requirement đã có
+  `builds.noise_requirement` (`Normal`/`Quiet`/`Silent`) và được snapshot vào request/QC session.
 
 ---
 
@@ -135,7 +135,8 @@ CREATE TABLE device_test_sessions (
     request_id         VARCHAR(50) NOT NULL,
     device_id          VARCHAR(50) NOT NULL,
     seller_user_id     INT         NOT NULL,
-    switch_technology  VARCHAR(50) NULL,               -- Mechanical / HE (lấy từ kit.pcbTechnology)
+    switch_technology  VARCHAR(50) NOT NULL,           -- Mechanical / HE (lấy từ kit.pcbTechnology)
+    noise_requirement  VARCHAR(20) NOT NULL DEFAULT 'Normal', -- Normal / Quiet / Silent
     total_keys         INT         NOT NULL,
     tested_keys        INT         NOT NULL DEFAULT 0,
     passed_keys        INT         NOT NULL DEFAULT 0,
@@ -151,6 +152,7 @@ CREATE TABLE device_test_sessions (
     CONSTRAINT FK_dts_request FOREIGN KEY (request_id) REFERENCES build_requests(request_id),
     CONSTRAINT FK_dts_device  FOREIGN KEY (device_id)  REFERENCES devices(device_id),
     CONSTRAINT FK_dts_seller  FOREIGN KEY (seller_user_id) REFERENCES users(user_id),
+    CONSTRAINT CK_dts_noise_requirement CHECK (noise_requirement IN ('Normal','Quiet','Silent')),
     CONSTRAINT CK_dts_status CHECK (status IN ('Running','Passed','Warning','Failed'))
 );
 GO
@@ -174,7 +176,7 @@ CREATE TABLE device_key_test_results (
     hold_duration_ms        INT         NULL,
     is_stuck                BIT         NOT NULL,
     noise_db                DECIMAL(8,2) NULL,
-    switch_technology       VARCHAR(50) NULL,           -- khớp guide §6 JSON per-key
+    switch_technology       VARCHAR(50) NOT NULL,       -- khớp guide §6 JSON per-key (denormalize từ session)
     result                  VARCHAR(20) NOT NULL,       -- Pass / Warning / Fail
     failure_type            VARCHAR(30) NULL,           -- NoSignal / WrongKey / Chatter / StuckKey / HighLatency / TooNoisy
     failure_reason          NVARCHAR(255) NULL,
@@ -278,7 +280,8 @@ IsActive (bool) · LastSeenAt (DateTime?) · CreatedAt (DateTime)
 
 **`DeviceTestSession.cs`**
 ```
-SessionId · RequestId · DeviceId · SellerUserId · SwitchTechnology (string?)
+SessionId · RequestId · DeviceId · SellerUserId · SwitchTechnology (string, NOT NULL)
+NoiseRequirement (NoiseRequirement, NOT NULL)
 TotalKeys · TestedKeys · PassedKeys · WarningKeys · FailedKeys (int)
 AverageLatencyMs · MaxLatencyMs · AverageNoiseDb · MaxNoiseDb (decimal?)
 Status (TestSessionStatus) · StartedAt (DateTime) · CompletedAt (DateTime?)
@@ -290,7 +293,7 @@ KeyTestId (long) · SessionId · RequestId · DeviceId · KeyCode · ExpectedKey
 ReceivedKey (string?) · PressSignalDetected (bool) · LatencyMs (decimal?)
 PressEventCount (int) · BounceCount (int?) · ReleaseSignalDetected (bool)
 HoldDurationMs (int?) · IsStuck (bool) · NoiseDb (decimal?)
-SwitchTechnology (string?) · Result (KeyTestResult) · FailureType (KeyFailureType?)
+SwitchTechnology (string, NOT NULL) · Result (KeyTestResult) · FailureType (KeyFailureType?, primary failure only)
 FailureReason (string?) · RecordedAt (DateTime)
 ```
 
@@ -299,7 +302,7 @@ là **input** cho `DeviceQcRules`; chưa có `Result`/`FailureType` (do rule quy
 ```
 SessionId · RequestId · DeviceId · KeyCode · ExpectedKey · ReceivedKey (string?)
 PressSignalDetected · LatencyMs (decimal?) · PressEventCount · BounceCount (int?)
-ReleaseSignalDetected · HoldDurationMs (int?) · IsStuck · NoiseDb (decimal?) · SwitchTechnology (string?)
+ReleaseSignalDetected · HoldDurationMs (int?) · IsStuck · NoiseDb (decimal?) · SwitchTechnology (string, NOT NULL)
 ```
 
 Các trường nullable bám đúng guide: ví dụ `BounceCount = null` và `LatencyMs/HoldDurationMs = null` khi NoSignal; `BounceCount = null` khi StuckKey (chưa đủ chu kỳ press-release).
@@ -352,13 +355,12 @@ record QcThresholds(
     int StuckThresholdMs = 1000)      // ví dụ; hold_duration_ms > ngưỡng ⇒ StuckKey
 ```
 
-Quy ước phase 1 (vì buyer **chưa** có UI nhập yêu cầu):
+Quy ước hiện tại:
 
 - **Latency** chỉ phụ thuộc `SwitchTechnology` (HE chặt hơn Mechanical). `buyerLatencyRequirement` **không**
   được dùng ở phase này — chỉ kích hoạt khi làm khối OPTIONAL §3.5.
-- **Noise** với `NoiseRequirement = Normal` ⇒ **không bao giờ Fail/`TooNoisy`**; chỉ ghi `noise_db` để
-  tham khảo (tối đa là `Warning` thông tin nếu vượt band Normal). `TooNoisy` chỉ xuất hiện khi
-  `NoiseRequirement = Silent` (phase sau, khi buyer yêu cầu im lặng).
+- **Noise** lấy từ `builds.noise_requirement` → request snapshot → `device_test_sessions.noise_requirement`.
+  `Normal` không bao giờ Fail/`TooNoisy`; `Quiet`/`Silent` có thể Fail nếu vượt ngưỡng.
 - Chữ ký `DeviceQcRules.Evaluate(telemetry, thresholds)` **không đổi** khi sau này truyền requirement
   thật vào — chỉ đổi giá trị enum.
 
@@ -460,7 +462,8 @@ Simulator **không** cần `IBuildRepository`/`IComponentCatalogService`. Nó pa
 | `requestId` | `BuildRequest.RequestId` đang chọn |
 | `sellerUserId` | `BuildRequest.SellerUserId` |
 | `deviceId` | `DeviceService.GetOrCreateQcStationAsync(sellerUserId)` (§3.3) — tạo on-demand, không seed cứng |
-| `buyerNoiseRequirement` / `buyerLatencyRequirement` | **chưa có** ⇒ mặc định `Normal` (xem §6.1) |
+| `buyerNoiseRequirement` | Lấy từ `build.noiseRequirement` trong snapshot; thiếu/hỏng ⇒ `Normal` |
+| `buyerLatencyRequirement` | **chưa có** ⇒ latency chỉ theo `switchTechnology` (xem §6.1) |
 
 > **Lý do dùng `kit.pcbTechnology`** thay vì tra switch đã chọn: buyer có thể **không** chọn switch cụ thể
 > (guide §4.2), nhưng kit luôn có `pcbTechnology`. Đây cũng là field quyết định switch HE/Mechanical
@@ -573,20 +576,21 @@ Closed += async (_, _) =>
 
 - **Build:** `dotnet build Custom_keyboard.csproj` sau mỗi phase (target `net10.0-windows`, WPF — cần host Windows/SDK).
 - **DB:** chạy lại `Database/SqlServer/CreateSchema_Refactor.sql` trên `CustomKeyboard_Refactor`; xác nhận 3 bảng mới + FK (`FK_dts_*`, `FK_dktr_session/request/device`) + `CK_devices_type` có `QC_STATION` + index được tạo (idempotent, **không** seed cứng device). Trạm QC tạo on-demand khi seller chạy test (§3.3). Xem `memory/refactor-db-test-setup.md` cho cách chạy sqlcmd.
-- **Logic (không cần UI):** theo harness fake-repository trong `Phase6Verification/Program.cs`:
+- **Logic (không cần UI):** theo harness fake-repository riêng ngoài repo tại
+  `D:\ccdmm\cc3\device_verify`:
   - `DeviceQcRules` với 6 ví dụ guide §6.1–6.6 (Pass, NoSignal, HighLatency, Chatter, StuckKey, WrongKey), assert đúng `KeyTestResult`/`KeyFailureType`.
   - **Vòng đời session:** `StartSessionAsync` → `RecordKeyResultAsync` nhiều lần → `CompleteSessionAsync`; assert không vỡ FK (fake repo kiểm tra session tồn tại trước khi nhận key result) và status tổng kết §7 (có Fail ⇒ Failed; chỉ Warning ⇒ Warning).
 - **End-to-end:** chạy app, seller chọn request `In_progress`, bấm **Start QC Test** → grid từng phím + summary hiển thị và rows ghi vào `device_key_test_results`; buyer chọn request thấy bản tóm tắt. Đường MQTT verify khi có broker; không có broker thì publisher trả `false` và simulator fallback in-process để vẫn ghi DB.
 
 ### Build-order checklist
 
-- [ ] Phase 1 — Schema (3 bảng + drop + index + QC_STATION + per-key FK/switch_technology; **không** seed cứng) ✅ DB tạo lại sạch
-- [ ] Phase 2 — Models + Enums (+ `KeyTelemetry` DTO, `DeviceType.QC_STATION`) ✅ build
-- [ ] Phase 3 — Repositories + `SqlTableNames` (session upsert) ✅ build
-- [ ] Phase 4 — `DeviceQcRules` + `DeviceService` (Start/Record/Complete) ✅ unit test §6/§7 + vòng đời
-- [ ] Phase 5 — Telemetry publisher/subscriber + `DeviceSimulator` (MQTT chính, in-process fallback) ✅ build
-- [ ] Phase 6 — Wiring `MainWindow.xaml.cs` (mqttSettings, telemetry publisher + subscriber, không IRealtimeNotifier) ✅ app khởi động
-- [ ] Phase 7 — UI seller (SelectedRequest có sẵn) + buyer (thêm SelectedRequest) + converter + localization ✅ end-to-end
+- [x] Phase 1 — Schema (3 bảng + drop + index + QC_STATION + per-key FK/switch_technology + noise_requirement; **không** seed cứng) ✅ DB tạo lại sạch
+- [x] Phase 2 — Models + Enums (+ `KeyTelemetry` DTO, `DeviceType.QC_STATION`) ✅ build
+- [x] Phase 3 — Repositories + `SqlTableNames` (session upsert) ✅ build
+- [x] Phase 4 — `DeviceQcRules` + `DeviceService` (Start/Record/Complete) ✅ `device_verify` pass §6/§7 + vòng đời
+- [x] Phase 5 — Telemetry publisher/subscriber + `DeviceSimulator` (MQTT chính, in-process fallback) ✅ build + `device_verify` fallback
+- [x] Phase 6 — Wiring `MainWindow.xaml.cs` (mqttSettings, telemetry publisher + subscriber, không IRealtimeNotifier) ✅ build; broker path compile sạch, runtime broker verify để Phase 7 end-to-end
+- [x] Phase 7 — UI seller (SelectedRequest có sẵn) + buyer (thêm SelectedRequest) + converter + localization + noise requirement ✅ `WpfUiVerification` pass 8/8 end-to-end QC
 
 ---
 
@@ -597,7 +601,7 @@ Closed += async (_, _) =>
 - **[FIX #3] Telemetry device dùng cặp `IDeviceTelemetryPublisher`/`IDeviceTelemetrySubscriber` riêng** — không nhồi vào `IRealtimeNotifier`.
 - **[FIX #4] `device_key_test_results.switch_technology`** thêm vào để khớp model + guide §6 JSON.
 - **[FIX #5] Simulator parse `RequestPayloadJson`** (`kit.requiredSwitchQuantity`, `kit.pcbTechnology`) — không cần repo/catalog.
-- **[FIX #6] Buyer noise/latency requirement = OPTIONAL phase sau** — phase lõi dùng requirement mặc định `Normal`, noise không fail build.
+- **[FIX #6] Buyer noise requirement đã nối end-to-end** — `builds.noise_requirement` vào request snapshot/session; latency requirement vẫn để phase sau.
 - **[FIX #7] `DeviceType.QC_STATION`** cho trạm gộp; giữ 3 loại chuyên biệt cho báo cáo. Device row tạo **on-demand** (`GetOrCreateQcStationAsync`), không seed cứng trong schema (schema không seed users).
 - **[FIX #8] Per-key FK tới `build_requests` & `devices`** + repository copy từ session ⇒ tránh lệch dữ liệu.
 - **[FIX #9] Buyer thêm `SelectedRequest`** ⇒ summary QC bind sạch theo request đang chọn.

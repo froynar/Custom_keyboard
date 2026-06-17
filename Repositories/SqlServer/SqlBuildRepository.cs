@@ -69,6 +69,7 @@ public sealed class SqlBuildRepository : IBuildRepository
                     kit_id = @kit_id,
                     name = @name,
                     notes = @notes,
+                    noise_requirement = @noise_requirement,
                     status = @status,
                     total_cost_snapshot = @total_cost_snapshot,
                     updated_at = SYSUTCDATETIME()
@@ -82,6 +83,7 @@ public sealed class SqlBuildRepository : IBuildRepository
                     kit_id,
                     name,
                     notes,
+                    noise_requirement,
                     status,
                     total_cost_snapshot,
                     created_at
@@ -92,6 +94,7 @@ public sealed class SqlBuildRepository : IBuildRepository
                     @kit_id,
                     @name,
                     @notes,
+                    @noise_requirement,
                     @status,
                     @total_cost_snapshot,
                     COALESCE(@created_at, SYSUTCDATETIME())
@@ -104,6 +107,7 @@ public sealed class SqlBuildRepository : IBuildRepository
                 kit_id,
                 name,
                 notes,
+                noise_requirement,
                 status,
                 total_cost_snapshot,
                 created_at,
@@ -159,6 +163,7 @@ public sealed class SqlBuildRepository : IBuildRepository
             kit_id,
             name,
             notes,
+            noise_requirement,
             status,
             total_cost_snapshot,
             created_at,
@@ -371,6 +376,7 @@ public sealed class SqlBuildRepository : IBuildRepository
         command.AddParameter("@kit_id", SqlDbType.VarChar, build.KitId, 50);
         command.AddParameter("@name", SqlDbType.VarChar, build.Name, 255);
         command.AddParameter("@notes", SqlDbType.VarChar, build.Notes, 500);
+        command.AddParameter("@noise_requirement", SqlDbType.VarChar, build.NoiseRequirement.ToString(), 20);
         command.AddParameter("@status", SqlDbType.VarChar, build.Status.ToString(), 50);
         command.AddDecimalParameter("@total_cost_snapshot", build.TotalCostSnapshot);
         command.AddParameter("@created_at", SqlDbType.DateTime2, build.CreatedAt == default ? null : build.CreatedAt);
@@ -413,6 +419,7 @@ public sealed class SqlBuildRepository : IBuildRepository
             KitId = reader.GetStringValue("kit_id"),
             Name = reader.GetStringValue("name"),
             Notes = reader.GetNullableStringValue("notes"),
+            NoiseRequirement = reader.GetEnumValue<NoiseRequirement>("noise_requirement"),
             Status = reader.GetEnumValue<BuildStatus>("status"),
             TotalCostSnapshot = reader.GetDecimalValue("total_cost_snapshot"),
             CreatedAt = reader.GetDateTimeValue("created_at"),

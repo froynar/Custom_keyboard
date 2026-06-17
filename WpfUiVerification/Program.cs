@@ -23,6 +23,7 @@ internal sealed class WpfUiRunner
         await RunSellerAnalyticsScenarioAsync("UI flow: seller analytics + chart localization (UC-02.3.1)", appPath);
         await RunAdminTabsScenarioAsync("UI flow: admin tab navigation renders (UC-03.4.x)", appPath);
         await RunSellerSnapshotScenarioAsync("UI flow: seller request snapshot renders (UC-02.3.2)", appPath);
+        await RunDeviceQcScenarioAsync("UI flow: seller runs QC and buyer sees summary (Device Layer Phase 7)", appPath);
 
         Console.WriteLine();
         Console.WriteLine($"Passed: {_total - _failures.Count}");
@@ -333,6 +334,65 @@ internal sealed class WpfUiRunner
         finally { await CloseAppAsync(process); }
     }
 
+    private async Task RunDeviceQcScenarioAsync(string name, string appPath)
+    {
+        _total++;
+        Process? sellerProcess = null;
+        Process? buyerProcess = null;
+        try
+        {
+            sellerProcess = StartApp(appPath);
+            var sellerWindow = WaitForMainWindow(sellerProcess.Id, TimeSpan.FromSeconds(20));
+            LoginAndWaitDashboard(sellerWindow, "seller_soigear", "SellerDashboardRoot");
+
+            var requestsGrid = WaitForElement(sellerWindow, "SellerRequestsGrid", TimeSpan.FromSeconds(10));
+            SelectDataGridRowByText(requestsGrid, "REQ_REF_BOOG75_PENDING");
+
+            Thread.Sleep(500);
+            InvokeIfEnabled(sellerWindow, "SellerAcceptButton");
+            Thread.Sleep(900);
+            InvokeIfEnabled(sellerWindow, "SellerInProgressButton");
+            Thread.Sleep(900);
+
+            ClickNav(sellerWindow, "NavQc", "Kiểm tra QC");
+            Thread.Sleep(500);
+            var startButton = WaitForElement(sellerWindow, "QcStartButton", TimeSpan.FromSeconds(10));
+            if (!startButton.Current.IsEnabled)
+            {
+                throw new InvalidOperationException("QC start button is disabled; selected request is not In_progress.");
+            }
+
+            InvokeOrToggle(startButton, "QcStartButton");
+            var qcRow = WaitForDataGridRow(sellerWindow, "QcKeyResultsGrid", TimeSpan.FromSeconds(45));
+            var sellerSummary = WaitForElement(sellerWindow, "SellerQcSummaryTitle", TimeSpan.FromSeconds(10));
+            Console.WriteLine($"[device-qc] seller row:{qcRow is not null} summary:{sellerSummary is not null}");
+
+            await CloseAppAsync(sellerProcess);
+            sellerProcess = null;
+
+            buyerProcess = StartApp(appPath);
+            var buyerWindow = WaitForMainWindow(buyerProcess.Id, TimeSpan.FromSeconds(20));
+            LoginAndWaitDashboard(buyerWindow, "buyer_refactor", "BuyerDashboardRoot");
+            ClickNav(buyerWindow, "BuyerSentRequestsNavButton", "Request đã gửi");
+
+            var buyerGrid = WaitForElement(buyerWindow, "BuyerRequestsGrid", TimeSpan.FromSeconds(10));
+            SelectDataGridRowByText(buyerGrid, "REQ_REF_BOOG75_PENDING");
+
+            var buyerSummary = WaitForElement(buyerWindow, "BuyerQcSummaryStatusLabel", TimeSpan.FromSeconds(15));
+            Console.WriteLine($"[device-qc] buyer summary:{buyerSummary is not null}");
+            Console.WriteLine($"PASS {name}");
+        }
+        catch (Exception ex)
+        {
+            _failures.Add($"{name}: {ex.Message}");
+        }
+        finally
+        {
+            await CloseAppAsync(sellerProcess);
+            await CloseAppAsync(buyerProcess);
+        }
+    }
+
     private void Report(string name, List<string> problems)
     {
         if (problems.Count == 0)
@@ -384,6 +444,59 @@ internal sealed class WpfUiRunner
         }
 
         InvokeOrToggle(element, automationId);
+    }
+
+    private static void InvokeIfEnabled(AutomationElement root, string automationId)
+    {
+        var element = FindByAutomationId(root, automationId);
+        if (element is null || !element.Current.IsEnabled)
+        {
+            return;
+        }
+
+        InvokeOrToggle(element, automationId);
+    }
+
+    private static AutomationElement WaitForDataGridRow(AutomationElement root, string gridAutomationId, TimeSpan timeout)
+    {
+        var grid = WaitForElement(root, gridAutomationId, timeout);
+        var stopAt = DateTime.UtcNow + timeout;
+        while (DateTime.UtcNow < stopAt)
+        {
+            var row = grid.FindFirst(
+                TreeScope.Descendants,
+                new PropertyCondition(AutomationElement.ControlTypeProperty, ControlType.DataItem));
+            if (row is not null)
+            {
+                return row;
+            }
+
+            Thread.Sleep(300);
+        }
+
+        throw new TimeoutException($"Timed out waiting for rows in '{gridAutomationId}'.");
+    }
+
+    private static AutomationElement SelectDataGridRowByText(AutomationElement grid, string text)
+    {
+        var rows = grid.FindAll(
+            TreeScope.Descendants,
+            new PropertyCondition(AutomationElement.ControlTypeProperty, ControlType.DataItem));
+
+        foreach (AutomationElement row in rows)
+        {
+            var rowName = row.Current.Name ?? string.Empty;
+            if (rowName.Contains(text, StringComparison.OrdinalIgnoreCase) || FindByNameContains(row, text) is not null)
+            {
+                if (row.TryGetCurrentPattern(SelectionItemPattern.Pattern, out var selection))
+                {
+                    ((SelectionItemPattern)selection).Select();
+                    return row;
+                }
+            }
+        }
+
+        throw new InvalidOperationException($"Could not find row containing '{text}'.");
     }
 
     private void SwitchLanguage(int processId, AutomationElement window, string optionAutomationId)

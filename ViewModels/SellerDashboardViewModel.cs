@@ -1,12 +1,15 @@
 using System.Collections.ObjectModel;
+using System.Windows;
 using System.Windows.Input;
 using Custom_keyboard.Analytics;
 using Custom_keyboard.Commands;
 using Custom_keyboard.Diagnostics;
 using Custom_keyboard.Models.Accounts;
 using Custom_keyboard.Models.Builds;
+using Custom_keyboard.Models.Devices;
 using Custom_keyboard.Models.Enums;
 using Custom_keyboard.Services;
+using Custom_keyboard.Services.Devices;
 using Custom_keyboard.Services.Stats;
 using LiveChartsCore;
 using LiveChartsCore.SkiaSharpView;
@@ -19,10 +22,13 @@ public sealed class SellerDashboardViewModel : RoleDashboardViewModel
 {
     private readonly IRequestService _requestService;
     private readonly IStatsService _statsService;
+    private readonly IDeviceService _deviceService;
+    private readonly DeviceSimulator _deviceSimulator;
     private bool _hasLoaded;
     private bool _isBusy;
     private string _statusMessage = Tr("Common_Ready");
     private BuildRequest? _selectedRequest;
+    private DeviceTestSession? _qcSession;
 
     private SellerDashboardStats _stats = new();
     private StatsPeriod _selectedPeriod = StatsPeriod.Monthly;
@@ -36,7 +42,9 @@ public sealed class SellerDashboardViewModel : RoleDashboardViewModel
         ICommand logoutCommand,
         IRequestService requestService,
         IStatsService statsService,
-        ChatViewModel chat)
+        ChatViewModel chat,
+        IDeviceService deviceService,
+        DeviceSimulator deviceSimulator)
         : base(
             currentUser,
             logoutCommand,
@@ -46,6 +54,8 @@ public sealed class SellerDashboardViewModel : RoleDashboardViewModel
     {
         _requestService = requestService;
         _statsService = statsService;
+        _deviceService = deviceService;
+        _deviceSimulator = deviceSimulator;
         Chat = chat;
 
         LoadCommand = new AsyncRelayCommand(_ => ExecuteSafeAsync(LoadAsync));
@@ -54,6 +64,7 @@ public sealed class SellerDashboardViewModel : RoleDashboardViewModel
         StartProgressCommand = new AsyncRelayCommand(_ => UpdateStatusAsync(RequestStatus.In_progress), _ => CanTransitionTo(RequestStatus.In_progress));
         CompleteCommand = new AsyncRelayCommand(_ => UpdateStatusAsync(RequestStatus.Completed), _ => CanTransitionTo(RequestStatus.Completed));
         CancelCommand = new AsyncRelayCommand(_ => UpdateStatusAsync(RequestStatus.Cancelled), _ => CanTransitionTo(RequestStatus.Cancelled));
+        StartQcTestCommand = new AsyncRelayCommand(_ => ExecuteSafeAsync(StartQcTestAsync, Tr("QcTest_Completed")), _ => CanStartQc());
     }
 
     public ChatViewModel Chat { get; }
@@ -69,6 +80,9 @@ public sealed class SellerDashboardViewModel : RoleDashboardViewModel
     public ICommand StartProgressCommand { get; }
     public ICommand CompleteCommand { get; }
     public ICommand CancelCommand { get; }
+    public ICommand StartQcTestCommand { get; }
+
+    public ObservableCollection<DeviceKeyTestResult> KeyResults { get; } = [];
 
     public bool IsBusy
     {
@@ -97,6 +111,7 @@ public sealed class SellerDashboardViewModel : RoleDashboardViewModel
             {
                 OnPropertyChanged(nameof(SelectedRequestPayload));
                 RaiseCommandStatesChanged();
+                _ = LoadSelectedRequestQcAsync();
             }
         }
     }
@@ -104,6 +119,22 @@ public sealed class SellerDashboardViewModel : RoleDashboardViewModel
     public string SelectedRequestPayload => SelectedRequest is null
         ? Tr("Seller_SelectRequestForSnapshot")
         : BuildRequestSnapshotFormatter.Format(SelectedRequest.RequestPayloadJson);
+
+    // --- QC test (per selected request) ---
+
+    public DeviceTestSession? QcSession
+    {
+        get => _qcSession;
+        private set
+        {
+            if (SetProperty(ref _qcSession, value))
+            {
+                OnPropertyChanged(nameof(QcSummaryVisibility));
+            }
+        }
+    }
+
+    public Visibility QcSummaryVisibility => _qcSession is null ? Visibility.Collapsed : Visibility.Visible;
 
     // --- Analytics (read-only, derived from build_requests + builds) ---
 
@@ -245,6 +276,55 @@ public sealed class SellerDashboardViewModel : RoleDashboardViewModel
         };
     }
 
+    private bool CanStartQc()
+        => !IsBusy && SelectedRequest is { Status: RequestStatus.In_progress };
+
+    // Runs the QC simulation for the selected request (DeviceSimulator owns Start -> Record* -> Complete,
+    // publishing over MQTT with an in-process fallback) and reloads the persisted results into the VM.
+    private async Task StartQcTestAsync()
+    {
+        var request = SelectedRequest ?? throw new InvalidOperationException(Tr("Seller_SelectRequestFirst"));
+        await _deviceSimulator.RunQcTestAsync(request);
+        await LoadQcAsync(request.RequestId);
+    }
+
+    private async Task LoadQcAsync(string requestId)
+    {
+        var session = await _deviceService.GetLatestSessionByRequestAsync(requestId);
+        QcSession = session;
+        KeyResults.Clear();
+        if (session is not null)
+        {
+            foreach (var result in await _deviceService.GetKeyResultsAsync(session.SessionId))
+            {
+                KeyResults.Add(result);
+            }
+        }
+    }
+
+    // Best-effort: show the latest QC result for the newly selected request (a request may have none).
+    private async Task LoadSelectedRequestQcAsync()
+    {
+        try
+        {
+            var request = SelectedRequest;
+            if (request is null)
+            {
+                QcSession = null;
+                KeyResults.Clear();
+                return;
+            }
+
+            await LoadQcAsync(request.RequestId);
+        }
+        catch (Exception ex)
+        {
+            AppLog.Error("SellerDashboard.LoadQc", ex);
+            QcSession = null;
+            KeyResults.Clear();
+        }
+    }
+
     private async Task ExecuteSafeAsync(Func<Task> action, string? successMessage = null)
     {
         IsBusy = true;
@@ -272,5 +352,6 @@ public sealed class SellerDashboardViewModel : RoleDashboardViewModel
         (StartProgressCommand as AsyncRelayCommand)?.RaiseCanExecuteChanged();
         (CompleteCommand as AsyncRelayCommand)?.RaiseCanExecuteChanged();
         (CancelCommand as AsyncRelayCommand)?.RaiseCanExecuteChanged();
+        (StartQcTestCommand as AsyncRelayCommand)?.RaiseCanExecuteChanged();
     }
 }

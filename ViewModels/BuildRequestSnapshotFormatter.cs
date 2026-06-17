@@ -49,6 +49,7 @@ internal static class BuildRequestSnapshotFormatter
             GetString(build, "name"),
             FormatParen(GetString(build, "buildId"))));
         AppendLine(text, Loc.Instance["Snapshot_Status"], GetString(build, "status"));
+        AppendLine(text, Loc.Instance["Snapshot_NoiseRequirement"], GetString(build, "noiseRequirement"));
         AppendLine(text, Loc.Instance["Snapshot_Total"], FormatMoney(GetDecimal(build, "totalCostSnapshot")));
         AppendLine(text, Loc.Instance["Snapshot_Notes"], GetString(build, "notes"));
         text.AppendLine();

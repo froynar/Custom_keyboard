@@ -35,6 +35,8 @@
 
                     <RadioButton x:Name="NavRequest" Content="{loc:Tr Seller_NavRequest}" GroupName="sellerNav"
                                  Style="{StaticResource SidebarNav}" IsChecked="True"/>
+                    <RadioButton x:Name="NavQc" Content="{loc:Tr QcTest_NavQc}" GroupName="sellerNav"
+                                 Style="{StaticResource SidebarNav}"/>
                     <RadioButton x:Name="NavAnalytics" Content="{loc:Tr Seller_NavAnalytics}" GroupName="sellerNav"
                                  Style="{StaticResource SidebarNav}"/>
                     <RadioButton x:Name="NavChat" Content="{loc:Tr Nav_Chat}" GroupName="sellerNav"
@@ -138,9 +140,9 @@
                             </Grid>
 
                             <WrapPanel Grid.Row="2" Margin="0,12,0,0">
-                                <Button Content="{loc:Tr Seller_Accept}" Command="{Binding AcceptCommand}"
+                                <Button x:Name="SellerAcceptButton" Content="{loc:Tr Seller_Accept}" Command="{Binding AcceptCommand}"
                                         Style="{StaticResource PrimaryButton}" Margin="0,0,8,8"/>
-                                <Button Content="{loc:Tr Seller_InProgress}" Command="{Binding StartProgressCommand}"
+                                <Button x:Name="SellerInProgressButton" Content="{loc:Tr Seller_InProgress}" Command="{Binding StartProgressCommand}"
                                         Style="{StaticResource InfoButton}" Margin="0,0,8,8"/>
                                 <Button Content="{loc:Tr Seller_Complete}" Command="{Binding CompleteCommand}"
                                         Style="{StaticResource SuccessButton}" Margin="0,0,8,8"/>
@@ -168,6 +170,163 @@
                                              Padding="10"/>
                                 </ScrollViewer>
                             </Border>
+                        </Grid>
+                    </Border>
+                </Grid>
+
+                <!-- QC test section -->
+                <Grid Visibility="{Binding IsChecked, ElementName=NavQc, Converter={StaticResource BoolToVis}}">
+                    <Grid.RowDefinitions>
+                        <RowDefinition Height="Auto"/>
+                        <RowDefinition Height="Auto"/>
+                        <RowDefinition Height="*"/>
+                    </Grid.RowDefinitions>
+
+                    <!-- Toolbar -->
+                    <Border Style="{StaticResource DashboardCard}" Margin="0,0,0,14">
+                        <DockPanel>
+                            <Button x:Name="QcStartButton" DockPanel.Dock="Right" Content="{loc:Tr QcTest_Start}"
+                                    Command="{Binding StartQcTestCommand}"
+                                    Style="{StaticResource PrimaryButton}" VerticalAlignment="Center"/>
+                            <StackPanel>
+                                <TextBlock Text="{loc:Tr QcTest_Title}" Style="{StaticResource SectionTitle}" Margin="0"/>
+                                <TextBlock Text="{loc:Tr QcTest_StartHint}" Foreground="{StaticResource TextMutedBrush}"
+                                           Margin="0,4,0,0" TextWrapping="Wrap"/>
+                            </StackPanel>
+                        </DockPanel>
+                    </Border>
+
+                    <!-- Summary card -->
+                    <Border Grid.Row="1" Style="{StaticResource DashboardCard}" Margin="0,0,0,14"
+                            AutomationProperties.AutomationId="SellerQcSummaryPanel"
+                            Visibility="{Binding QcSummaryVisibility}">
+                        <StackPanel>
+                            <DockPanel Margin="0,0,0,12">
+                                <Border DockPanel.Dock="Right" Style="{StaticResource BadgeChrome}"
+                                        Background="{Binding QcSession.Status, Converter={StaticResource StatusToBrushConverter}}">
+                                    <TextBlock Style="{StaticResource StatusBadgeText}">
+                                        <TextBlock.Text>
+                                            <MultiBinding Converter="{StaticResource LocalizedStatus}">
+                                                <Binding Path="QcSession.Status"/>
+                                                <Binding Path="Language" Source="{x:Static loc:Loc.Instance}"/>
+                                            </MultiBinding>
+                                        </TextBlock.Text>
+                                    </TextBlock>
+                                </Border>
+                                <TextBlock AutomationProperties.AutomationId="SellerQcSummaryTitle"
+                                           Text="{loc:Tr QcTest_Summary}" Style="{StaticResource SectionTitle}"
+                                           Margin="0" VerticalAlignment="Center"/>
+                            </DockPanel>
+                            <UniformGrid Rows="1" Columns="4" Margin="0,0,0,10">
+                                <Border Style="{StaticResource KpiCard}">
+                                    <StackPanel>
+                                        <TextBlock Text="{loc:Tr QcTest_Tested}" Style="{StaticResource MutedText}"/>
+                                        <TextBlock FontSize="20" FontWeight="SemiBold" Foreground="{StaticResource TextPrimaryBrush}">
+                                            <TextBlock.Text>
+                                                <MultiBinding StringFormat="{}{0}/{1}">
+                                                    <Binding Path="QcSession.TestedKeys"/>
+                                                    <Binding Path="QcSession.TotalKeys"/>
+                                                </MultiBinding>
+                                            </TextBlock.Text>
+                                        </TextBlock>
+                                    </StackPanel>
+                                </Border>
+                                <Border Style="{StaticResource KpiCard}">
+                                    <StackPanel>
+                                        <TextBlock Text="{loc:Tr QcTest_Passed}" Style="{StaticResource MutedText}"/>
+                                        <TextBlock Text="{Binding QcSession.PassedKeys}" FontSize="20" FontWeight="SemiBold" Foreground="{StaticResource SuccessBrush}"/>
+                                    </StackPanel>
+                                </Border>
+                                <Border Style="{StaticResource KpiCard}">
+                                    <StackPanel>
+                                        <TextBlock Text="{loc:Tr QcTest_Warning}" Style="{StaticResource MutedText}"/>
+                                        <TextBlock Text="{Binding QcSession.WarningKeys}" FontSize="20" FontWeight="SemiBold" Foreground="{StaticResource WarningBrush}"/>
+                                    </StackPanel>
+                                </Border>
+                                <Border Style="{StaticResource KpiCard}" Margin="0">
+                                    <StackPanel>
+                                        <TextBlock Text="{loc:Tr QcTest_Failed}" Style="{StaticResource MutedText}"/>
+                                        <TextBlock Text="{Binding QcSession.FailedKeys}" FontSize="20" FontWeight="SemiBold" Foreground="{StaticResource DangerBrush}"/>
+                                    </StackPanel>
+                                </Border>
+                            </UniformGrid>
+                            <UniformGrid Rows="1" Columns="4">
+                                <Border Style="{StaticResource KpiCard}">
+                                    <StackPanel>
+                                        <TextBlock Text="{loc:Tr QcTest_AvgLatency}" Style="{StaticResource MutedText}"/>
+                                        <TextBlock Text="{Binding QcSession.AverageLatencyMs, StringFormat=N2, TargetNullValue=-}" FontSize="18" FontWeight="SemiBold"/>
+                                    </StackPanel>
+                                </Border>
+                                <Border Style="{StaticResource KpiCard}">
+                                    <StackPanel>
+                                        <TextBlock Text="{loc:Tr QcTest_MaxLatency}" Style="{StaticResource MutedText}"/>
+                                        <TextBlock Text="{Binding QcSession.MaxLatencyMs, StringFormat=N2, TargetNullValue=-}" FontSize="18" FontWeight="SemiBold"/>
+                                    </StackPanel>
+                                </Border>
+                                <Border Style="{StaticResource KpiCard}">
+                                    <StackPanel>
+                                        <TextBlock Text="{loc:Tr QcTest_AvgNoise}" Style="{StaticResource MutedText}"/>
+                                        <TextBlock Text="{Binding QcSession.AverageNoiseDb, StringFormat=N2, TargetNullValue=-}" FontSize="18" FontWeight="SemiBold"/>
+                                    </StackPanel>
+                                </Border>
+                                <Border Style="{StaticResource KpiCard}" Margin="0">
+                                    <StackPanel>
+                                        <TextBlock Text="{loc:Tr QcTest_MaxNoise}" Style="{StaticResource MutedText}"/>
+                                        <TextBlock Text="{Binding QcSession.MaxNoiseDb, StringFormat=N2, TargetNullValue=-}" FontSize="18" FontWeight="SemiBold"/>
+                                    </StackPanel>
+                                </Border>
+                            </UniformGrid>
+                        </StackPanel>
+                    </Border>
+
+                    <!-- Per-key results -->
+                    <Border Grid.Row="2" Style="{StaticResource DashboardCard}">
+                        <Grid>
+                            <Grid.RowDefinitions>
+                                <RowDefinition Height="Auto"/>
+                                <RowDefinition Height="*"/>
+                            </Grid.RowDefinitions>
+                            <TextBlock Text="{loc:Tr QcTest_PerKey}" Style="{StaticResource SectionTitle}"/>
+                            <Grid Grid.Row="1">
+                                <DataGrid x:Name="QcKeyResultsGrid" ItemsSource="{Binding KeyResults}" AlternationCount="2">
+                                    <DataGrid.Columns>
+                                        <DataGridTextColumn Header="{loc:Tr QcTest_ColKey}" Binding="{Binding KeyCode}" Width="*"/>
+                                        <DataGridCheckBoxColumn Header="{loc:Tr QcTest_ColPress}" Binding="{Binding PressSignalDetected}" Width="70" IsReadOnly="True"/>
+                                        <DataGridCheckBoxColumn Header="{loc:Tr QcTest_ColRelease}" Binding="{Binding ReleaseSignalDetected}" Width="80" IsReadOnly="True"/>
+                                        <DataGridTextColumn Header="{loc:Tr QcTest_ColPressEvents}" Binding="{Binding PressEventCount}" Width="100"/>
+                                        <DataGridTextColumn Header="{loc:Tr QcTest_ColBounce}" Binding="{Binding BounceCount}" Width="80"/>
+                                        <DataGridTextColumn Header="{loc:Tr QcTest_ColLatency}" Binding="{Binding LatencyMs, StringFormat=N2}" Width="100"/>
+                                        <DataGridCheckBoxColumn Header="{loc:Tr QcTest_ColStuck}" Binding="{Binding IsStuck}" Width="60" IsReadOnly="True"/>
+                                        <DataGridTemplateColumn Header="{loc:Tr QcTest_ColResult}" Width="110">
+                                            <DataGridTemplateColumn.CellTemplate>
+                                                <DataTemplate>
+                                                    <Border Style="{StaticResource BadgeChrome}"
+                                                            Background="{Binding Result, Converter={StaticResource StatusToBrushConverter}}">
+                                                        <TextBlock Style="{StaticResource StatusBadgeText}">
+                                                            <TextBlock.Text>
+                                                                <MultiBinding Converter="{StaticResource LocalizedStatus}">
+                                                                    <Binding Path="Result"/>
+                                                                    <Binding Path="Language" Source="{x:Static loc:Loc.Instance}"/>
+                                                                </MultiBinding>
+                                                            </TextBlock.Text>
+                                                        </TextBlock>
+                                                    </Border>
+                                                </DataTemplate>
+                                            </DataGridTemplateColumn.CellTemplate>
+                                        </DataGridTemplateColumn>
+                                        <DataGridTextColumn Header="{loc:Tr QcTest_ColFailureType}" Binding="{Binding FailureType}" Width="120"/>
+                                        <DataGridTextColumn Header="{loc:Tr QcTest_ColReason}" Binding="{Binding FailureReason}" Width="2*"/>
+                                    </DataGrid.Columns>
+                                </DataGrid>
+
+                                <Border Style="{StaticResource EmptyStateCard}"
+                                        Visibility="{Binding Items.Count, ElementName=QcKeyResultsGrid, Converter={StaticResource CountToVisibility}}">
+                                    <StackPanel>
+                                        <TextBlock Text="{loc:Tr QcTest_NoData}" Style="{StaticResource EmptyStateTitle}"/>
+                                        <TextBlock Text="{loc:Tr QcTest_StartHint}" Style="{StaticResource EmptyStateText}"/>
+                                    </StackPanel>
+                                </Border>
+                            </Grid>
                         </Grid>
                     </Border>
                 </Grid>

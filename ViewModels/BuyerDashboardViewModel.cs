@@ -7,8 +7,10 @@ using Custom_keyboard.Diagnostics;
 using Custom_keyboard.Models.Accounts;
 using Custom_keyboard.Models.Builds;
 using Custom_keyboard.Models.Components;
+using Custom_keyboard.Models.Devices;
 using Custom_keyboard.Models.Enums;
 using Custom_keyboard.Services;
+using Custom_keyboard.Services.Devices;
 using Custom_keyboard.Services.Stats;
 
 namespace Custom_keyboard.ViewModels;
@@ -22,6 +24,7 @@ public sealed class BuyerDashboardViewModel : RoleDashboardViewModel
     private readonly IRequestService _requestService;
     private readonly IStatsService _statsService;
     private readonly ISellerApplicationService _sellerApplicationService;
+    private readonly IDeviceService _deviceService;
     private SellerPublicStats? _sellerStats;
     private SellerApplication? _myApplication;
     private string _sellerAppShopName = string.Empty;
@@ -48,10 +51,13 @@ public sealed class BuyerDashboardViewModel : RoleDashboardViewModel
     private int _switchQuantity;
     private KeycapSet? _selectedKeycap;
     private Stabilizer? _selectedStabilizer;
+    private NoiseRequirement _selectedNoiseRequirement = NoiseRequirement.Normal;
     private KeyboardBuild? _selectedBuild;
     private SellerProfile? _selectedSeller;
     private BuildModEditorViewModel? _selectedMod;
     private string? _requestNote;
+    private BuildRequest? _selectedRequest;
+    private DeviceTestSession? _selectedRequestQc;
 
     public BuyerDashboardViewModel(
         User currentUser,
@@ -61,7 +67,8 @@ public sealed class BuyerDashboardViewModel : RoleDashboardViewModel
         IRequestService requestService,
         IStatsService statsService,
         ISellerApplicationService sellerApplicationService,
-        ChatViewModel chat)
+        ChatViewModel chat,
+        IDeviceService deviceService)
         : base(
             currentUser,
             logoutCommand,
@@ -74,6 +81,7 @@ public sealed class BuyerDashboardViewModel : RoleDashboardViewModel
         _requestService = requestService;
         _statsService = statsService;
         _sellerApplicationService = sellerApplicationService;
+        _deviceService = deviceService;
         Chat = chat;
 
         LoadCommand = new AsyncRelayCommand(_ => ExecuteSafeAsync(LoadAsync));
@@ -109,6 +117,7 @@ public sealed class BuyerDashboardViewModel : RoleDashboardViewModel
     public ObservableCollection<string> Errors { get; } = [];
     public ObservableCollection<string> Warnings { get; } = [];
     public ObservableCollection<string> Infos { get; } = [];
+    public NoiseRequirement[] NoiseRequirements { get; } = Enum.GetValues<NoiseRequirement>();
 
     public ICommand LoadCommand { get; }
     public ICommand RefreshAllCommand { get; }
@@ -285,6 +294,18 @@ public sealed class BuyerDashboardViewModel : RoleDashboardViewModel
         }
     }
 
+    public NoiseRequirement SelectedNoiseRequirement
+    {
+        get => _selectedNoiseRequirement;
+        set
+        {
+            if (SetProperty(ref _selectedNoiseRequirement, value))
+            {
+                ScheduleValidation();
+            }
+        }
+    }
+
     public KeyboardBuild? SelectedBuild
     {
         get => _selectedBuild;
@@ -325,6 +346,36 @@ public sealed class BuyerDashboardViewModel : RoleDashboardViewModel
     }
 
     public Visibility SellerStatsVisibility => SellerStats is not null ? Visibility.Visible : Visibility.Collapsed;
+
+    // Sent-requests selection -> show that request's latest QC summary (read-only, no per-key detail).
+    public BuildRequest? SelectedRequest
+    {
+        get => _selectedRequest;
+        set
+        {
+            if (SetProperty(ref _selectedRequest, value))
+            {
+                _ = LoadSelectedRequestQcAsync(value);
+            }
+        }
+    }
+
+    public DeviceTestSession? SelectedRequestQc
+    {
+        get => _selectedRequestQc;
+        private set
+        {
+            if (SetProperty(ref _selectedRequestQc, value))
+            {
+                OnPropertyChanged(nameof(SelectedRequestQcVisibility));
+                OnPropertyChanged(nameof(SelectedRequestQcEmptyVisibility));
+            }
+        }
+    }
+
+    public Visibility SelectedRequestQcVisibility => SelectedRequestQc is not null ? Visibility.Visible : Visibility.Collapsed;
+
+    public Visibility SelectedRequestQcEmptyVisibility => SelectedRequestQc is null ? Visibility.Visible : Visibility.Collapsed;
 
     public BuildModEditorViewModel? SelectedMod
     {
@@ -538,6 +589,26 @@ public sealed class BuyerDashboardViewModel : RoleDashboardViewModel
         }
     }
 
+    // Best-effort: a request may never have been QC-tested, so a missing session is normal (not an error).
+    private async Task LoadSelectedRequestQcAsync(BuildRequest? request)
+    {
+        if (request is null)
+        {
+            SelectedRequestQc = null;
+            return;
+        }
+
+        try
+        {
+            SelectedRequestQc = await _deviceService.GetLatestSessionByRequestAsync(request.RequestId);
+        }
+        catch (Exception ex)
+        {
+            AppLog.Error("BuyerDashboard", ex);
+            SelectedRequestQc = null;
+        }
+    }
+
     private async Task SaveBuildAsync()
     {
         var build = CreateBuildFromCurrentSelection();
@@ -614,6 +685,7 @@ public sealed class BuyerDashboardViewModel : RoleDashboardViewModel
             _editingStatus = full.Status;
             BuildName = full.Name;
             BuildNotes = full.Notes;
+            SelectedNoiseRequirement = full.NoiseRequirement;
 
             SelectedKit = FindById(Kits, full.KitId, item => item.KitId);
             SelectedSwitch = null;
@@ -672,6 +744,7 @@ public sealed class BuyerDashboardViewModel : RoleDashboardViewModel
             _editingStatus = BuildStatus.Draft;
             BuildName = string.Empty;
             BuildNotes = null;
+            SelectedNoiseRequirement = NoiseRequirement.Normal;
             SelectedKit = null;
             SelectedSwitch = null;
             SwitchQuantity = 0;
@@ -860,6 +933,7 @@ public sealed class BuyerDashboardViewModel : RoleDashboardViewModel
             KitId = SelectedKit?.KitId ?? string.Empty,
             Name = BuildName,
             Notes = BuildNotes,
+            NoiseRequirement = SelectedNoiseRequirement,
             Status = _editingStatus,
             Items = items,
             Mods = Mods.Select(mod => mod.ToBuildMod()).ToList()
