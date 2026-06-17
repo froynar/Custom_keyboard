@@ -36,7 +36,7 @@ WPF View
   -> SQL Server
 
 Device Simulator
-  -> MQTT / In-process simulation
+  -> MQTT broker
   -> DeviceService
   -> DeviceRepository
   -> SQL Server
@@ -48,7 +48,7 @@ Trong do:
 - `DeviceService`: xu ly logic nhan telemetry, validate, tinh pass/fail.
 - `DeviceRepository`: luu device, test session, test result vao SQL.
 - `SQL Server`: van la source of truth.
-- MQTT chi la lop realtime tuy chon, giong cach du an hien tai dang lam voi `Realtime`.
+- MQTT la transport chinh de Device Simulator gui telemetry vao app. In-process simulation chi nen dung lam fallback cho unit test/demo cuc nhanh, khong phai huong tich hop chinh.
 
 ## 3. Cac Loai Device Gia Lap
 
@@ -539,21 +539,41 @@ switch_requirement_note     NVARCHAR(500)
 
 ## 9. MQTT Topic De Xuat
 
-Neu di theo MQTT:
+### 9.0 Transport Chinh
 
-### Device gui ket qua tung phim
+Transport chinh cho tang Device la MQTT:
+
+```text
+Device Simulator -> MQTT Broker -> WPF App Subscriber -> DeviceService -> SQL Server
+```
+
+Trong phase mo phong nay khong dung HTTP hay WebSocket lam kenh chinh:
+
+- HTTP phu hop khi co backend Web API rieng, nhung du an hien tai la WPF desktop + SQL Server.
+- WebSocket phu hop cho client-server realtime UI, nhung IoT telemetry dang theo mo hinh publish/subscribe nen MQTT hop hon.
+- MQTT phu hop voi topic theo device/request, nhe, de mo phong, va trung voi tang `Realtime` hien co cua du an.
+
+SQL Server van la source of truth. MQTT chi dam nhan viec van chuyen event realtime; sau khi app nhan du lieu, ket qua test phai duoc luu vao database.
+
+### 9.1 Device Gui Ket Qua Tung Phim
+
+Device publish moi ket qua key-test len topic:
 
 ```text
 keyboard/device/{deviceId}/request/{requestId}/key-test
 ```
 
-### Device gui tong ket session
+### 9.2 Device Gui Tong Ket Session
+
+Device publish tong ket session len topic:
 
 ```text
 keyboard/device/{deviceId}/request/{requestId}/session-summary
 ```
 
-### App yeu cau device bat dau test
+### 9.3 App Yeu Cau Device Bat Dau Test
+
+Neu can demo app dieu khien simulator, app publish len topic:
 
 ```text
 keyboard/device/{deviceId}/request/{requestId}/start-test
