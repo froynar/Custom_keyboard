@@ -52,6 +52,7 @@ internal sealed class Phase6Runner
         await Run("DeviceSimulator falls back when summary publish fails", UnitDeviceSimulatorSummaryPublishFallbackAsync);
         await Run("DeviceSimulator keeps same-switch noise within sensor tolerance", UnitDeviceSimulatorNoiseStaysWithinSensorToleranceAsync);
         await Run("SQL integration covers build/request/chat CRUD", IntegrationSqlBuildRequestChatAsync);
+        await Run("SQL integration: admin-added catalog components can be purchased by buyer", IntegrationSqlAdminCatalogBuyerPurchaseAsync);
         await Run("SQL integration covers buyer-seller QC completion flow", IntegrationSqlBuyerSellerQcFlowAsync);
         await Run("SQL integration keeps device telemetry idempotent", IntegrationSqlDeviceTelemetryIdempotencyAsync);
         await Run("SQL integration covers analytics aggregates", IntegrationSqlAnalyticsAsync);
@@ -798,6 +799,181 @@ internal sealed class Phase6Runner
         finally
         {
             await CleanupSqlAsync(factory, buildId, requestId, conversationId);
+        }
+    }
+
+    private static async Task IntegrationSqlAdminCatalogBuyerPurchaseAsync()
+    {
+        var factory = new SqlConnectionFactory(new SqlServerSettings());
+        var marker = DateTime.UtcNow.ToString("yyyyMMddHHmmssfff");
+        var buildId = $"P6_BUILD_ADMIN_BUY_{marker}";
+        var layoutId = $"P6_ADMIN_BUY_LAYOUT_{marker}";
+        var kitId = $"P6_ADMIN_BUY_KIT_{marker}";
+        var switchId = $"P6_ADMIN_BUY_SWITCH_{marker}";
+        var keycapId = $"P6_ADMIN_BUY_KEYCAP_{marker}";
+        var stabilizerId = $"P6_ADMIN_BUY_STAB_{marker}";
+        var accessoryId = $"P6_ADMIN_BUY_ACC_{marker}";
+        string? requestId = null;
+
+        await CleanupSqlAsync(factory, buildId);
+        await CleanupSqlAdminCatalogPurchaseAsync(factory);
+
+        try
+        {
+            var userRepository = new SqlUserRepository(factory);
+            var sellerRepository = new SqlSellerRepository(factory);
+            var componentRepository = new SqlComponentRepository(factory);
+            var buildRepository = new SqlBuildRepository(factory);
+            var requestRepository = new SqlRequestRepository(factory);
+            var auditRepository = new SqlAuditLogRepository(factory);
+            var adminService = new AdminService(userRepository, sellerRepository, componentRepository, requestRepository, auditRepository);
+            var catalog = new ComponentCatalogService(componentRepository);
+            var buildService = new BuildService(buildRepository, catalog);
+            var requestService = new RequestService(buildRepository, sellerRepository, requestRepository, buildService, catalog, NullRealtimeNotifier.Instance);
+
+            var admin = await userRepository.FindByUsernameAsync("admin_refactor")
+                ?? throw new InvalidOperationException("Missing seed admin_refactor.");
+            var buyer = await userRepository.FindByUsernameAsync("buyer_refactor")
+                ?? throw new InvalidOperationException("Missing seed buyer_refactor.");
+            var seller = (await sellerRepository.GetVerifiedSellersAsync()).FirstOrDefault()
+                ?? throw new InvalidOperationException("Missing verified seller seed data.");
+
+            var brand = await adminService.SaveBrandAsync(
+                new Brand { BrandName = $"P6 Admin Buy Brand {marker}", Country = "VN" },
+                admin.UserId);
+            await adminService.SaveLayoutAsync(
+                new Layout
+                {
+                    LayoutId = layoutId,
+                    LayoutName = "P6 Admin Buy 65",
+                    FormFactor = "65%",
+                    KeyCount = 68
+                },
+                admin.UserId);
+
+            await adminService.SaveComponentAsync(
+                new AdminComponentRecord
+                {
+                    ComponentType = AdminComponentType.Kit,
+                    ComponentId = kitId,
+                    Name = "P6 Admin Buy Kit",
+                    BrandId = brand.BrandId,
+                    LayoutId = layoutId,
+                    PcbTechnology = "Mechanical",
+                    SwitchMount = "MX 5-pin",
+                    RequiredSwitchQuantity = 68,
+                    IncludedParts = "case, pcb, plate",
+                    PriceUsd = 79.99m,
+                    IsAvailable = true
+                },
+                admin.UserId);
+            await adminService.SaveComponentAsync(
+                new AdminComponentRecord
+                {
+                    ComponentType = AdminComponentType.Switch,
+                    ComponentId = switchId,
+                    Name = "P6 Admin Buy Linear",
+                    BrandId = brand.BrandId,
+                    SwitchTechnology = "Mechanical",
+                    MountType = "MX 5-pin",
+                    SwitchType = "Linear",
+                    ActuationForceG = 45,
+                    PriceUsd = 0.42m,
+                    IsAvailable = true
+                },
+                admin.UserId);
+            await adminService.SaveComponentAsync(
+                new AdminComponentRecord
+                {
+                    ComponentType = AdminComponentType.KeycapSet,
+                    ComponentId = keycapId,
+                    Name = "P6 Admin Buy Keycap",
+                    BrandId = brand.BrandId,
+                    SupportedFormFactor = "65/TKL",
+                    Profile = "Cherry",
+                    Material = "PBT",
+                    PriceUsd = 35m,
+                    IsAvailable = true
+                },
+                admin.UserId);
+            await adminService.SaveComponentAsync(
+                new AdminComponentRecord
+                {
+                    ComponentType = AdminComponentType.Stabilizer,
+                    ComponentId = stabilizerId,
+                    Name = "P6 Admin Buy Stabilizer",
+                    BrandId = brand.BrandId,
+                    SupportedLayouts = "65/TKL",
+                    PriceUsd = 12.50m,
+                    IsAvailable = true
+                },
+                admin.UserId);
+            await adminService.SaveComponentAsync(
+                new AdminComponentRecord
+                {
+                    ComponentType = AdminComponentType.Accessory,
+                    ComponentId = accessoryId,
+                    Name = "P6 Admin Buy Lube",
+                    AccessoryType = "Lube",
+                    TargetComponent = "Switch",
+                    PriceUsd = 7m,
+                    IsAvailable = true
+                },
+                admin.UserId);
+
+            AssertTrue((await catalog.GetAvailableKitsAsync()).Any(item => item.KitId == kitId), "admin kit appears in buyer catalog");
+            AssertTrue((await catalog.GetAvailableSwitchesAsync()).Any(item => item.SwitchId == switchId), "admin switch appears in buyer catalog");
+            AssertTrue((await catalog.GetAvailableKeycapSetsAsync()).Any(item => item.KeycapId == keycapId), "admin keycap appears in buyer catalog");
+            AssertTrue((await catalog.GetAvailableStabilizersAsync()).Any(item => item.StabilizerId == stabilizerId), "admin stabilizer appears in buyer catalog");
+            AssertTrue((await catalog.GetAvailableAccessoriesAsync()).Any(item => item.AccessoryId == accessoryId), "admin accessory appears in buyer catalog");
+
+            var build = new KeyboardBuild
+            {
+                BuildId = buildId,
+                BuyerId = buyer.UserId,
+                KitId = kitId,
+                Name = "P6 admin-added catalog build",
+                Notes = "Verifies admin-added components are purchasable by a buyer.",
+                NoiseRequirement = NoiseRequirement.Quiet,
+                Items =
+                [
+                    new BuildItem { SwitchId = switchId, Quantity = 68 },
+                    new BuildItem { KeycapId = keycapId, Quantity = 1 },
+                    new BuildItem { StabilizerId = stabilizerId, Quantity = 1 },
+                    new BuildItem { AccessoryId = accessoryId, Quantity = 1 }
+                ],
+                Mods =
+                [
+                    new BuildMod { ModType = "Lube", TargetComponent = "Switch", Notes = "Quantity: 68 switches; admin catalog flow" }
+                ]
+            };
+
+            var validation = await buildService.ValidateBuildAsync(build);
+            AssertTrue(validation.IsValid, "buyer build with admin-added components validates");
+
+            var saved = await buildService.SaveBuildAsync(build);
+            AssertEqual(BuildStatus.Saved, saved.Status, "buyer can save build with admin-added components");
+            AssertEqual(163.05m, saved.TotalCostSnapshot, "admin-added component price snapshots total");
+
+            var request = await requestService.SendRequestAsync(saved.BuildId, buyer.UserId, seller.UserId, "admin-added catalog purchase flow");
+            requestId = request.RequestId;
+            AssertEqual(RequestStatus.Pending, request.Status, "buyer can request seller for admin-added build");
+            AssertContains(request.RequestPayloadJson, kitId, "request snapshot includes admin-added kit");
+            AssertContains(request.RequestPayloadJson, switchId, "request snapshot includes admin-added switch");
+            AssertContains(request.RequestPayloadJson, keycapId, "request snapshot includes admin-added keycap");
+            AssertContains(request.RequestPayloadJson, stabilizerId, "request snapshot includes admin-added stabilizer");
+            AssertContains(request.RequestPayloadJson, accessoryId, "request snapshot includes admin-added accessory");
+
+            await adminService.SetComponentAvailabilityAsync(AdminComponentType.Switch, switchId, false, admin.UserId);
+            AssertFalse((await catalog.GetAvailableSwitchesAsync()).Any(item => item.SwitchId == switchId), "hidden admin switch leaves buyer catalog");
+
+            var hiddenValidation = await buildService.ValidateBuildAsync(saved);
+            AssertFalse(hiddenValidation.IsValid, "buyer cannot newly purchase a hidden admin-added switch");
+        }
+        finally
+        {
+            await CleanupSqlAsync(factory, buildId, requestId);
+            await CleanupSqlAdminCatalogPurchaseAsync(factory, marker);
         }
     }
 
@@ -1564,6 +1740,41 @@ internal sealed class Phase6Runner
                 command.Parameters.AddWithValue("@build_id", (object?)buildId ?? DBNull.Value);
                 command.Parameters.AddWithValue("@request_id", (object?)requestId ?? DBNull.Value);
                 command.Parameters.AddWithValue("@conversation_id", (object?)conversationId ?? DBNull.Value);
+            });
+    }
+
+    private static async Task CleanupSqlAdminCatalogPurchaseAsync(SqlConnectionFactory factory, string? marker = null)
+    {
+        await using var connection = factory.CreateConnection();
+        await connection.OpenAsync();
+
+        var idLike = marker is null ? "P6_ADMIN_BUY_%" : $"P6_ADMIN_BUY_%{marker}";
+        var brandLike = marker is null ? "P6 Admin Buy Brand %" : $"P6 Admin Buy Brand {marker}";
+        var jsonIdLike = marker is null ? "%P6_ADMIN_BUY_%" : $"%P6_ADMIN_BUY_%{marker}%";
+        var jsonBrandLike = marker is null ? "%P6 Admin Buy Brand %" : $"%P6 Admin Buy Brand {marker}%";
+
+        await ExecuteNonQueryAsync(connection, """
+            DELETE FROM audit_log
+            WHERE record_id LIKE @id_like
+               OR old_value_json LIKE @json_id_like
+               OR new_value_json LIKE @json_id_like
+               OR old_value_json LIKE @json_brand_like
+               OR new_value_json LIKE @json_brand_like;
+
+            DELETE FROM accessories WHERE accessory_id LIKE @id_like;
+            DELETE FROM stabilizers WHERE stab_id LIKE @id_like;
+            DELETE FROM keycap_sets WHERE keycap_id LIKE @id_like;
+            DELETE FROM switches WHERE switch_id LIKE @id_like;
+            DELETE FROM keyboard_kits WHERE kit_id LIKE @id_like;
+            DELETE FROM layouts WHERE layout_id LIKE @id_like;
+            DELETE FROM brands WHERE brand_name LIKE @brand_like;
+            """,
+            command =>
+            {
+                command.Parameters.AddWithValue("@id_like", idLike);
+                command.Parameters.AddWithValue("@brand_like", brandLike);
+                command.Parameters.AddWithValue("@json_id_like", jsonIdLike);
+                command.Parameters.AddWithValue("@json_brand_like", jsonBrandLike);
             });
     }
 

@@ -8,7 +8,7 @@ Ban chi tiet van nam trong `Custom_Keyboard_DFD_Context_Level0_Refactor.md`.
 ## Nguyen Tac Rut Gon
 
 - Chi giu 3 tac nhan ngoai: Buyer, Seller, Admin.
-- Chi giu 5 tien trinh muc 0 theo FHD: Tai khoan, Build, Request, Quan tri, Chat.
+- Chi giu 6 tien trinh muc 0 theo FHD: Tai khoan, Build, Request, Quan tri, Chat, Device/QC.
 - Gop kho du lieu thanh nhom logic lon thay vi liet ke tat ca bang ERD.
 - Luong du lieu tren so do dung nhan ngan; chi tiet duoc giai thich trong bang chu thich.
 - Khong the hien tung thao tac UI, cot database, DTO hoac luong realtime.
@@ -24,10 +24,10 @@ flowchart LR
     System(("Custom Keyboard Builder"))
 
     Buyer -- "(1) Tai khoan, build, request, don seller, chat" --> System
-    System -- "(2) Catalog, build/status, ket qua request, tin nhan" --> Buyer
+    System -- "(2) Catalog, build/status, ket qua request, QC summary, tin nhan" --> Buyer
 
-    Seller -- "(3) Tai khoan, xu ly request, chat" --> System
-    System -- "(4) Request duoc gan, build snapshot, ket qua xu ly, tin nhan" --> Seller
+    Seller -- "(3) Tai khoan, xu ly request, chay QC, chat" --> System
+    System -- "(4) Request duoc gan, build snapshot, ket qua xu ly, ket qua QC, tin nhan" --> Seller
 
     Admin -- "(5) Tai khoan, thao tac quan tri, duyet don, chat" --> System
     System -- "(6) Du lieu quan tri, audit, ket qua cap nhat, tin nhan" --> Admin
@@ -38,9 +38,9 @@ flowchart LR
 | So | Luong du lieu |
 | --- | --- |
 | (1) | Buyer dang ky/dang nhap, tao build tu kit, gui request, nop don seller va gui tin nhan seller. |
-| (2) | He thong tra catalog, canh bao/tong gia, build/request status, trang thai don seller va tin nhan seller. |
-| (3) | Seller dang nhap, xem request, cap nhat trang thai request va gui tin nhan buyer/admin. |
-| (4) | He thong tra request duoc gan, snapshot build, ket qua cap nhat va tin nhan buyer/admin. |
+| (2) | He thong tra catalog, canh bao/tong gia, build/request status, trang thai don seller, QC summary va tin nhan seller. |
+| (3) | Seller dang nhap, xem request, cap nhat trang thai request, chay QC va gui tin nhan buyer/admin. |
+| (4) | He thong tra request duoc gan, snapshot build, ket qua cap nhat, ket qua QC va tin nhan buyer/admin. |
 | (5) | Admin dang nhap, quan ly user/seller/catalog, xem audit, duyet don seller va gui tin nhan seller. |
 | (6) | He thong tra dashboard/admin data, audit log, ket qua thao tac va tin nhan seller. |
 
@@ -57,12 +57,14 @@ flowchart LR
     P3(("3.0\nQuan ly request"))
     P4(("4.0\nQuan tri he thong"))
     P5(("5.0\nQuan ly chat"))
+    P6(("6.0\nDevice/QC"))
 
     D1[("D1\nNguoi dung\n& ho so seller")]
     D2[("D2\nCatalog\nkeyboard")]
     D3[("D3\nBuild\n& request")]
     D4[("D4\nChat")]
     D5[("D5\nAudit\n& don seller")]
+    D6[("D6\nDevice\n& QC results")]
 
     Buyer -- "(1) Dang ky/dang nhap" --> P1
     Seller -- "(1) Dang nhap" --> P1
@@ -101,6 +103,12 @@ flowchart LR
     P5 <--> D1
     P5 <--> D3
     P5 <--> D4
+
+    Seller -- "(17) Chay QC cho request" --> P6
+    P6 <--> D3
+    P6 <--> D6
+    P6 -- "(18) Ket qua QC tung phim" --> Seller
+    P6 -- "(19) QC summary theo request" --> Buyer
 ```
 
 ### Tien Trinh Level 0
@@ -112,6 +120,7 @@ flowchart LR
 | 3.0 | Quan ly request | Buyer gui build da luu cho seller verified; Seller xem va cap nhat trang thai request. |
 | 4.0 | Quan tri he thong | Admin quan ly user, seller profile, catalog, audit log va duyet don xin seller. |
 | 5.0 | Quan ly chat | Xu ly hoi thoai Buyer-Seller va Seller-Admin/Admin-Seller. |
+| 6.0 | Device/QC | Mo phong tram QC, luu ket qua test tung phim va tong hop session. |
 
 ### Kho Du Lieu Rut Gon
 
@@ -122,6 +131,7 @@ flowchart LR
 | D3 | Build & request | Builds, build items, build mods, request build va snapshot. |
 | D4 | Chat | Chat conversations va chat messages. |
 | D5 | Audit & don seller | Audit logs va seller applications. |
+| D6 | Device & QC results | Devices, test sessions va per-key QC results. |
 
 ### Chu Thich Luong Du Lieu Level 0
 
@@ -143,9 +153,13 @@ flowchart LR
 | (14) | Tin nhan seller gui buyer hoac admin. |
 | (15) | Tin nhan admin gui seller. |
 | (16) | Lich su chat va tin nhan moi tra ve cho nguoi tham gia. |
+| (17) | Seller yeu cau chay QC cho request dang In_progress. |
+| (18) | Bang ket qua tung phim: pass/warning/fail, failure type, latency, noise. |
+| (19) | Tom tat QC cho Buyer theo request: tested/pass/warning/fail, latency va noise. |
 
 ## Ranh Gioi
 
 - Ban rut gon nay dung cho bao cao tong quan; neu can doi chieu chi tiet tung data store/flow, xem ban refactor day du.
 - DFD khong co chat truc tiep Buyer-Admin.
 - DFD khong co seller inventory, compatibility rules, case/PCB/plate rieng le; cac phan do da nam trong keyboard kit.
+- Device/QC trong phase nay la simulator trong app, dai dien cho tram QC nhung khong yeu cau phan cung that.

@@ -12,6 +12,7 @@ Muc tieu la giu dung can bang voi DFD Level 0 rut gon, nhung moi so do Level 1 c
 | D3 | Build & request | Builds, build items, build mods, build requests va request snapshot. |
 | D4 | Chat | Chat conversations va chat messages. |
 | D5 | Audit & don seller | Audit logs va seller applications. |
+| D6 | Device & QC results | Devices, device test sessions va per-key QC results. |
 
 ## DFD Level 1 - 1.0 Quan Ly Tai Khoan
 
@@ -259,6 +260,48 @@ flowchart LR
 | (8) | Tin nhan Admin gui Seller. |
 | (9) | Lich su chat va tin nhan moi. |
 
+## DFD Level 1 - 6.0 Device/QC Kiem Tra Keyboard
+
+```mermaid
+flowchart LR
+    Seller["Seller"]
+    Buyer["Buyer"]
+
+    P61(("6.1\nTao/lay tram QC"))
+    P62(("6.2\nBat dau phien QC"))
+    P63(("6.3\nXu ly telemetry tung phim"))
+    P64(("6.4\nTong hop session"))
+    P65(("6.5\nTra ket qua QC"))
+
+    D3[("D3\nBuild\n& request")]
+    D6[("D6\nDevice\n& QC results")]
+
+    Seller -- "(1) Yeu cau chay QC" --> P61
+    P61 <--> D6
+    P61 -- "(2) Device active" --> P62
+    P62 <--> D3
+    P62 <--> D6
+    P62 -- "(3) Session Running" --> P63
+    P63 <--> D6
+    P63 -- "(4) Du ket qua tung phim" --> P64
+    P64 <--> D6
+    P64 -- "(5) Summary" --> P65
+    P65 -- "(6) Bang ket qua tung phim" --> Seller
+    P65 -- "(7) Tom tat QC" --> Buyer
+```
+
+### Chu Thich
+
+| So | Luong du lieu |
+| --- | --- |
+| (1) | Seller chay QC cho request dang In_progress. |
+| (2) | QC_STATION cua seller duoc tao hoac lay lai. |
+| (3) | Session Running gan request, seller, device, switch technology, noise requirement va total keys. |
+| (4) | Telemetry tung phim da duoc luu thanh key result. |
+| (5) | Tested/pass/warning/fail, average/max latency va noise. |
+| (6) | Seller xem ket qua tung key va failure type. |
+| (7) | Buyer xem QC summary moi nhat theo request. |
+
 ## Kiem Tra Can Bang Voi Level 0 Rut Gon
 
 | Level 0 | Level 1 rut gon |
@@ -268,9 +311,11 @@ flowchart LR
 | 3.0 Quan ly request | 3.1 Tiep nhan request; 3.2 Tao request; 3.3 Tra cuu request; 3.4 Cap nhat trang thai |
 | 4.0 Quan tri he thong | 4.1 Dashboard admin; 4.2 Quan ly user; 4.3 Quan ly seller profile; 4.4 Quan ly catalog; 4.5 Xem audit log; 4.6 Duyet don seller |
 | 5.0 Quan ly chat | 5.1 Mo/tao hoi thoai; 5.2 Kiem tra quyen chat; 5.3 Luu tin nhan; 5.4 Tra cuu lich su |
+| 6.0 Device/QC | 6.1 Tao/lay tram QC; 6.2 Bat dau phien QC; 6.3 Xu ly telemetry tung phim; 6.4 Tong hop session; 6.5 Tra ket qua QC |
 
 ## Ranh Gioi
 
 - Ban rut gon khong thay the file Level 1 chi tiet.
 - Khong co chat truc tiep Buyer-Admin.
 - Khong co seller inventory, compatibility rules, case/PCB/plate rieng le.
+- Device/QC la simulator va luu DB-first; MQTT chi la transport, fallback in-process khong lam mat ket qua.

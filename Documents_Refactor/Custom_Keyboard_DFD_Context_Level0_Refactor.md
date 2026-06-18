@@ -15,10 +15,10 @@ flowchart LR
     System(("Custom Keyboard Builder"))
 
     Buyer -- "Thong tin tai khoan, cau hinh build tu kit, request gui seller, tin nhan seller" --> System
-    System -- "Ket qua xac thuc, catalog kha dung, build da luu, trang thai request, tin nhan seller" --> Buyer
+    System -- "Ket qua xac thuc, catalog kha dung, build da luu, trang thai request, tom tat QC, tin nhan seller" --> Buyer
 
-    Seller -- "Thong tin tai khoan, yeu cau xem request, cap nhat trang thai, tin nhan buyer/admin" --> System
-    System -- "Ket qua xac thuc, request duoc gan, chi tiet build snapshot, ket qua cap nhat, tin nhan buyer/admin" --> Seller
+    Seller -- "Thong tin tai khoan, yeu cau xem request, cap nhat trang thai, chay QC, tin nhan buyer/admin" --> System
+    System -- "Ket qua xac thuc, request duoc gan, chi tiet build snapshot, ket qua cap nhat, ket qua QC, tin nhan buyer/admin" --> Seller
 
     Admin -- "Thong tin tai khoan, yeu cau quan ly user/seller/catalog, yeu cau audit log, tin nhan seller" --> System
     System -- "Ket qua xac thuc, du lieu quan tri, ket qua cap nhat, audit log, tin nhan seller" --> Admin
@@ -28,8 +28,8 @@ flowchart LR
 
 | Tac nhan | Vai tro |
 | --- | --- |
-| Buyer | Dang ky/dang nhap, tao build tu kit, them build items, luu build, gui request, theo doi request, nop don xin lam seller va chat voi seller. |
-| Seller | Dang nhap, xem request duoc gan, xem chi tiet build, cap nhat trang thai request va chat voi buyer/admin. |
+| Buyer | Dang ky/dang nhap, tao build tu kit, them build items, luu build, gui request, theo doi request, xem tom tat QC, nop don xin lam seller va chat voi seller. |
+| Seller | Dang nhap, xem request duoc gan, xem chi tiet build, cap nhat trang thai request, chay QC va chat voi buyer/admin. |
 | Admin | Dang nhap, quan ly user, seller profile, catalog, audit log, duyet don xin lam seller va chat voi seller. |
 
 ### Luong Du Lieu Muc Ngu Canh
@@ -37,9 +37,9 @@ flowchart LR
 | Ma | Nguon | Dich | Luong du lieu |
 | --- | --- | --- | --- |
 | C1 | Buyer | System | Thong tin tai khoan, lua chon kit/build items, build notes, request seller, tin nhan gui seller |
-| C2 | System | Buyer | Ket qua xac thuc, catalog available, canh bao tuong thich, tong gia, build/request status, tin nhan seller |
-| C3 | Seller | System | Thong tin tai khoan, yeu cau request, status moi, tin nhan gui buyer/admin |
-| C4 | System | Seller | Ket qua xac thuc, danh sach request, chi tiet build snapshot, ket qua cap nhat, tin nhan buyer/admin |
+| C2 | System | Buyer | Ket qua xac thuc, catalog available, canh bao tuong thich, tong gia, build/request status, QC summary, tin nhan seller |
+| C3 | Seller | System | Thong tin tai khoan, yeu cau request, status moi, yeu cau chay QC, tin nhan gui buyer/admin |
+| C4 | System | Seller | Ket qua xac thuc, danh sach request, chi tiet build snapshot, ket qua cap nhat, ket qua QC tung phim, tin nhan buyer/admin |
 | C5 | Admin | System | Thong tin tai khoan, thao tac user/seller/catalog, yeu cau audit, tin nhan gui seller |
 | C6 | System | Admin | Ket qua xac thuc, danh sach user/seller/catalog, ket qua cap nhat, audit log, tin nhan seller |
 
@@ -54,6 +54,7 @@ flowchart LR
 | 3.0 | Quan ly request build | Xu ly buyer gui request cho seller va seller cap nhat trang thai. |
 | 4.0 | Quan tri he thong | Xu ly quan ly user, seller profile, catalog, audit log va duyet don xin lam seller. |
 | 5.0 | Quan ly chat | Xu ly hoi thoai Buyer-Seller va Seller-Admin/Admin-Seller. |
+| 6.0 | Device/QC - Kiem tra keyboard | Tao/lay QC station, chay phien test, luu ket qua tung phim va tong hop session. |
 
 ### Cac Kho Du Lieu
 
@@ -67,6 +68,7 @@ flowchart LR
 | D6 | Audit log | Lich su thao tac quan trong. |
 | D7 | Chat | Chat conversations va chat messages. |
 | D8 | Don xin seller | Seller applications: don buyer xin len seller va trang thai duyet. |
+| D9 | Device va QC results | Devices, device test sessions va device key test results. |
 
 ### So Do Level 0
 
@@ -81,6 +83,7 @@ flowchart LR
     P3(("3.0\nQuan ly request build"))
     P4(("4.0\nQuan tri he thong"))
     P5(("5.0\nQuan ly chat"))
+    P6(("6.0\nDevice/QC"))
 
     D1[("D1\nNguoi dung va vai tro")]
     D2[("D2\nHo so seller")]
@@ -90,6 +93,7 @@ flowchart LR
     D6[("D6\nAudit log")]
     D7[("D7\nChat")]
     D8[("D8\nDon xin seller")]
+    D9[("D9\nDevice va QC results")]
 
     Buyer -- "(1) Thong tin tai khoan" --> P1
     Seller -- "(1) Thong tin tai khoan" --> P1
@@ -141,6 +145,13 @@ flowchart LR
     P4 -- "(39) Luu/cap nhat don" --> D8
     D8 -- "(40) Don xin seller can duyet" --> P4
     P4 -- "(41) Trang thai don (Pending/Approved/Rejected)" --> Buyer
+
+    Seller -- "(42) Chay QC cho request In_progress" --> P6
+    D5 -- "(43) Request/payload snapshot" --> P6
+    P6 -- "(44) Tao/lay device va luu ket qua QC" --> D9
+    D9 -- "(45) Session/key results" --> P6
+    P6 -- "(46) Bang ket qua QC tung phim" --> Seller
+    P6 -- "(47) Tom tat QC theo request" --> Buyer
 ```
 
 ### Chu Thich Luong Du Lieu Level 0
@@ -188,9 +199,16 @@ flowchart LR
 | (39) | 4.0 | D8 | Tao don Pending hoac cap nhat trang thai duyet (khi duyet con ghi (23) role, (24) seller profile, (26) audit) |
 | (40) | D8 | 4.0 | Don xin seller va trang thai de admin duyet |
 | (41) | 4.0 | Buyer | Trang thai don (Pending/Approved/Rejected) |
+| (42) | Seller | 6.0 | Yeu cau chay QC cho request dang In_progress |
+| (43) | D5 | 6.0 | Request payload snapshot chua key count, switch technology va noise requirement |
+| (44) | 6.0 | D9 | Device, session Running va ket qua test tung phim |
+| (45) | D9 | 6.0 | Session/key results de tong hop pass/warning/fail |
+| (46) | 6.0 | Seller | Bang ket qua tung phim gom failure type, latency va noise |
+| (47) | 6.0 | Buyer | Tom tat QC moi nhat theo request |
 
 ## Ranh Gioi
 
 - DFD Level 0 chi the hien tien trinh xu ly du lieu lon, khong mo ta tung man hinh UI.
 - D3 gom catalog keyboard theo ERD refactor, khong co inventory va khong co case/PCB/plate rieng le.
 - Cac chi tiet phuc tap duoc bung o Level 1 va Level 2.
+- Device/QC trong phase nay la simulator va MQTT/fallback in-process, khong bat buoc co phan cung that.

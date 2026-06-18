@@ -454,6 +454,23 @@ flowchart LR
 | 6.6 | Xem ket qua tung phim | UC-02, UC-04 |
 | 6.7 | Tong hop ket qua QC | UC-01, UC-04 |
 
+## Bang Kiem Tra Cheo Diagram
+
+Bang nay dung de doi chieu nhanh giua use case, sequence diagram, activity diagram va ERD.
+
+| Pham vi | Use case | Sequence | Activity | ERD / du lieu chinh |
+| --- | --- | --- | --- | --- |
+| Tai khoan, profile, logout | UC-01, UC-02, UC-03 | SD-S01, SD-S09 | AD-01, AD-S01 | roles, users |
+| Buyer tao build tu kit | UC-01 | SD-S02, SD-S10 | AD-02, AD-S02 | keyboard_kits, switches, keycap_sets, stabilizers, accessories, builds, build_items, build_mods |
+| Buyer gui request cho seller | UC-01 | SD-S02 | AD-02, AD-S02 | build_requests, request_payload_json, builds.noise_requirement |
+| Buyer xem request va QC summary | UC-01, UC-04 | SD-S03, SD-S04 | AD-02, AD-S02, AD-06, AD-S06 | build_requests, device_test_sessions |
+| Seller xu ly request | UC-02 | SD-S03 | AD-03, AD-S03 | build_requests.status |
+| Seller chay QC tung phim | UC-02, UC-04 | SD-S03, SD-S04 | AD-03, AD-S03, AD-06, AD-S06 | devices, device_test_sessions, device_key_test_results |
+| Admin quan tri user/seller/catalog | UC-03 | SD-S05, SD-S10 | AD-04, AD-S04 | users, seller_profiles, brands, layouts, catalog tables, audit_log |
+| Buyer xin thanh seller va admin duyet | UC-01, UC-03 | SD-S06 | AD-02, AD-S02, AD-04, AD-S04 | seller_applications, users.role_id, seller_profiles, audit_log |
+| Chat theo role | UC-01, UC-02, UC-03 | SD-S07 | AD-05, AD-S05 | chat_conversations, chat_messages |
+| Dashboard/analytics | UC-01, UC-02, UC-03 | SD-S08 | AD-02, AD-S02, AD-03, AD-S03, AD-04, AD-S04 | aggregate tu builds, build_requests, device_test_sessions, catalog, users |
+
 ## Ranh Gioi
 
 - Khong co use case quan ly inventory/stock trong phase nay.

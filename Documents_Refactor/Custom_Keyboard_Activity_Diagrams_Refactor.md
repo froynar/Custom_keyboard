@@ -535,3 +535,14 @@ flowchart LR
 - Chatter/double click dua tren press_event_count > 1 va/hoac bounce_count > nguong sau khi da co press-release hoan tat.
 - HE switch dung nguong latency chat hon, vi du <= 3ms Pass, > 3ms den <= 6ms Warning, > 6ms Fail.
 - SQL Server la source of truth; MQTT chi la transport cho telemetry mo phong.
+
+## Bang Kiem Tra Coverage
+
+| Nhom | FHD | Activity diagram bao phu | Ghi chu |
+| --- | --- | --- | --- |
+| Tai khoan | 1.1-1.4 | AD-01 | Dang ky, dang nhap, profile, logout. |
+| Buyer build/request | 2.1-2.13 | AD-02 | Tao build tu kit, gui request, archive build, nop don seller, xem QC summary. |
+| Seller request/QC | 3.1-3.10 | AD-03, AD-06 | Xu ly request, chay QC, xem tung key, hoan thanh/huy. |
+| Admin | 4.1-4.6 | AD-04 | User, seller profile, catalog, audit, duyet don seller. |
+| Chat | 5.1-5.4 | AD-05 | Buyer-Seller va Seller-Admin/Admin-Seller. |
+| Device/QC | 6.1-6.7 | AD-03, AD-06 | Tao session, telemetry tung phim, MQTT/fallback, tong hop ket qua. |

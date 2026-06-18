@@ -61,6 +61,7 @@ flowchart TD
         ClickSave[Luu build]
         ChooseSeller[Chon seller va gui request]
         ViewStatus[Theo doi request]
+        ViewQcSummary[Xem tom tat QC neu da co]
         Archive[Luu tru build]
         ApplySeller[Nop don tro thanh seller]
         End((Ket thuc))
@@ -73,6 +74,7 @@ flowchart TD
         ShowBuildError[Hien thi loi/canh bao]
         SaveBuild[Luu build va tong gia snapshot]
         CreateRequest[Tao request Pending]
+        LoadQcSummary[Load tom tat QC moi nhat]
         SaveApplication[Luu don seller Pending]
     end
 
@@ -82,16 +84,17 @@ flowchart TD
     ViewBuilds -- Gui request --> ChooseSeller
     Choose -- Tao build --> CreateBuild --> LoadCatalog --> SelectKit --> AddItems --> ClickSave --> ValidateBuild
     ValidateBuild -- Khong --> ShowBuildError --> AddItems
-    ValidateBuild -- Co --> SaveBuild --> ChooseSeller --> CreateRequest --> ViewStatus --> End
+    ValidateBuild -- Co --> SaveBuild --> ChooseSeller --> CreateRequest --> ViewStatus --> LoadQcSummary --> ViewQcSummary --> End
     Choose -- Dang ky seller --> ApplySeller --> SaveApplication --> End
 ```
 
 | FHD | Pham vi |
 | --- | --- |
 | 2.1-2.8 | Xem dashboard/build, tao build, chon kit, them item/mod, kiem tra va luu build. |
-| 2.9-2.11 | Chon seller verified, gui request va theo doi trang thai. |
+| 2.9-2.11 | Chon seller verified, gui request, theo doi trang thai va xem tom tat QC neu seller da test. |
 | 2.12 | Luu tru build. |
 | 2.13 | Nop don tro thanh seller. |
+| 6.7 | Buyer xem tom tat session QC da duoc seller chay. |
 
 ## AD-S03: Seller Xu Ly Request
 
@@ -263,6 +266,17 @@ flowchart TD
 | 6.5 | Kiem tra do on tung phim. |
 | 6.6 | Xem ket qua tung phim va failure_type. |
 | 6.7 | Tong hop session Passed/Warning/Failed. |
+
+## Bang Kiem Tra Coverage
+
+| Nhom | FHD | Activity diagram bao phu |
+| --- | --- | --- |
+| Tai khoan | 1.1, 1.2, 1.3, 1.4 | AD-S01 |
+| Buyer build/request | 2.1, 2.2, 2.3, 2.4, 2.5, 2.6, 2.7, 2.8, 2.9, 2.10, 2.11, 2.12, 2.13 | AD-S02 |
+| Seller request/QC | 3.1, 3.2, 3.3, 3.4, 3.5, 3.6, 3.7, 3.8, 3.9, 3.10 | AD-S03, AD-S06 |
+| Admin | 4.1, 4.2, 4.3, 4.4, 4.5, 4.6 | AD-S04 |
+| Chat | 5.1, 5.2, 5.3, 5.4 | AD-S05 |
+| Device/QC | 6.1, 6.2, 6.3, 6.4, 6.5, 6.6, 6.7 | AD-S03, AD-S06 |
 
 ## Ranh Gioi
 
