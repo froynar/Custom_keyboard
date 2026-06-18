@@ -22,50 +22,68 @@ public sealed class SqlDeviceKeyTestResultRepository : IDeviceKeyTestResultRepos
 
         await using var command = connection.CreateCommand();
         command.CommandText = """
-            INSERT INTO device_key_test_results (
-                session_id,
-                request_id,
-                device_id,
-                key_code,
-                expected_key,
-                received_key,
-                press_signal_detected,
-                latency_ms,
-                press_event_count,
-                bounce_count,
-                release_signal_detected,
-                hold_duration_ms,
-                is_stuck,
-                noise_db,
-                switch_technology,
-                result,
-                failure_type,
-                failure_reason,
-                recorded_at
-            )
-            VALUES (
-                @session_id,
-                @request_id,
-                @device_id,
-                @key_code,
-                @expected_key,
-                @received_key,
-                @press_signal_detected,
-                @latency_ms,
-                @press_event_count,
-                @bounce_count,
-                @release_signal_detected,
-                @hold_duration_ms,
-                @is_stuck,
-                @noise_db,
-                @switch_technology,
-                @result,
-                @failure_type,
-                @failure_reason,
-                COALESCE(@recorded_at, SYSUTCDATETIME())
-            );
+            SET XACT_ABORT ON;
+            SET TRANSACTION ISOLATION LEVEL SERIALIZABLE;
 
-            DECLARE @new_key_test_id BIGINT = CAST(SCOPE_IDENTITY() AS BIGINT);
+            DECLARE @key_test_id BIGINT;
+
+            BEGIN TRANSACTION;
+
+            SELECT TOP (1) @key_test_id = key_test_id
+            FROM device_key_test_results WITH (UPDLOCK, HOLDLOCK)
+            WHERE session_id = @session_id
+              AND key_code = @key_code
+            ORDER BY key_test_id;
+
+            IF @key_test_id IS NULL
+            BEGIN
+                INSERT INTO device_key_test_results (
+                    session_id,
+                    request_id,
+                    device_id,
+                    key_code,
+                    expected_key,
+                    received_key,
+                    press_signal_detected,
+                    latency_ms,
+                    press_event_count,
+                    bounce_count,
+                    release_signal_detected,
+                    hold_duration_ms,
+                    is_stuck,
+                    noise_db,
+                    switch_technology,
+                    result,
+                    failure_type,
+                    failure_reason,
+                    recorded_at
+                )
+                VALUES (
+                    @session_id,
+                    @request_id,
+                    @device_id,
+                    @key_code,
+                    @expected_key,
+                    @received_key,
+                    @press_signal_detected,
+                    @latency_ms,
+                    @press_event_count,
+                    @bounce_count,
+                    @release_signal_detected,
+                    @hold_duration_ms,
+                    @is_stuck,
+                    @noise_db,
+                    @switch_technology,
+                    @result,
+                    @failure_type,
+                    @failure_reason,
+                    COALESCE(@recorded_at, SYSUTCDATETIME())
+                );
+
+                SET @key_test_id = CAST(SCOPE_IDENTITY() AS BIGINT);
+            END;
+
+            COMMIT TRANSACTION;
 
             SELECT
                 key_test_id,
@@ -89,7 +107,7 @@ public sealed class SqlDeviceKeyTestResultRepository : IDeviceKeyTestResultRepos
                 failure_reason,
                 recorded_at
             FROM device_key_test_results
-            WHERE key_test_id = @new_key_test_id;
+            WHERE key_test_id = @key_test_id;
             """;
         AddKeyResultParameters(command, result);
 

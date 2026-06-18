@@ -8,6 +8,7 @@ using Custom_keyboard.Models.Components;
 using Custom_keyboard.Models.Devices;
 using Custom_keyboard.Models.Enums;
 using Custom_keyboard.Realtime;
+using Custom_keyboard.Realtime.Devices;
 using Custom_keyboard.Repositories;
 using Custom_keyboard.Repositories.SqlServer;
 using Custom_keyboard.Services;
@@ -41,12 +42,18 @@ internal sealed class Phase6Runner
         await Run("ChatService supports admin-seller conversations (T14)", UnitChatServiceAdminConversationAsync);
         await Run("AccountService validates email/phone on register", UnitAccountServiceRegisterValidationAsync);
         await Run("AccountService login accepts valid and blocks wrong/banned (T01/T02)", UnitAccountServiceLoginAsync);
+        await Run("AccountService logout clears the active session", UnitAccountServiceLogoutAsync);
         await Run("AdminService writes audit entries for admin actions", UnitAdminServiceAuditActionsAsync);
+        await Run("AdminService hides and restores catalog components", UnitAdminServiceCatalogAvailabilityAsync);
         await Run("SellerApplicationService submit/approve/reject + guards", UnitSellerApplicationServiceAsync);
         await Run("StatsService revalidates role/active boundaries", UnitStatsServiceAuthorizationAsync);
         await Run("Buyer dashboard filters switches by selected kit", UnitBuyerDashboardFiltersCompatibleSwitchesAsync);
         await Run("Build mod presets persist spring weight and switch quantity", UnitBuildModPresetMetadata);
+        await Run("DeviceSimulator falls back when summary publish fails", UnitDeviceSimulatorSummaryPublishFallbackAsync);
+        await Run("DeviceSimulator keeps same-switch noise within sensor tolerance", UnitDeviceSimulatorNoiseStaysWithinSensorToleranceAsync);
         await Run("SQL integration covers build/request/chat CRUD", IntegrationSqlBuildRequestChatAsync);
+        await Run("SQL integration covers buyer-seller QC completion flow", IntegrationSqlBuyerSellerQcFlowAsync);
+        await Run("SQL integration keeps device telemetry idempotent", IntegrationSqlDeviceTelemetryIdempotencyAsync);
         await Run("SQL integration covers analytics aggregates", IntegrationSqlAnalyticsAsync);
         await Run("SQL integration: seed accounts log in with Password123 (Phase 10)", IntegrationSqlSeedAccountLoginAsync);
         await Run("VerifyRefactor invariant queries return clean results", IntegrationSqlVerifyRefactorAsync);
@@ -379,6 +386,22 @@ internal sealed class Phase6Runner
         AssertTrue(service.CurrentUser is null, "banned user establishes no session");
     }
 
+    private static async Task UnitAccountServiceLogoutAsync()
+    {
+        var users = FakeUserRepository.Standard();
+        var service = new AccountService(users, new Pbkdf2PasswordHasher());
+
+        var registered = await service.RegisterBuyerAsync("logout_user", "logout@test.local", "0906660000", "Password123");
+        AssertTrue(registered.Succeeded, "registration for logout test");
+
+        var login = await service.LoginAsync("logout_user", "Password123");
+        AssertTrue(login.Succeeded, "login before logout succeeds");
+        AssertTrue(service.CurrentUser is not null, "session is active before logout");
+
+        service.Logout();
+        AssertTrue(service.CurrentUser is null, "logout clears current user session");
+    }
+
     private static async Task UnitAdminServiceAuditActionsAsync()
     {
         var audit = new FakeAuditLogRepository();
@@ -407,6 +430,51 @@ internal sealed class Phase6Runner
             () => service.SetUserActiveAsync(20, false, 10),
             "non-admin cannot ban");
         AssertEqual(3, audit.Entries.Count, "rejected action writes no audit");
+    }
+
+    private static async Task UnitAdminServiceCatalogAvailabilityAsync()
+    {
+        var components = new FakeComponentRepository();
+        await components.SaveBrandAsync(new Brand { BrandId = 1, BrandName = "Catalog Test Brand" });
+        var audit = new FakeAuditLogRepository();
+        var service = new AdminService(
+            FakeUserRepository.Standard(),
+            FakeSellerRepository.Standard(),
+            components,
+            new FakeRequestRepository(),
+            audit);
+
+        var saved = await service.SaveComponentAsync(
+            new AdminComponentRecord
+            {
+                ComponentType = AdminComponentType.Switch,
+                ComponentId = "SW_ADMIN_HIDE",
+                BrandId = 1,
+                Name = "Admin Hide Switch",
+                SwitchTechnology = "Mechanical",
+                MountType = "MX 5-pin",
+                ActuationForceG = 55,
+                PriceUsd = 0.45m,
+                IsAvailable = true
+            },
+            adminUserId: 30);
+        AssertTrue(saved.IsAvailable, "new component starts available");
+
+        await service.SetComponentAvailabilityAsync(AdminComponentType.Switch, saved.ComponentId, false, 30);
+        var hidden = await components.GetAdminComponentByIdAsync(AdminComponentType.Switch, saved.ComponentId)
+            ?? throw new InvalidOperationException("Hidden component was not reloadable.");
+        AssertFalse(hidden.IsAvailable, "component hidden by admin");
+        AssertFalse((await components.GetAvailableSwitchesAsync()).Any(item => item.SwitchId == saved.ComponentId), "hidden switch removed from buyer catalog");
+
+        await service.SetComponentAvailabilityAsync(AdminComponentType.Switch, saved.ComponentId, true, 30);
+        var restored = await components.GetAdminComponentByIdAsync(AdminComponentType.Switch, saved.ComponentId)
+            ?? throw new InvalidOperationException("Restored component was not reloadable.");
+        AssertTrue(restored.IsAvailable, "component restored by admin");
+        AssertTrue((await components.GetAvailableSwitchesAsync()).Any(item => item.SwitchId == saved.ComponentId), "restored switch returns to buyer catalog");
+
+        AssertContains(audit.Entries.Select(entry => entry.Action), "ComponentCreate", "catalog create audit");
+        AssertContains(audit.Entries.Select(entry => entry.Action), "ComponentHide", "catalog hide audit");
+        AssertContains(audit.Entries.Select(entry => entry.Action), "ComponentRestore", "catalog restore audit");
     }
 
     private static async Task UnitStatsServiceAuthorizationAsync()
@@ -563,6 +631,63 @@ internal sealed class Phase6Runner
         return Task.CompletedTask;
     }
 
+    private static async Task UnitDeviceSimulatorSummaryPublishFallbackAsync()
+    {
+        var deviceService = new RecordingDeviceService();
+        var publisher = new ScriptedDeviceTelemetryPublisher(publishKeyResult: true, publishSummaryResult: false);
+        var simulator = new DeviceSimulator(deviceService, publisher);
+        var request = new BuildRequest
+        {
+            RequestId = "REQ_UNIT_DEVICE_SUMMARY_FAIL",
+            SellerUserId = 20,
+            RequestPayloadJson = """
+                {
+                  "build": { "noiseRequirement": "Normal" },
+                  "kit": { "requiredSwitchQuantity": 3, "pcbTechnology": "Mechanical" }
+                }
+                """,
+            Status = RequestStatus.In_progress
+        };
+
+        var completed = await simulator.RunQcTestAsync(request);
+
+        AssertEqual(3, publisher.KeyPublishCount, "key telemetry publish attempts");
+        AssertEqual(1, publisher.SummaryPublishCount, "summary publish attempted once");
+        AssertEqual(3, deviceService.RecordedResults.Count, "summary failure fallback records all keys");
+        AssertEqual(3, completed.TestedKeys, "summary failure fallback completes all keys");
+        AssertFalse(completed.Status == TestSessionStatus.Running, "summary failure fallback does not leave session Running");
+    }
+
+    private static async Task UnitDeviceSimulatorNoiseStaysWithinSensorToleranceAsync()
+    {
+        var deviceService = new RecordingDeviceService();
+        var simulator = new DeviceSimulator(
+            deviceService,
+            new ScriptedDeviceTelemetryPublisher(publishKeyResult: false, publishSummaryResult: false));
+        var request = new BuildRequest
+        {
+            RequestId = "REQ_UNIT_DEVICE_NOISE_TOLERANCE",
+            SellerUserId = 20,
+            RequestPayloadJson = """
+                {
+                  "build": { "noiseRequirement": "Quiet" },
+                  "kit": { "requiredSwitchQuantity": 20, "pcbTechnology": "Mechanical" }
+                }
+                """,
+            Status = RequestStatus.In_progress
+        };
+
+        await simulator.RunQcTestAsync(request);
+
+        var noises = deviceService.RecordedResults
+            .Select(result => result.NoiseDb!.Value)
+            .ToList();
+        var spread = noises.Max() - noises.Min();
+
+        AssertEqual(20, noises.Count, "noise tolerance key count");
+        AssertTrue(spread <= 1.60m, $"same-switch noise spread should stay within sensor tolerance, actual {spread}");
+    }
+
     private static async Task UnitSellerApplicationServiceAsync()
     {
         var users = FakeUserRepository.Standard();
@@ -673,6 +798,164 @@ internal sealed class Phase6Runner
         finally
         {
             await CleanupSqlAsync(factory, buildId, requestId, conversationId);
+        }
+    }
+
+    private static async Task IntegrationSqlBuyerSellerQcFlowAsync()
+    {
+        var factory = new SqlConnectionFactory(new SqlServerSettings());
+        var marker = DateTime.UtcNow.ToString("yyyyMMddHHmmssfff");
+        var buildId = $"P6_BUILD_QC_FLOW_{marker}";
+        string? requestId = null;
+
+        await CleanupSqlAsync(factory);
+
+        try
+        {
+            var userRepository = new SqlUserRepository(factory);
+            var sellerRepository = new SqlSellerRepository(factory);
+            var componentRepository = new SqlComponentRepository(factory);
+            var buildRepository = new SqlBuildRepository(factory);
+            var requestRepository = new SqlRequestRepository(factory);
+            var deviceRepository = new SqlDeviceRepository(factory);
+            var sessionRepository = new SqlDeviceTestSessionRepository(factory);
+            var keyResultRepository = new SqlDeviceKeyTestResultRepository(factory);
+            var catalog = new ComponentCatalogService(componentRepository);
+            var buildService = new BuildService(buildRepository, catalog);
+            var requestService = new RequestService(buildRepository, sellerRepository, requestRepository, buildService, catalog, NullRealtimeNotifier.Instance);
+            var deviceService = new DeviceService(deviceRepository, sessionRepository, keyResultRepository);
+            var simulator = new DeviceSimulator(deviceService, new NullDeviceTelemetryPublisher());
+
+            var buyer = await userRepository.FindByUsernameAsync("buyer_refactor")
+                ?? throw new InvalidOperationException("Missing seed buyer_refactor.");
+            var seller = (await sellerRepository.GetVerifiedSellersAsync()).FirstOrDefault()
+                ?? throw new InvalidOperationException("Missing verified seller seed data.");
+
+            var build = await buildService.SaveBuildAsync(await CreateSqlBuildAsync(catalog, buyer.UserId, buildId));
+            var request = await requestService.SendRequestAsync(build.BuildId, buyer.UserId, seller.UserId, "full QC use-case flow");
+            requestId = request.RequestId;
+
+            request = await requestService.UpdateStatusAsync(request.RequestId, seller.UserId, RequestStatus.Accepted);
+            AssertEqual(RequestStatus.Accepted, request.Status, "seller accepts request");
+            request = await requestService.UpdateStatusAsync(request.RequestId, seller.UserId, RequestStatus.In_progress);
+            AssertEqual(RequestStatus.In_progress, request.Status, "seller starts request");
+
+            var qcSession = await simulator.RunQcTestAsync(request);
+            AssertFalse(qcSession.Status == TestSessionStatus.Running, "QC flow session completes");
+            AssertEqual(qcSession.TotalKeys, qcSession.TestedKeys, "QC flow tests every key");
+
+            var keyResults = await deviceService.GetKeyResultsAsync(qcSession.SessionId);
+            AssertEqual(qcSession.TotalKeys, keyResults.Count, "QC flow persists per-key rows");
+            AssertTrue(keyResults.All(result => !string.IsNullOrWhiteSpace(result.KeyCode)), "QC flow key rows include key codes");
+
+            var buyerSummary = await deviceService.GetLatestSessionByRequestAsync(request.RequestId)
+                ?? throw new InvalidOperationException("Buyer QC summary was not reloadable.");
+            AssertEqual(qcSession.SessionId, buyerSummary.SessionId, "buyer sees latest QC summary for request");
+            AssertEqual(qcSession.TestedKeys, buyerSummary.TestedKeys, "buyer QC summary tested count");
+
+            var completed = await requestService.UpdateStatusAsync(request.RequestId, seller.UserId, RequestStatus.Completed);
+            AssertEqual(RequestStatus.Completed, completed.Status, "seller completes request after QC");
+            AssertTrue(completed.CompletedAt is not null, "completed request timestamp");
+        }
+        finally
+        {
+            await CleanupSqlAsync(factory, buildId, requestId);
+        }
+    }
+
+    private static async Task IntegrationSqlDeviceTelemetryIdempotencyAsync()
+    {
+        var factory = new SqlConnectionFactory(new SqlServerSettings());
+        var marker = DateTime.UtcNow.ToString("yyyyMMddHHmmssfff");
+        var buildId = $"P6_BUILD_DEVICE_{marker}";
+        var requestId = $"REQ_P6_DEVICE_{marker}";
+        var deviceId = $"DEV_P6_DEVICE_{marker}";
+
+        await CleanupSqlAsync(factory);
+
+        try
+        {
+            var userRepository = new SqlUserRepository(factory);
+            var sellerRepository = new SqlSellerRepository(factory);
+            var componentRepository = new SqlComponentRepository(factory);
+            var buildRepository = new SqlBuildRepository(factory);
+            var requestRepository = new SqlRequestRepository(factory);
+            var deviceRepository = new SqlDeviceRepository(factory);
+            var sessionRepository = new SqlDeviceTestSessionRepository(factory);
+            var keyResultRepository = new SqlDeviceKeyTestResultRepository(factory);
+            var catalog = new ComponentCatalogService(componentRepository);
+            var buildService = new BuildService(buildRepository, catalog);
+            var deviceService = new DeviceService(deviceRepository, sessionRepository, keyResultRepository);
+
+            var buyer = await userRepository.FindByUsernameAsync("buyer_refactor")
+                ?? throw new InvalidOperationException("Missing seed buyer_refactor.");
+            var seller = (await sellerRepository.GetVerifiedSellersAsync()).FirstOrDefault()
+                ?? throw new InvalidOperationException("Missing verified seller seed data.");
+
+            var build = await buildService.SaveBuildAsync(await CreateSqlBuildAsync(catalog, buyer.UserId, buildId));
+            await requestRepository.SaveAsync(new BuildRequest
+            {
+                RequestId = requestId,
+                BuildId = build.BuildId,
+                SellerUserId = seller.UserId,
+                RequestPayloadJson = "{\"device\":\"idempotency\"}",
+                Status = RequestStatus.In_progress,
+                Note = "Phase 6 device idempotency",
+                RequestedAt = DateTime.UtcNow,
+                AcceptedAt = DateTime.UtcNow
+            });
+
+            var device = await deviceRepository.SaveAsync(new Device
+            {
+                DeviceId = deviceId,
+                SellerUserId = seller.UserId,
+                DeviceName = "P6 QC Idempotency Station",
+                DeviceType = DeviceType.QC_STATION,
+                IsActive = true,
+                CreatedAt = DateTime.UtcNow
+            });
+
+            var session = await deviceService.StartSessionAsync(
+                requestId,
+                seller.UserId,
+                device.DeviceId,
+                "Mechanical",
+                NoiseRequirement.Normal,
+                totalKeys: 1);
+
+            var telemetry = new KeyTelemetry
+            {
+                SessionId = session.SessionId,
+                RequestId = requestId,
+                DeviceId = device.DeviceId,
+                KeyCode = "A",
+                ExpectedKey = "A",
+                ReceivedKey = "A",
+                PressSignalDetected = true,
+                LatencyMs = 8.5m,
+                PressEventCount = 1,
+                BounceCount = 0,
+                ReleaseSignalDetected = true,
+                HoldDurationMs = 90,
+                IsStuck = false,
+                NoiseDb = 58.2m,
+                SwitchTechnology = "Mechanical"
+            };
+
+            var first = await deviceService.RecordKeyResultAsync(telemetry);
+            var duplicate = await deviceService.RecordKeyResultAsync(telemetry);
+            AssertEqual(first.KeyTestId, duplicate.KeyTestId, "duplicate telemetry returns existing key result");
+
+            var keyResults = await deviceService.GetKeyResultsAsync(session.SessionId);
+            AssertEqual(1, keyResults.Count, "duplicate telemetry persists one row");
+
+            var completed = await deviceService.CompleteSessionAsync(session.SessionId);
+            AssertEqual(1, completed.TestedKeys, "duplicate telemetry counted once");
+            AssertEqual(TestSessionStatus.Passed, completed.Status, "single clean key passes");
+        }
+        finally
+        {
+            await CleanupSqlAsync(factory, buildId, requestId);
         }
     }
 
@@ -1044,6 +1327,13 @@ internal sealed class Phase6Runner
                 UNION ALL SELECT 'build_mods.build_id' FROM build_mods bm LEFT JOIN builds bd ON bd.build_id = bm.build_id WHERE bd.build_id IS NULL
                 UNION ALL SELECT 'build_requests.build_id' FROM build_requests br LEFT JOIN builds bd ON bd.build_id = br.build_id WHERE bd.build_id IS NULL
                 UNION ALL SELECT 'build_requests.seller_user_id' FROM build_requests br LEFT JOIN users u ON u.user_id = br.seller_user_id WHERE u.user_id IS NULL
+                UNION ALL SELECT 'devices.seller_user_id' FROM devices d LEFT JOIN users u ON u.user_id = d.seller_user_id WHERE u.user_id IS NULL
+                UNION ALL SELECT 'device_test_sessions.request_id' FROM device_test_sessions dts LEFT JOIN build_requests br ON br.request_id = dts.request_id WHERE br.request_id IS NULL
+                UNION ALL SELECT 'device_test_sessions.device_id' FROM device_test_sessions dts LEFT JOIN devices d ON d.device_id = dts.device_id WHERE d.device_id IS NULL
+                UNION ALL SELECT 'device_test_sessions.seller_user_id' FROM device_test_sessions dts LEFT JOIN users u ON u.user_id = dts.seller_user_id WHERE u.user_id IS NULL
+                UNION ALL SELECT 'device_key_test_results.session_id' FROM device_key_test_results dktr LEFT JOIN device_test_sessions dts ON dts.session_id = dktr.session_id WHERE dts.session_id IS NULL
+                UNION ALL SELECT 'device_key_test_results.request_id' FROM device_key_test_results dktr LEFT JOIN build_requests br ON br.request_id = dktr.request_id WHERE br.request_id IS NULL
+                UNION ALL SELECT 'device_key_test_results.device_id' FROM device_key_test_results dktr LEFT JOIN devices d ON d.device_id = dktr.device_id WHERE d.device_id IS NULL
                 UNION ALL SELECT 'audit_log.user_id' FROM audit_log al LEFT JOIN users u ON u.user_id = al.user_id WHERE u.user_id IS NULL
                 UNION ALL SELECT 'chat_conversations.seller_user_id' FROM chat_conversations c LEFT JOIN users u ON u.user_id = c.seller_user_id WHERE u.user_id IS NULL
                 UNION ALL SELECT 'chat_conversations.build_request_id' FROM chat_conversations c LEFT JOIN build_requests br ON br.request_id = c.build_request_id WHERE c.build_request_id IS NOT NULL AND br.request_id IS NULL
@@ -1110,6 +1400,45 @@ internal sealed class Phase6Runner
                   SELECT 1 FROM build_requests br
                   WHERE br.build_id = b.build_id
                     AND br.status IN ('Pending', 'Accepted', 'In_progress'));
+            """);
+
+        await AssertZeroRowsAsync(connection, "Duplicate device key results", """
+            SELECT session_id, key_code
+            FROM device_key_test_results
+            GROUP BY session_id, key_code
+            HAVING COUNT(*) > 1;
+            """);
+
+        await AssertZeroRowsAsync(connection, "Device session summary counts", """
+            SELECT dts.session_id
+            FROM device_test_sessions dts
+            OUTER APPLY (
+                SELECT
+                    COUNT(*) AS tested_keys,
+                    SUM(CASE WHEN dktr.result = 'Pass' THEN 1 ELSE 0 END) AS passed_keys,
+                    SUM(CASE WHEN dktr.result = 'Warning' THEN 1 ELSE 0 END) AS warning_keys,
+                    SUM(CASE WHEN dktr.result = 'Fail' THEN 1 ELSE 0 END) AS failed_keys
+                FROM device_key_test_results dktr
+                WHERE dktr.session_id = dts.session_id
+            ) actual
+            WHERE dts.status <> 'Running'
+              AND (
+                    dts.tested_keys <> actual.tested_keys
+                 OR dts.passed_keys <> ISNULL(actual.passed_keys, 0)
+                 OR dts.warning_keys <> ISNULL(actual.warning_keys, 0)
+                 OR dts.failed_keys <> ISNULL(actual.failed_keys, 0)
+              );
+            """);
+
+        await AssertZeroRowsAsync(connection, "Stale empty running device sessions", """
+            SELECT dts.session_id
+            FROM device_test_sessions dts
+            WHERE dts.status = 'Running'
+              AND dts.started_at < DATEADD(minute, -5, SYSUTCDATETIME())
+              AND NOT EXISTS (
+                  SELECT 1
+                  FROM device_key_test_results dktr
+                  WHERE dktr.session_id = dts.session_id);
             """);
 
         await AssertZeroRowsAsync(connection, "Chat sender participant rule", """
@@ -1213,6 +1542,14 @@ internal sealed class Phase6Runner
             WHERE build_request_id IN (SELECT request_id FROM build_requests WHERE build_id {buildPredicate})
                OR (@conversation_id IS NOT NULL AND conversation_id {conversationPredicate});
 
+            DELETE FROM device_key_test_results
+            WHERE request_id IN (SELECT request_id FROM build_requests WHERE build_id {buildPredicate})
+               OR (@request_id IS NOT NULL AND request_id {requestPredicate});
+
+            DELETE FROM device_test_sessions
+            WHERE request_id IN (SELECT request_id FROM build_requests WHERE build_id {buildPredicate})
+               OR (@request_id IS NOT NULL AND request_id {requestPredicate});
+
             DELETE FROM build_requests
             WHERE build_id {buildPredicate}
                OR (@request_id IS NOT NULL AND request_id {requestPredicate});
@@ -1220,6 +1557,7 @@ internal sealed class Phase6Runner
             DELETE FROM build_mods WHERE build_id {buildPredicate};
             DELETE FROM build_items WHERE build_id {buildPredicate};
             DELETE FROM builds WHERE build_id {buildPredicate};
+            DELETE FROM devices WHERE device_id LIKE 'DEV_P6_%';
             """,
             command =>
             {
@@ -1648,6 +1986,205 @@ internal sealed class FakeDeviceService : IDeviceService
         => Task.FromResult<IReadOnlyList<DeviceKeyTestResult>>([]);
 }
 
+internal sealed class RecordingDeviceService : IDeviceService
+{
+    private readonly Dictionary<string, DeviceTestSession> _sessions = new(StringComparer.OrdinalIgnoreCase);
+    private readonly Dictionary<string, DeviceKeyTestResult> _resultsBySessionKey = new(StringComparer.OrdinalIgnoreCase);
+    private long _nextKeyTestId = 1;
+
+    public List<DeviceKeyTestResult> RecordedResults => _resultsBySessionKey.Values.ToList();
+
+    public Task<Device> GetOrCreateQcStationAsync(int sellerUserId, CancellationToken cancellationToken = default)
+        => Task.FromResult(new Device
+        {
+            DeviceId = $"DEV_RECORDING_{sellerUserId}",
+            SellerUserId = sellerUserId,
+            DeviceName = "Recording QC Station",
+            DeviceType = DeviceType.QC_STATION,
+            IsActive = true,
+            CreatedAt = DateTime.UtcNow
+        });
+
+    public Task<DeviceTestSession> StartSessionAsync(
+        string requestId,
+        int sellerUserId,
+        string deviceId,
+        string switchTechnology,
+        NoiseRequirement noiseRequirement,
+        int totalKeys,
+        CancellationToken cancellationToken = default)
+    {
+        var session = new DeviceTestSession
+        {
+            SessionId = $"QCSESS_RECORDING_{Guid.NewGuid():N}",
+            RequestId = requestId,
+            SellerUserId = sellerUserId,
+            DeviceId = deviceId,
+            SwitchTechnology = switchTechnology,
+            NoiseRequirement = noiseRequirement,
+            TotalKeys = totalKeys,
+            Status = TestSessionStatus.Running,
+            StartedAt = DateTime.UtcNow
+        };
+        _sessions[session.SessionId] = CloneSession(session);
+        return Task.FromResult(CloneSession(session));
+    }
+
+    public Task<DeviceKeyTestResult> RecordKeyResultAsync(KeyTelemetry telemetry, CancellationToken cancellationToken = default)
+    {
+        var session = _sessions[telemetry.SessionId];
+        var key = $"{telemetry.SessionId}|{telemetry.KeyCode}";
+        if (_resultsBySessionKey.TryGetValue(key, out var existing))
+        {
+            return Task.FromResult(CloneResult(existing));
+        }
+
+        var evaluation = DeviceQcRules.Evaluate(
+            telemetry,
+            new QcThresholds(session.SwitchTechnology, session.NoiseRequirement));
+        var result = new DeviceKeyTestResult
+        {
+            KeyTestId = _nextKeyTestId++,
+            SessionId = telemetry.SessionId,
+            RequestId = session.RequestId,
+            DeviceId = session.DeviceId,
+            KeyCode = telemetry.KeyCode,
+            ExpectedKey = telemetry.ExpectedKey,
+            ReceivedKey = telemetry.ReceivedKey,
+            PressSignalDetected = telemetry.PressSignalDetected,
+            LatencyMs = telemetry.LatencyMs,
+            PressEventCount = telemetry.PressEventCount,
+            BounceCount = telemetry.BounceCount,
+            ReleaseSignalDetected = telemetry.ReleaseSignalDetected,
+            HoldDurationMs = telemetry.HoldDurationMs,
+            IsStuck = telemetry.IsStuck,
+            NoiseDb = telemetry.NoiseDb,
+            SwitchTechnology = session.SwitchTechnology,
+            Result = evaluation.Result,
+            FailureType = evaluation.FailureType,
+            FailureReason = evaluation.Reason,
+            RecordedAt = DateTime.UtcNow
+        };
+        _resultsBySessionKey[key] = CloneResult(result);
+        return Task.FromResult(CloneResult(result));
+    }
+
+    public Task<DeviceTestSession> CompleteSessionAsync(string sessionId, CancellationToken cancellationToken = default)
+    {
+        var session = _sessions[sessionId];
+        var results = _resultsBySessionKey.Values
+            .Where(result => string.Equals(result.SessionId, sessionId, StringComparison.OrdinalIgnoreCase))
+            .ToList();
+        session.TestedKeys = results.Count;
+        if (results.Count < session.TotalKeys)
+        {
+            session.Status = TestSessionStatus.Running;
+            _sessions[sessionId] = CloneSession(session);
+            return Task.FromResult(CloneSession(session));
+        }
+
+        session.PassedKeys = results.Count(result => result.Result == KeyTestResult.Pass);
+        session.WarningKeys = results.Count(result => result.Result == KeyTestResult.Warning);
+        session.FailedKeys = results.Count(result => result.Result == KeyTestResult.Fail);
+        session.Status = session.FailedKeys > 0
+            ? TestSessionStatus.Failed
+            : session.WarningKeys > 0
+                ? TestSessionStatus.Warning
+                : TestSessionStatus.Passed;
+        session.CompletedAt = DateTime.UtcNow;
+        _sessions[sessionId] = CloneSession(session);
+        return Task.FromResult(CloneSession(session));
+    }
+
+    public Task<DeviceTestSession?> GetLatestSessionByRequestAsync(string requestId, CancellationToken cancellationToken = default)
+        => Task.FromResult<DeviceTestSession?>(_sessions.Values
+            .Where(session => string.Equals(session.RequestId, requestId, StringComparison.OrdinalIgnoreCase))
+            .OrderByDescending(session => session.StartedAt)
+            .Select(CloneSession)
+            .FirstOrDefault());
+
+    public Task<IReadOnlyList<DeviceKeyTestResult>> GetKeyResultsAsync(string sessionId, CancellationToken cancellationToken = default)
+        => Task.FromResult<IReadOnlyList<DeviceKeyTestResult>>(_resultsBySessionKey.Values
+            .Where(result => string.Equals(result.SessionId, sessionId, StringComparison.OrdinalIgnoreCase))
+            .Select(CloneResult)
+            .ToList());
+
+    private static DeviceTestSession CloneSession(DeviceTestSession session)
+        => new()
+        {
+            SessionId = session.SessionId,
+            RequestId = session.RequestId,
+            DeviceId = session.DeviceId,
+            SellerUserId = session.SellerUserId,
+            SwitchTechnology = session.SwitchTechnology,
+            NoiseRequirement = session.NoiseRequirement,
+            TotalKeys = session.TotalKeys,
+            TestedKeys = session.TestedKeys,
+            PassedKeys = session.PassedKeys,
+            WarningKeys = session.WarningKeys,
+            FailedKeys = session.FailedKeys,
+            AverageLatencyMs = session.AverageLatencyMs,
+            MaxLatencyMs = session.MaxLatencyMs,
+            AverageNoiseDb = session.AverageNoiseDb,
+            MaxNoiseDb = session.MaxNoiseDb,
+            Status = session.Status,
+            StartedAt = session.StartedAt,
+            CompletedAt = session.CompletedAt
+        };
+
+    private static DeviceKeyTestResult CloneResult(DeviceKeyTestResult result)
+        => new()
+        {
+            KeyTestId = result.KeyTestId,
+            SessionId = result.SessionId,
+            RequestId = result.RequestId,
+            DeviceId = result.DeviceId,
+            KeyCode = result.KeyCode,
+            ExpectedKey = result.ExpectedKey,
+            ReceivedKey = result.ReceivedKey,
+            PressSignalDetected = result.PressSignalDetected,
+            LatencyMs = result.LatencyMs,
+            PressEventCount = result.PressEventCount,
+            BounceCount = result.BounceCount,
+            ReleaseSignalDetected = result.ReleaseSignalDetected,
+            HoldDurationMs = result.HoldDurationMs,
+            IsStuck = result.IsStuck,
+            NoiseDb = result.NoiseDb,
+            SwitchTechnology = result.SwitchTechnology,
+            Result = result.Result,
+            FailureType = result.FailureType,
+            FailureReason = result.FailureReason,
+            RecordedAt = result.RecordedAt
+        };
+}
+
+internal sealed class ScriptedDeviceTelemetryPublisher : IDeviceTelemetryPublisher
+{
+    private readonly bool _publishKeyResult;
+    private readonly bool _publishSummaryResult;
+
+    public ScriptedDeviceTelemetryPublisher(bool publishKeyResult, bool publishSummaryResult)
+    {
+        _publishKeyResult = publishKeyResult;
+        _publishSummaryResult = publishSummaryResult;
+    }
+
+    public int KeyPublishCount { get; private set; }
+    public int SummaryPublishCount { get; private set; }
+
+    public Task<bool> PublishKeyTestAsync(KeyTelemetry telemetry, CancellationToken cancellationToken = default)
+    {
+        KeyPublishCount++;
+        return Task.FromResult(_publishKeyResult);
+    }
+
+    public Task<bool> PublishSessionSummaryAsync(DeviceTestSession session, CancellationToken cancellationToken = default)
+    {
+        SummaryPublishCount++;
+        return Task.FromResult(_publishSummaryResult);
+    }
+}
+
 internal sealed class FakeChatRepository : IChatRepository
 {
     private readonly Dictionary<string, ChatConversation> _conversations = new(StringComparer.OrdinalIgnoreCase);
@@ -1942,6 +2479,7 @@ internal sealed class FakeAuditLogRepository : IAuditLogRepository
 internal sealed class FakeComponentRepository : IComponentRepository
 {
     private readonly Dictionary<int, Brand> _brands = new();
+    private readonly Dictionary<string, AdminComponentRecord> _adminComponents = new(StringComparer.OrdinalIgnoreCase);
     private int _nextBrandId = 1;
 
     public Task<IReadOnlyList<Brand>> GetBrandsAsync(CancellationToken cancellationToken = default)
@@ -1965,8 +2503,15 @@ internal sealed class FakeComponentRepository : IComponentRepository
 
     public Task<IReadOnlyList<KeyboardKit>> GetAvailableKitsAsync(CancellationToken cancellationToken = default) => Task.FromResult<IReadOnlyList<KeyboardKit>>([]);
     public Task<KeyboardKit?> GetKitByIdAsync(string kitId, CancellationToken cancellationToken = default) => Task.FromResult<KeyboardKit?>(null);
-    public Task<IReadOnlyList<KeyboardSwitch>> GetAvailableSwitchesAsync(CancellationToken cancellationToken = default) => Task.FromResult<IReadOnlyList<KeyboardSwitch>>([]);
-    public Task<KeyboardSwitch?> GetSwitchByIdAsync(string switchId, CancellationToken cancellationToken = default) => Task.FromResult<KeyboardSwitch?>(null);
+    public Task<IReadOnlyList<KeyboardSwitch>> GetAvailableSwitchesAsync(CancellationToken cancellationToken = default)
+        => Task.FromResult<IReadOnlyList<KeyboardSwitch>>(_adminComponents.Values
+            .Where(component => component.ComponentType == AdminComponentType.Switch && component.IsAvailable)
+            .Select(ToKeyboardSwitch)
+            .ToList());
+    public Task<KeyboardSwitch?> GetSwitchByIdAsync(string switchId, CancellationToken cancellationToken = default)
+        => Task.FromResult(_adminComponents.TryGetValue(ComponentKey(AdminComponentType.Switch, switchId), out var component)
+            ? ToKeyboardSwitch(component)
+            : null);
     public Task<IReadOnlyList<KeycapSet>> GetAvailableKeycapSetsAsync(CancellationToken cancellationToken = default) => Task.FromResult<IReadOnlyList<KeycapSet>>([]);
     public Task<KeycapSet?> GetKeycapSetByIdAsync(string keycapId, CancellationToken cancellationToken = default) => Task.FromResult<KeycapSet?>(null);
     public Task<IReadOnlyList<Stabilizer>> GetAvailableStabilizersAsync(CancellationToken cancellationToken = default) => Task.FromResult<IReadOnlyList<Stabilizer>>([]);
@@ -1974,11 +2519,46 @@ internal sealed class FakeComponentRepository : IComponentRepository
     public Task<IReadOnlyList<Accessory>> GetAvailableAccessoriesAsync(CancellationToken cancellationToken = default) => Task.FromResult<IReadOnlyList<Accessory>>([]);
     public Task<Accessory?> GetAccessoryByIdAsync(string accessoryId, CancellationToken cancellationToken = default) => Task.FromResult<Accessory?>(null);
 
-    public Task<IReadOnlyList<AdminComponentRecord>> GetAdminComponentsAsync(AdminComponentType componentType, CancellationToken cancellationToken = default) => Task.FromResult<IReadOnlyList<AdminComponentRecord>>([]);
-    public Task<AdminComponentRecord?> GetAdminComponentByIdAsync(AdminComponentType componentType, string componentId, CancellationToken cancellationToken = default) => Task.FromResult<AdminComponentRecord?>(null);
-    public Task<int> GetComponentCountAsync(CancellationToken cancellationToken = default) => Task.FromResult(0);
-    public Task<AdminComponentRecord> SaveAdminComponentAsync(AdminComponentRecord component, CancellationToken cancellationToken = default) => Task.FromResult(component);
-    public Task SetComponentAvailabilityAsync(AdminComponentType componentType, string componentId, bool isAvailable, CancellationToken cancellationToken = default) => Task.CompletedTask;
+    public Task<IReadOnlyList<AdminComponentRecord>> GetAdminComponentsAsync(AdminComponentType componentType, CancellationToken cancellationToken = default)
+        => Task.FromResult<IReadOnlyList<AdminComponentRecord>>(_adminComponents.Values
+            .Where(component => component.ComponentType == componentType)
+            .Select(component => component.Clone())
+            .ToList());
+    public Task<AdminComponentRecord?> GetAdminComponentByIdAsync(AdminComponentType componentType, string componentId, CancellationToken cancellationToken = default)
+        => Task.FromResult(_adminComponents.TryGetValue(ComponentKey(componentType, componentId), out var component)
+            ? component.Clone()
+            : null);
+    public Task<int> GetComponentCountAsync(CancellationToken cancellationToken = default) => Task.FromResult(_adminComponents.Count);
+    public Task<AdminComponentRecord> SaveAdminComponentAsync(AdminComponentRecord component, CancellationToken cancellationToken = default)
+    {
+        var clone = component.Clone();
+        _adminComponents[ComponentKey(clone.ComponentType, clone.ComponentId)] = clone;
+        return Task.FromResult(clone.Clone());
+    }
+
+    public Task SetComponentAvailabilityAsync(AdminComponentType componentType, string componentId, bool isAvailable, CancellationToken cancellationToken = default)
+    {
+        var component = _adminComponents[ComponentKey(componentType, componentId)];
+        component.IsAvailable = isAvailable;
+        return Task.CompletedTask;
+    }
+
+    private static string ComponentKey(AdminComponentType componentType, string componentId)
+        => $"{componentType}:{componentId}";
+
+    private static KeyboardSwitch ToKeyboardSwitch(AdminComponentRecord component)
+        => new()
+        {
+            SwitchId = component.ComponentId,
+            BrandId = component.BrandId,
+            SwitchName = component.Name,
+            SwitchTechnology = component.SwitchTechnology,
+            MountType = component.MountType,
+            SwitchType = component.SwitchType,
+            ActuationForceG = component.ActuationForceG,
+            PriceUsd = component.PriceUsd,
+            IsAvailable = component.IsAvailable
+        };
 }
 
 internal sealed class FakeRealtimeNotifier : IRealtimeNotifier

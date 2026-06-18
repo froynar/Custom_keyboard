@@ -16,6 +16,11 @@ public sealed class DeviceSimulator
     private const int FallbackKeyCount = 68;
     private const string DefaultSwitchTechnology = "Mechanical";
     private const int CompleteRetryAttempts = 10;
+    private const double NoSignalFaultRate = 0.004;
+    private const double WrongKeyFaultRate = 0.0015;
+    private const double StuckKeyFaultRate = 0.0005;
+    private const double ChatterFaultRate = 0.007;
+    private const double LatencyOutlierRate = 0.015;
     private static readonly TimeSpan CompleteRetryDelay = TimeSpan.FromMilliseconds(150);
 
     private static readonly string[] BaseKeyLayout =
@@ -61,6 +66,7 @@ public sealed class DeviceSimulator
             cancellationToken);
 
         var keys = BuildKeyLayout(keyCount);
+        var sessionNoiseDb = NextSessionNoiseDb(noiseRequirement);
         var emittedTelemetries = new List<KeyTelemetry>(keys.Count);
         var allViaMqtt = true;
 
@@ -68,7 +74,7 @@ public sealed class DeviceSimulator
         {
             cancellationToken.ThrowIfCancellationRequested();
 
-            var telemetry = GenerateKeyTelemetry(session, device.DeviceId, keyCode, switchTechnology);
+            var telemetry = GenerateKeyTelemetry(session, device.DeviceId, keyCode, switchTechnology, sessionNoiseDb);
             emittedTelemetries.Add(telemetry);
 
             // Main path: publish to broker (subscriber persists). Fallback: write directly (FIX #11/#12).
@@ -85,17 +91,14 @@ public sealed class DeviceSimulator
             }
         }
 
-        // Completion: pure-MQTT runs publish the summary (subscriber completes once rows land);
-        // any direct-call run finalizes directly so the session never stays Running (plan §7.2 step 5).
+        // Completion: summary publish is best-effort notification only. Always reconcile against
+        // emitted telemetry so a half-alive broker cannot leave an empty/partial Running session.
         if (allViaMqtt && keyCount > 0)
         {
-            if (await _publisher.PublishSessionSummaryAsync(session, cancellationToken))
-            {
-                return await CompleteWhenPersistedOrFallbackAsync(session.SessionId, emittedTelemetries, cancellationToken);
-            }
+            _ = await _publisher.PublishSessionSummaryAsync(session, cancellationToken);
         }
 
-        return await CompleteDirectAsync(session.SessionId, cancellationToken);
+        return await CompleteWhenPersistedOrFallbackAsync(session.SessionId, emittedTelemetries, cancellationToken);
     }
 
     private async Task<DeviceTestSession> CompleteWhenPersistedOrFallbackAsync(
@@ -198,7 +201,12 @@ public sealed class DeviceSimulator
         return keys;
     }
 
-    private KeyTelemetry GenerateKeyTelemetry(DeviceTestSession session, string deviceId, string keyCode, string switchTechnology)
+    private KeyTelemetry GenerateKeyTelemetry(
+        DeviceTestSession session,
+        string deviceId,
+        string keyCode,
+        string switchTechnology,
+        decimal sessionNoiseDb)
     {
         var telemetry = new KeyTelemetry
         {
@@ -208,12 +216,18 @@ public sealed class DeviceSimulator
             KeyCode = keyCode,
             ExpectedKey = keyCode,
             SwitchTechnology = switchTechnology,
-            NoiseDb = NextNoiseDb()
+            NoiseDb = NextMeasuredNoiseDb(sessionNoiseDb)
         };
 
-        // Fault injection roughly following guide §10.3 (most keys are clean).
+        // Fault injection uses low, QC-like rates: most keys are clean; chatter is
+        // more likely than stuck, but both remain uncommon.
         var roll = _random.NextDouble();
-        if (roll < 0.02) // NoSignal
+        var noSignalCutoff = NoSignalFaultRate;
+        var wrongKeyCutoff = noSignalCutoff + WrongKeyFaultRate;
+        var stuckCutoff = wrongKeyCutoff + StuckKeyFaultRate;
+        var chatterCutoff = stuckCutoff + ChatterFaultRate;
+
+        if (roll < noSignalCutoff) // NoSignal
         {
             telemetry.PressSignalDetected = false;
             telemetry.ReceivedKey = null;
@@ -226,14 +240,14 @@ public sealed class DeviceSimulator
             return telemetry;
         }
 
-        if (roll < 0.025) // WrongKey
+        if (roll < wrongKeyCutoff) // WrongKey
         {
             ApplyCleanPress(telemetry, switchTechnology);
             telemetry.ReceivedKey = DifferentKey(keyCode);
             return telemetry;
         }
 
-        if (roll < 0.03) // StuckKey: press lands, release never does
+        if (roll < stuckCutoff) // StuckKey: press lands, release never does
         {
             telemetry.PressSignalDetected = true;
             telemetry.ReceivedKey = keyCode;
@@ -246,7 +260,7 @@ public sealed class DeviceSimulator
             return telemetry;
         }
 
-        if (roll < 0.05) // Chatter: one press registered several times
+        if (roll < chatterCutoff) // Chatter: one press registered several times
         {
             var pressEvents = _random.Next(2, 6);
             telemetry.PressSignalDetected = true;
@@ -281,21 +295,47 @@ public sealed class DeviceSimulator
     {
         var isHe = string.Equals(switchTechnology, "HE", StringComparison.OrdinalIgnoreCase);
         double value;
-        if (allowOutlier && _random.NextDouble() < 0.05)
+        if (allowOutlier && _random.NextDouble() < LatencyOutlierRate)
         {
-            value = isHe ? NextDouble(4.0, 8.0) : NextDouble(20.0, 35.0);
+            value = isHe ? NextDouble(3.5, 7.0) : NextDouble(18.0, 28.0);
         }
         else
         {
-            value = isHe ? NextDouble(1.0, 3.5) : NextDouble(5.0, 18.0);
+            value = isHe ? NextDouble(1.0, 3.2) : NextDouble(4.5, 14.0);
         }
 
         return Math.Round((decimal)value, 2, MidpointRounding.AwayFromZero);
     }
 
-    private decimal NextNoiseDb()
-        // Phase 1 buyer requirement is Normal; noise sits in the 50-68 dB band (guide §10.5).
-        => Math.Round((decimal)NextDouble(50.0, 68.0), 2, MidpointRounding.AwayFromZero);
+    private decimal NextSessionNoiseDb(NoiseRequirement requirement)
+    {
+        // One build using one switch profile has a shared acoustic baseline. A noisy
+        // build should fail consistently instead of randomly spiking per key.
+        var roll = _random.NextDouble();
+        var value = requirement switch
+        {
+            NoiseRequirement.Silent when roll < 0.75 => NextDouble(41.0, 45.0),
+            NoiseRequirement.Silent when roll < 0.95 => NextDouble(45.0, 55.0),
+            NoiseRequirement.Silent => NextDouble(55.5, 59.0),
+
+            NoiseRequirement.Quiet when roll < 0.75 => NextDouble(49.0, 55.0),
+            NoiseRequirement.Quiet when roll < 0.95 => NextDouble(55.0, 65.0),
+            NoiseRequirement.Quiet => NextDouble(65.5, 68.0),
+
+            _ when roll < 0.85 => NextDouble(54.0, 62.0),
+            _ when roll < 0.97 => NextDouble(62.0, 65.0),
+            _ => NextDouble(65.5, 68.0)
+        };
+
+        return Math.Round((decimal)value, 2, MidpointRounding.AwayFromZero);
+    }
+
+    private decimal NextMeasuredNoiseDb(decimal sessionNoiseDb)
+    {
+        const double SensorToleranceDb = 0.8;
+        var measured = (double)sessionNoiseDb + NextDouble(-SensorToleranceDb, SensorToleranceDb);
+        return Math.Round((decimal)Math.Max(0.0, measured), 2, MidpointRounding.AwayFromZero);
+    }
 
     private string DifferentKey(string keyCode)
     {

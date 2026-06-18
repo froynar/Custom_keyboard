@@ -492,4 +492,5 @@ CREATE INDEX IX_dts_device ON device_test_sessions(device_id);
 CREATE INDEX IX_dts_seller_status ON device_test_sessions(seller_user_id, status);
 CREATE INDEX IX_dktr_session ON device_key_test_results(session_id);
 CREATE INDEX IX_dktr_request ON device_key_test_results(request_id);
+CREATE UNIQUE INDEX UX_dktr_session_key_code ON device_key_test_results(session_id, key_code);
 GO

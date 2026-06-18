@@ -217,6 +217,10 @@ Table device_key_test_results {
   failure_reason varchar(255)
   recorded_at datetime [not null]
 
+  indexes {
+    (session_id, key_code) [unique, name: 'UX_dktr_session_key_code']
+  }
+
   Note: 'request_id and device_id are denormalized from the session for faster per-request QC lookup. Chatter/double click uses press_event_count and bounce_count after a completed press-release cycle; StuckKey uses release_signal_detected=false and bounce_count should remain null.'
 }
 

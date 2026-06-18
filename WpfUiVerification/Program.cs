@@ -363,6 +363,9 @@ internal sealed class WpfUiRunner
             }
 
             InvokeOrToggle(startButton, "QcStartButton");
+            WaitForEnabledState(startButton, expectedEnabled: false, TimeSpan.FromSeconds(10));
+            WaitForEnabledState(startButton, expectedEnabled: true, TimeSpan.FromSeconds(60));
+            WaitForElementNameContains(sellerWindow, "SellerQcTestedCount", "85/85", TimeSpan.FromSeconds(10));
             var qcRow = WaitForDataGridRow(sellerWindow, "QcKeyResultsGrid", TimeSpan.FromSeconds(45));
             var sellerSummary = WaitForElement(sellerWindow, "SellerQcSummaryTitle", TimeSpan.FromSeconds(10));
             Console.WriteLine($"[device-qc] seller row:{qcRow is not null} summary:{sellerSummary is not null}");
@@ -475,6 +478,51 @@ internal sealed class WpfUiRunner
         }
 
         throw new TimeoutException($"Timed out waiting for rows in '{gridAutomationId}'.");
+    }
+
+    private static void WaitForEnabledState(AutomationElement element, bool expectedEnabled, TimeSpan timeout)
+    {
+        var stopAt = DateTime.UtcNow + timeout;
+        while (DateTime.UtcNow < stopAt)
+        {
+            try
+            {
+                if (element.Current.IsEnabled == expectedEnabled)
+                {
+                    return;
+                }
+            }
+            catch (ElementNotAvailableException)
+            {
+                break;
+            }
+
+            Thread.Sleep(200);
+        }
+
+        throw new TimeoutException($"Timed out waiting for element enabled={expectedEnabled}.");
+    }
+
+    private static AutomationElement WaitForElementNameContains(
+        AutomationElement root,
+        string automationId,
+        string expectedText,
+        TimeSpan timeout)
+    {
+        var stopAt = DateTime.UtcNow + timeout;
+        while (DateTime.UtcNow < stopAt)
+        {
+            var element = FindByAutomationId(root, automationId);
+            if (element is not null
+                && (element.Current.Name ?? string.Empty).Contains(expectedText, StringComparison.OrdinalIgnoreCase))
+            {
+                return element;
+            }
+
+            Thread.Sleep(200);
+        }
+
+        throw new TimeoutException($"Timed out waiting for '{automationId}' to contain '{expectedText}'.");
     }
 
     private static AutomationElement SelectDataGridRowByText(AutomationElement grid, string text)

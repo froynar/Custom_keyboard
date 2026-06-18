@@ -141,6 +141,20 @@ UNION ALL SELECT 'build_requests.build_id', COUNT(*)
     FROM build_requests br LEFT JOIN builds bd ON bd.build_id = br.build_id WHERE bd.build_id IS NULL
 UNION ALL SELECT 'build_requests.seller_user_id', COUNT(*)
     FROM build_requests br LEFT JOIN users u ON u.user_id = br.seller_user_id WHERE u.user_id IS NULL
+UNION ALL SELECT 'devices.seller_user_id', COUNT(*)
+    FROM devices d LEFT JOIN users u ON u.user_id = d.seller_user_id WHERE u.user_id IS NULL
+UNION ALL SELECT 'device_test_sessions.request_id', COUNT(*)
+    FROM device_test_sessions dts LEFT JOIN build_requests br ON br.request_id = dts.request_id WHERE br.request_id IS NULL
+UNION ALL SELECT 'device_test_sessions.device_id', COUNT(*)
+    FROM device_test_sessions dts LEFT JOIN devices d ON d.device_id = dts.device_id WHERE d.device_id IS NULL
+UNION ALL SELECT 'device_test_sessions.seller_user_id', COUNT(*)
+    FROM device_test_sessions dts LEFT JOIN users u ON u.user_id = dts.seller_user_id WHERE u.user_id IS NULL
+UNION ALL SELECT 'device_key_test_results.session_id', COUNT(*)
+    FROM device_key_test_results dktr LEFT JOIN device_test_sessions dts ON dts.session_id = dktr.session_id WHERE dts.session_id IS NULL
+UNION ALL SELECT 'device_key_test_results.request_id', COUNT(*)
+    FROM device_key_test_results dktr LEFT JOIN build_requests br ON br.request_id = dktr.request_id WHERE br.request_id IS NULL
+UNION ALL SELECT 'device_key_test_results.device_id', COUNT(*)
+    FROM device_key_test_results dktr LEFT JOIN devices d ON d.device_id = dktr.device_id WHERE d.device_id IS NULL
 UNION ALL SELECT 'audit_log.user_id', COUNT(*)
     FROM audit_log al LEFT JOIN users u ON u.user_id = al.user_id WHERE u.user_id IS NULL
 UNION ALL SELECT 'chat_conversations.seller_user_id', COUNT(*)
@@ -174,6 +188,48 @@ WHERE b.status NOT IN ('Requested', 'Archived')
       SELECT 1 FROM build_requests br
       WHERE br.build_id = b.build_id
         AND br.status IN ('Pending', 'Accepted', 'In_progress'));
+GO
+
+PRINT '================================================================';
+PRINT ' Extra B3 Device QC session/key consistency';
+PRINT '          Expected: 0 rows.';
+PRINT '================================================================';
+SELECT 'duplicate_key_result' AS problem, session_id, key_code
+FROM device_key_test_results
+GROUP BY session_id, key_code
+HAVING COUNT(*) > 1
+
+UNION ALL
+
+SELECT 'summary_count_mismatch', dts.session_id, NULL
+FROM device_test_sessions dts
+OUTER APPLY (
+    SELECT
+        COUNT(*) AS tested_keys,
+        SUM(CASE WHEN dktr.result = 'Pass' THEN 1 ELSE 0 END) AS passed_keys,
+        SUM(CASE WHEN dktr.result = 'Warning' THEN 1 ELSE 0 END) AS warning_keys,
+        SUM(CASE WHEN dktr.result = 'Fail' THEN 1 ELSE 0 END) AS failed_keys
+    FROM device_key_test_results dktr
+    WHERE dktr.session_id = dts.session_id
+) actual
+WHERE dts.status <> 'Running'
+  AND (
+        dts.tested_keys <> actual.tested_keys
+     OR dts.passed_keys <> ISNULL(actual.passed_keys, 0)
+     OR dts.warning_keys <> ISNULL(actual.warning_keys, 0)
+     OR dts.failed_keys <> ISNULL(actual.failed_keys, 0)
+  )
+
+UNION ALL
+
+SELECT 'stale_empty_running_session', dts.session_id, NULL
+FROM device_test_sessions dts
+WHERE dts.status = 'Running'
+  AND dts.started_at < DATEADD(minute, -5, SYSUTCDATETIME())
+  AND NOT EXISTS (
+      SELECT 1
+      FROM device_key_test_results dktr
+      WHERE dktr.session_id = dts.session_id);
 GO
 
 PRINT '================================================================';
