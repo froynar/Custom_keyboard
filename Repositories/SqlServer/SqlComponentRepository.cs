@@ -81,6 +81,43 @@ public sealed class SqlComponentRepository : IComponentRepository
         throw new InvalidOperationException("Could not save brand.");
     }
 
+    public async Task<bool> IsBrandInUseAsync(int brandId, CancellationToken cancellationToken = default)
+    {
+        await using var connection = _connectionFactory.CreateConnection();
+        await connection.OpenAsync(cancellationToken);
+
+        await using var command = connection.CreateCommand();
+        command.CommandText = """
+            SELECT CASE WHEN EXISTS (
+                SELECT 1 FROM keyboard_kits WHERE brand_id = @brand_id
+                UNION ALL
+                SELECT 1 FROM switches WHERE brand_id = @brand_id
+                UNION ALL
+                SELECT 1 FROM keycap_sets WHERE brand_id = @brand_id
+                UNION ALL
+                SELECT 1 FROM stabilizers WHERE brand_id = @brand_id
+            ) THEN 1 ELSE 0 END;
+            """;
+        command.AddParameter("@brand_id", SqlDbType.Int, brandId);
+
+        return Convert.ToInt32(await command.ExecuteScalarAsync(cancellationToken)) == 1;
+    }
+
+    public async Task DeleteBrandAsync(int brandId, CancellationToken cancellationToken = default)
+    {
+        await using var connection = _connectionFactory.CreateConnection();
+        await connection.OpenAsync(cancellationToken);
+
+        await using var command = connection.CreateCommand();
+        command.CommandText = """
+            DELETE FROM brands
+            WHERE brand_id = @brand_id;
+            """;
+        command.AddParameter("@brand_id", SqlDbType.Int, brandId);
+
+        await command.ExecuteNonQueryAsync(cancellationToken);
+    }
+
     // ---------------------------------------------------------------- Layouts
     public Task<IReadOnlyList<Layout>> GetLayoutsAsync(CancellationToken cancellationToken = default)
     {

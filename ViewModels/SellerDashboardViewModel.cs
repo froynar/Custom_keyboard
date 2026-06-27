@@ -130,6 +130,7 @@ public sealed class SellerDashboardViewModel : RoleDashboardViewModel
             if (SetProperty(ref _qcSession, value))
             {
                 OnPropertyChanged(nameof(QcSummaryVisibility));
+                RaiseCommandStatesChanged();
             }
         }
     }
@@ -271,10 +272,14 @@ public sealed class SellerDashboardViewModel : RoleDashboardViewModel
         {
             RequestStatus.Pending => status is RequestStatus.Accepted or RequestStatus.Cancelled,
             RequestStatus.Accepted => status is RequestStatus.In_progress or RequestStatus.Cancelled,
-            RequestStatus.In_progress => status is RequestStatus.Completed or RequestStatus.Cancelled,
+            RequestStatus.In_progress => status == RequestStatus.Cancelled
+                || (status == RequestStatus.Completed && HasAcceptableQcResult()),
             _ => false
         };
     }
+
+    private bool HasAcceptableQcResult()
+        => QcSession?.Status is TestSessionStatus.Passed or TestSessionStatus.Warning;
 
     private bool CanStartQc()
         => !IsBusy && SelectedRequest is { Status: RequestStatus.In_progress };

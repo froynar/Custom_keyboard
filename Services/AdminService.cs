@@ -227,6 +227,33 @@ public sealed class AdminService : IAdminService
         return saved;
     }
 
+    public async Task DeleteBrandAsync(
+        int brandId,
+        int adminUserId,
+        CancellationToken cancellationToken = default)
+    {
+        await EnsureAdminAsync(adminUserId, cancellationToken);
+
+        var oldBrand = await _componentRepository.GetBrandByIdAsync(brandId, cancellationToken)
+            ?? throw new InvalidOperationException(Loc.Instance["Service_BrandNotExist"]);
+
+        if (await _componentRepository.IsBrandInUseAsync(brandId, cancellationToken))
+        {
+            throw new InvalidOperationException(Loc.Instance["Service_BrandInUse"]);
+        }
+
+        await _componentRepository.DeleteBrandAsync(brandId, cancellationToken);
+
+        await AddAuditAsync(
+            adminUserId,
+            "brands",
+            oldBrand.BrandId.ToString(),
+            "BrandDelete",
+            oldBrand,
+            null,
+            cancellationToken);
+    }
+
     public async Task<Layout> SaveLayoutAsync(
         Layout layout,
         int adminUserId,

@@ -86,6 +86,7 @@ public sealed class AdminDashboardViewModel : RoleDashboardViewModel
         RefreshCatalogCommand = new AsyncRelayCommand(_ => ExecuteSafeAsync(RefreshCatalogAsync, Tr("Admin_RefreshedCatalog")));
         NewBrandCommand = new RelayCommand(_ => NewBrandEditor());
         SaveBrandCommand = new AsyncRelayCommand(_ => ExecuteSafeAsync(SaveBrandAsync, Tr("Admin_BrandSaved")));
+        DeleteBrandCommand = new AsyncRelayCommand(_ => ExecuteSafeAsync(DeleteBrandAsync, Tr("Admin_BrandDeleted")), _ => CanDeleteSelectedBrand);
         NewLayoutCommand = new RelayCommand(_ => NewLayoutEditor());
         SaveLayoutCommand = new AsyncRelayCommand(_ => ExecuteSafeAsync(SaveLayoutAsync, Tr("Admin_LayoutSaved")));
         RefreshComponentsCommand = new AsyncRelayCommand(_ => ExecuteSafeAsync(RefreshComponentsAsync, Tr("Admin_RefreshedComponents")));
@@ -128,6 +129,7 @@ public sealed class AdminDashboardViewModel : RoleDashboardViewModel
     public ICommand RefreshCatalogCommand { get; }
     public ICommand NewBrandCommand { get; }
     public ICommand SaveBrandCommand { get; }
+    public ICommand DeleteBrandCommand { get; }
     public ICommand NewLayoutCommand { get; }
     public ICommand SaveLayoutCommand { get; }
     public ICommand RefreshComponentsCommand { get; }
@@ -171,8 +173,10 @@ public sealed class AdminDashboardViewModel : RoleDashboardViewModel
             if (SetProperty(ref _isBusy, value))
             {
                 OnPropertyChanged(nameof(CanReviewSelectedApplication));
+                OnPropertyChanged(nameof(CanDeleteSelectedBrand));
                 (ApproveApplicationCommand as AsyncRelayCommand)?.RaiseCanExecuteChanged();
                 (RejectApplicationCommand as AsyncRelayCommand)?.RaiseCanExecuteChanged();
+                (DeleteBrandCommand as AsyncRelayCommand)?.RaiseCanExecuteChanged();
             }
         }
     }
@@ -287,12 +291,21 @@ public sealed class AdminDashboardViewModel : RoleDashboardViewModel
         get => _selectedBrand;
         set
         {
-            if (SetProperty(ref _selectedBrand, value) && value is not null)
+            if (SetProperty(ref _selectedBrand, value))
             {
-                BrandEditor = CloneBrand(value);
+                if (value is not null)
+                {
+                    BrandEditor = CloneBrand(value);
+                }
+
+                OnPropertyChanged(nameof(CanDeleteSelectedBrand));
+                (DeleteBrandCommand as AsyncRelayCommand)?.RaiseCanExecuteChanged();
             }
         }
     }
+
+    public bool CanDeleteSelectedBrand =>
+        !IsBusy && SelectedBrand is { BrandId: > 0 };
 
     public Brand BrandEditor
     {
@@ -613,6 +626,20 @@ public sealed class AdminDashboardViewModel : RoleDashboardViewModel
     private async Task SaveBrandAsync()
     {
         BrandEditor = await _adminService.SaveBrandAsync(CloneBrand(BrandEditor), CurrentUser.UserId);
+        await RefreshBrandsAsync();
+        await RefreshAuditAsync();
+    }
+
+    private async Task DeleteBrandAsync()
+    {
+        if (SelectedBrand is null)
+        {
+            throw new InvalidOperationException(Tr("Admin_SelectBrandFirst"));
+        }
+
+        await _adminService.DeleteBrandAsync(SelectedBrand.BrandId, CurrentUser.UserId);
+        SelectedBrand = null;
+        BrandEditor = new Brand();
         await RefreshBrandsAsync();
         await RefreshAuditAsync();
     }

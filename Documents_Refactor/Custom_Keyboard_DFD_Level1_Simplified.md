@@ -40,7 +40,7 @@ flowchart LR
 
 | So | Luong du lieu |
 | --- | --- |
-| (1) | Buyer dang ky hoac Buyer/Seller/Admin dang nhap. |
+| (1) | Khach dang ky tai khoan Buyer hoac Buyer/Seller/Admin dang nhap. |
 | (2) | Username/email/password/phone da chuan hoa. |
 | (3) | Ket qua login, role, active status. |
 | (4) | Yeu cau xem profile hoac ket thuc phien. |

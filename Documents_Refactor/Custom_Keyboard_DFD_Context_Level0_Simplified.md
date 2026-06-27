@@ -37,7 +37,7 @@ flowchart LR
 
 | So | Luong du lieu |
 | --- | --- |
-| (1) | Buyer dang ky/dang nhap, tao build tu kit, gui request, nop don seller va gui tin nhan seller. |
+| (1) | Khach dang ky tai khoan Buyer; Buyer dang nhap, tao build tu kit, gui request, nop don seller va gui tin nhan seller. |
 | (2) | He thong tra catalog, canh bao/tong gia, build/request status, trang thai don seller, QC summary va tin nhan seller. |
 | (3) | Seller dang nhap, xem request, cap nhat trang thai request, chay QC va gui tin nhan buyer/admin. |
 | (4) | He thong tra request duoc gan, snapshot build, ket qua cap nhat, ket qua QC va tin nhan buyer/admin. |
@@ -115,7 +115,7 @@ flowchart LR
 
 | Ma | Tien trinh | Noi dung xu ly |
 | --- | --- | --- |
-| 1.0 | Quan ly tai khoan | Buyer dang ky; Buyer/Seller/Admin dang nhap, dang xuat va xem profile. |
+| 1.0 | Quan ly tai khoan | Khach dang ky tai khoan Buyer; Buyer/Seller/Admin dang nhap, dang xuat va xem profile. |
 | 2.0 | Quan ly build | Buyer chon kit, them item/mod, kiem tra tuong thich, tinh tong gia va luu build. |
 | 3.0 | Quan ly request | Buyer gui build da luu cho seller verified; Seller xem va cap nhat trang thai request. |
 | 4.0 | Quan tri he thong | Admin quan ly user, seller profile, catalog, audit log va duyet don xin seller. |

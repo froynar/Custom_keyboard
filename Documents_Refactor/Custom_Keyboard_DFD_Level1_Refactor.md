@@ -14,7 +14,7 @@ flowchart LR
 
     D1[("D1\nNguoi dung va vai tro")]
 
-    User -- "(1) Buyer dang ky hoac user dang nhap" --> P11
+    User -- "(1) Khach dang ky tai khoan Buyer hoac user dang nhap" --> P11
     P11 -- "(2) Du lieu tai khoan da chuan hoa" --> P12
     P12 -- "(3) Tao/kiem tra tai khoan" --> D1
     D1 -- "(4) User, role, active status" --> P12

@@ -24,6 +24,7 @@ public sealed class LoginViewModel : ViewModelBase
         _loginSucceeded = loginSucceeded;
         _statusMessage = statusMessage;
         LoginCommand = new AsyncRelayCommand(_ => LoginAsync());
+        QuickLoginCommand = new AsyncRelayCommand(LoginQuickAsync);
         ShowRegisterCommand = new RelayCommand(_ => showRegister());
     }
 
@@ -52,7 +53,27 @@ public sealed class LoginViewModel : ViewModelBase
     }
 
     public ICommand LoginCommand { get; }
+    public ICommand QuickLoginCommand { get; }
     public ICommand ShowRegisterCommand { get; }
+
+    public IReadOnlyList<QuickLoginAccount> QuickLoginAccounts { get; } =
+    [
+        new("buyer_refactor", "Buyer"),
+        new("seller_soigear", "Seller"),
+        new("admin_refactor", "Admin")
+    ];
+
+    private async Task LoginQuickAsync(object? parameter)
+    {
+        if (parameter is not string username || string.IsNullOrWhiteSpace(username))
+        {
+            return;
+        }
+
+        EmailOrUsername = username;
+        Password = "Password123";
+        await LoginAsync();
+    }
 
     private async Task LoginAsync()
     {
@@ -69,4 +90,9 @@ public sealed class LoginViewModel : ViewModelBase
 
         ErrorMessage = result.Message;
     }
+}
+
+public sealed record QuickLoginAccount(string Username, string Role)
+{
+    public string Label => $"{Username} ({Role})";
 }

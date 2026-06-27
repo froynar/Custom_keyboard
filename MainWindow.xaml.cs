@@ -32,12 +32,23 @@ namespace Custom_keyboard
             var accountService = new AccountService(userRepository, passwordHasher);
             var componentCatalogService = new ComponentCatalogService(componentRepository);
             var buildService = new BuildService(buildRepository, componentCatalogService);
+
+            // Device QC layer (telemetry transport + service + simulator).
+            var deviceRepository = new SqlDeviceRepository(connectionFactory);
+            var deviceSessionRepository = new SqlDeviceTestSessionRepository(connectionFactory);
+            var deviceKeyResultRepository = new SqlDeviceKeyTestResultRepository(connectionFactory);
+            var deviceService = new DeviceService(
+                deviceRepository,
+                deviceSessionRepository,
+                deviceKeyResultRepository);
+
             var requestService = new RequestService(
                 buildRepository,
                 sellerRepository,
                 requestRepository,
                 buildService,
                 componentCatalogService,
+                deviceService,
                 realtimeService);
             var adminService = new AdminService(
                 userRepository,
@@ -53,22 +64,11 @@ namespace Custom_keyboard
                 sellerApplicationRepository,
                 auditLogRepository);
 
-            // Device QC layer (telemetry transport + service + simulator).
-            var deviceRepository = new SqlDeviceRepository(connectionFactory);
-            var deviceSessionRepository = new SqlDeviceTestSessionRepository(connectionFactory);
-            var deviceKeyResultRepository = new SqlDeviceKeyTestResultRepository(connectionFactory);
-
             // MQTT is the main transport; when it is off we use a Null publisher so the simulator
             // records QC results directly via DeviceService (no broker, no data loss).
             IDeviceTelemetryPublisher deviceTelemetryPublisher = mqttSettings.Enabled
                 ? new MqttDeviceTelemetryPublisher(mqttSettings)
                 : new NullDeviceTelemetryPublisher();
-
-            // DeviceService persists only — it never takes IRealtimeNotifier and never re-publishes telemetry.
-            var deviceService = new DeviceService(
-                deviceRepository,
-                deviceSessionRepository,
-                deviceKeyResultRepository);
 
             var deviceSimulator = new DeviceSimulator(deviceService, deviceTelemetryPublisher);
 

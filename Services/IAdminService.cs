@@ -18,6 +18,7 @@ public interface IAdminService
     Task<SellerProfile> SaveSellerProfileAsync(SellerProfile sellerProfile, int adminUserId, CancellationToken cancellationToken = default);
     Task<SellerProfile> SetSellerVerifiedAsync(int sellerUserId, bool isVerified, int adminUserId, CancellationToken cancellationToken = default);
     Task<Brand> SaveBrandAsync(Brand brand, int adminUserId, CancellationToken cancellationToken = default);
+    Task DeleteBrandAsync(int brandId, int adminUserId, CancellationToken cancellationToken = default);
     Task<Layout> SaveLayoutAsync(Layout layout, int adminUserId, CancellationToken cancellationToken = default);
     Task<AdminComponentRecord> SaveComponentAsync(AdminComponentRecord component, int adminUserId, CancellationToken cancellationToken = default);
     Task SetComponentAvailabilityAsync(AdminComponentType componentType, string componentId, bool isAvailable, int adminUserId, CancellationToken cancellationToken = default);

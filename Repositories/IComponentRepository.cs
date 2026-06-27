@@ -9,6 +9,8 @@ public interface IComponentRepository
     Task<IReadOnlyList<Brand>> GetBrandsAsync(CancellationToken cancellationToken = default);
     Task<Brand?> GetBrandByIdAsync(int brandId, CancellationToken cancellationToken = default);
     Task<Brand> SaveBrandAsync(Brand brand, CancellationToken cancellationToken = default);
+    Task<bool> IsBrandInUseAsync(int brandId, CancellationToken cancellationToken = default);
+    Task DeleteBrandAsync(int brandId, CancellationToken cancellationToken = default);
 
     // Layouts
     Task<IReadOnlyList<Layout>> GetLayoutsAsync(CancellationToken cancellationToken = default);

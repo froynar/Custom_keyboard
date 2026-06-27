@@ -10,72 +10,104 @@
                 <GradientStop Color="#F7F7F7" Offset="1"/>
             </LinearGradientBrush>
         </Grid.Background>
-        <Border Width="420"
-                Padding="30"
-                Style="{StaticResource DashboardCard}"
-                HorizontalAlignment="Center"
-                VerticalAlignment="Center">
-            <StackPanel>
-                <StackPanel Orientation="Horizontal" Margin="0,0,0,20">
-                    <Border Width="40" Height="40" CornerRadius="8"
-                            Background="{StaticResource AccentBrush}" Margin="0,0,12,0">
-                        <TextBlock Text="&#xE765;" FontFamily="Segoe MDL2 Assets"
-                                   Foreground="White" FontSize="20"
-                                   HorizontalAlignment="Center" VerticalAlignment="Center"/>
-                    </Border>
-                    <StackPanel VerticalAlignment="Center">
-                        <TextBlock Text="{loc:Tr Common_AppName}" FontSize="18" FontWeight="SemiBold"
-                                   Foreground="{StaticResource TextPrimaryBrush}"/>
-                        <TextBlock Text="{loc:Tr Common_AppTagline}" FontSize="11"
-                                   Foreground="{StaticResource TextMutedBrush}"/>
+        <StackPanel Orientation="Horizontal"
+                    HorizontalAlignment="Center"
+                    VerticalAlignment="Center">
+            <Border Width="420"
+                    Padding="30"
+                    Style="{StaticResource DashboardCard}">
+                <StackPanel>
+                    <StackPanel Orientation="Horizontal" Margin="0,0,0,20">
+                        <Border Width="40" Height="40" CornerRadius="8"
+                                Background="{StaticResource AccentBrush}" Margin="0,0,12,0">
+                            <TextBlock Text="&#xE765;" FontFamily="Segoe MDL2 Assets"
+                                       Foreground="White" FontSize="20"
+                                       HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                        </Border>
+                        <StackPanel VerticalAlignment="Center">
+                            <TextBlock Text="{loc:Tr Common_AppName}" FontSize="18" FontWeight="SemiBold"
+                                       Foreground="{StaticResource TextPrimaryBrush}"/>
+                            <TextBlock Text="{loc:Tr Common_AppTagline}" FontSize="11"
+                                       Foreground="{StaticResource TextMutedBrush}"/>
+                        </StackPanel>
                     </StackPanel>
-                </StackPanel>
-                <TextBlock Text="{loc:Tr Login_Title}"
-                           FontSize="{StaticResource FontSizeHero}"
-                           FontWeight="SemiBold"
-                           Foreground="{StaticResource TextPrimaryBrush}"/>
-                <TextBlock Text="{loc:Tr Login_Subtitle}"
-                           Margin="0,4,0,24"
-                           FontSize="14"
-                           Foreground="{StaticResource TextMutedBrush}"/>
+                    <TextBlock Text="{loc:Tr Login_Title}"
+                               FontSize="{StaticResource FontSizeHero}"
+                               FontWeight="SemiBold"
+                               Foreground="{StaticResource TextPrimaryBrush}"/>
+                    <TextBlock Text="{loc:Tr Login_Subtitle}"
+                               Margin="0,4,0,24"
+                               FontSize="14"
+                               Foreground="{StaticResource TextMutedBrush}"/>
 
-                <TextBlock Text="{loc:Tr Login_EmailOrUsername}"
-                           FontWeight="SemiBold"
-                           Foreground="{StaticResource TextPrimaryBrush}"/>
-                <TextBox AutomationProperties.AutomationId="LoginEmailOrUsernameTextBox"
-                         Text="{Binding EmailOrUsername, UpdateSourceTrigger=PropertyChanged}"
-                         Margin="0,6,0,14"/>
-
-                <TextBlock Text="{loc:Tr Common_Password}"
-                           FontWeight="SemiBold"
-                           Foreground="{StaticResource TextPrimaryBrush}"/>
-                <PasswordBox AutomationProperties.AutomationId="LoginPasswordBox"
-                             behaviors:PasswordBoxBinding.Attach="True"
-                             behaviors:PasswordBoxBinding.BoundPassword="{Binding Password, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"
+                    <TextBlock Text="{loc:Tr Login_EmailOrUsername}"
+                               FontWeight="SemiBold"
+                               Foreground="{StaticResource TextPrimaryBrush}"/>
+                    <TextBox AutomationProperties.AutomationId="LoginEmailOrUsernameTextBox"
+                             Text="{Binding EmailOrUsername, UpdateSourceTrigger=PropertyChanged}"
                              Margin="0,6,0,14"/>
 
-                <TextBlock AutomationProperties.AutomationId="LoginErrorMessage"
-                           Text="{Binding ErrorMessage}"
-                           Foreground="{StaticResource DangerBrush}"
-                           TextWrapping="Wrap"
-                           MinHeight="20"/>
-                <TextBlock AutomationProperties.AutomationId="LoginStatusMessage"
-                           Text="{Binding StatusMessage}"
-                           Foreground="{StaticResource SuccessBrush}"
-                           TextWrapping="Wrap"
-                           MinHeight="20"/>
+                    <TextBlock Text="{loc:Tr Common_Password}"
+                               FontWeight="SemiBold"
+                               Foreground="{StaticResource TextPrimaryBrush}"/>
+                    <PasswordBox AutomationProperties.AutomationId="LoginPasswordBox"
+                                 behaviors:PasswordBoxBinding.Attach="True"
+                                 behaviors:PasswordBoxBinding.BoundPassword="{Binding Password, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"
+                                 Margin="0,6,0,14"/>
 
-                <Button AutomationProperties.AutomationId="LoginSubmitButton"
-                        Content="{loc:Tr Login_SignIn}"
-                        Command="{Binding LoginCommand}"
-                        Margin="0,8,0,10"
-                        Style="{StaticResource PrimaryButton}"/>
+                    <TextBlock AutomationProperties.AutomationId="LoginErrorMessage"
+                               Text="{Binding ErrorMessage}"
+                               Foreground="{StaticResource DangerBrush}"
+                               TextWrapping="Wrap"
+                               MinHeight="20"/>
+                    <TextBlock AutomationProperties.AutomationId="LoginStatusMessage"
+                               Text="{Binding StatusMessage}"
+                               Foreground="{StaticResource SuccessBrush}"
+                               TextWrapping="Wrap"
+                               MinHeight="20"/>
 
-                <Button AutomationProperties.AutomationId="LoginShowRegisterButton"
-                        Content="{loc:Tr Login_CreateBuyerAccount}"
-                        Command="{Binding ShowRegisterCommand}"
-                        Style="{StaticResource SecondaryButton}"/>
-            </StackPanel>
-        </Border>
+                    <Button AutomationProperties.AutomationId="LoginSubmitButton"
+                            Content="{loc:Tr Login_SignIn}"
+                            Command="{Binding LoginCommand}"
+                            Margin="0,8,0,10"
+                            Style="{StaticResource PrimaryButton}"/>
+
+                    <Button AutomationProperties.AutomationId="LoginShowRegisterButton"
+                            Content="{loc:Tr Login_CreateBuyerAccount}"
+                            Command="{Binding ShowRegisterCommand}"
+                            Style="{StaticResource SecondaryButton}"/>
+                </StackPanel>
+            </Border>
+
+            <Border Width="260"
+                    Padding="22"
+                    Margin="18,0,0,0"
+                    Style="{StaticResource DashboardCard}"
+                    VerticalAlignment="Top">
+                <StackPanel>
+                    <TextBlock Text="{loc:Tr Login_QuickTitle}"
+                               FontSize="18"
+                               FontWeight="SemiBold"
+                               Foreground="{StaticResource TextPrimaryBrush}"/>
+                    <TextBlock Text="{loc:Tr Login_QuickSubtitle}"
+                               Margin="0,4,0,16"
+                               FontSize="12"
+                               TextWrapping="Wrap"
+                               Foreground="{StaticResource TextMutedBrush}"/>
+                    <ItemsControl ItemsSource="{Binding QuickLoginAccounts}">
+                        <ItemsControl.ItemTemplate>
+                            <DataTemplate>
+                                <Button Content="{Binding Label}"
+                                        Command="{Binding DataContext.QuickLoginCommand, RelativeSource={RelativeSource AncestorType=UserControl}}"
+                                        CommandParameter="{Binding Username}"
+                                        Style="{StaticResource SecondaryButton}"
+                                        HorizontalAlignment="Stretch"
+                                        Margin="0,0,0,8"/>
+                            </DataTemplate>
+                        </ItemsControl.ItemTemplate>
+                    </ItemsControl>
+                </StackPanel>
+            </Border>
+        </StackPanel>
     </Grid>
 </UserControl>

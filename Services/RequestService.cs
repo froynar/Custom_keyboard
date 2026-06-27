@@ -7,6 +7,7 @@ using Custom_keyboard.Models.Components;
 using Custom_keyboard.Models.Enums;
 using Custom_keyboard.Realtime;
 using Custom_keyboard.Repositories;
+using Custom_keyboard.Services.Devices;
 
 namespace Custom_keyboard.Services;
 
@@ -29,6 +30,7 @@ public sealed class RequestService : IRequestService
     private readonly IRequestRepository _requestRepository;
     private readonly IBuildService _buildService;
     private readonly IComponentCatalogService _catalogService;
+    private readonly IDeviceService _deviceService;
     private readonly IRealtimeNotifier _realtimeNotifier;
 
     public RequestService(
@@ -37,6 +39,7 @@ public sealed class RequestService : IRequestService
         IRequestRepository requestRepository,
         IBuildService buildService,
         IComponentCatalogService catalogService,
+        IDeviceService deviceService,
         IRealtimeNotifier realtimeNotifier)
     {
         _buildRepository = buildRepository;
@@ -44,6 +47,7 @@ public sealed class RequestService : IRequestService
         _requestRepository = requestRepository;
         _buildService = buildService;
         _catalogService = catalogService;
+        _deviceService = deviceService;
         _realtimeNotifier = realtimeNotifier;
     }
 
@@ -149,6 +153,11 @@ public sealed class RequestService : IRequestService
                 Loc.Instance["Status_" + status]));
         }
 
+        if (status == RequestStatus.Completed)
+        {
+            await EnsureQcAllowsCompletionAsync(request.RequestId, cancellationToken);
+        }
+
         request.Status = status;
         if (status == RequestStatus.Accepted && request.AcceptedAt is null)
         {
@@ -164,6 +173,15 @@ public sealed class RequestService : IRequestService
         await PublishSafelyAsync(() =>
             _realtimeNotifier.RequestStatusChangedAsync(saved.RequestId, saved.Status, cancellationToken));
         return saved;
+    }
+
+    private async Task EnsureQcAllowsCompletionAsync(string requestId, CancellationToken cancellationToken)
+    {
+        var latestSession = await _deviceService.GetLatestSessionByRequestAsync(requestId, cancellationToken);
+        if (latestSession?.Status is not (TestSessionStatus.Passed or TestSessionStatus.Warning))
+        {
+            throw new InvalidOperationException(Loc.Instance["Service_QcRequiredBeforeComplete"]);
+        }
     }
 
     // Realtime is a bonus layer: a publish failure must never surface to the caller or

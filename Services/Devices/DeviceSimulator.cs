@@ -21,6 +21,8 @@ public sealed class DeviceSimulator
     private const double StuckKeyFaultRate = 0.0005;
     private const double ChatterFaultRate = 0.007;
     private const double LatencyOutlierRate = 0.015;
+    private const double NoiseWarningRate = 0.035;
+    private const double NoiseFailRate = 0.005;
     private static readonly TimeSpan CompleteRetryDelay = TimeSpan.FromMilliseconds(150);
 
     private static readonly string[] BaseKeyLayout =
@@ -216,7 +218,7 @@ public sealed class DeviceSimulator
             KeyCode = keyCode,
             ExpectedKey = keyCode,
             SwitchTechnology = switchTechnology,
-            NoiseDb = NextMeasuredNoiseDb(sessionNoiseDb)
+            NoiseDb = NextMeasuredNoiseDb(sessionNoiseDb, session.NoiseRequirement)
         };
 
         // Fault injection uses low, QC-like rates: most keys are clean; chatter is
@@ -309,33 +311,48 @@ public sealed class DeviceSimulator
 
     private decimal NextSessionNoiseDb(NoiseRequirement requirement)
     {
-        // One build using one switch profile has a shared acoustic baseline. A noisy
-        // build should fail consistently instead of randomly spiking per key.
-        var roll = _random.NextDouble();
+        // One build using one switch profile has a shared acoustic baseline, kept in the
+        // pass band. Per-key noise outliers below control the warning rate.
         var value = requirement switch
         {
-            NoiseRequirement.Silent when roll < 0.75 => NextDouble(41.0, 45.0),
-            NoiseRequirement.Silent when roll < 0.95 => NextDouble(45.0, 55.0),
-            NoiseRequirement.Silent => NextDouble(55.5, 59.0),
-
-            NoiseRequirement.Quiet when roll < 0.75 => NextDouble(49.0, 55.0),
-            NoiseRequirement.Quiet when roll < 0.95 => NextDouble(55.0, 65.0),
-            NoiseRequirement.Quiet => NextDouble(65.5, 68.0),
-
-            _ when roll < 0.85 => NextDouble(54.0, 62.0),
-            _ when roll < 0.97 => NextDouble(62.0, 65.0),
-            _ => NextDouble(65.5, 68.0)
+            NoiseRequirement.Silent => NextDouble(39.0, 43.8),
+            NoiseRequirement.Quiet => NextDouble(48.0, 53.8),
+            _ => NextDouble(54.0, 62.5)
         };
 
         return Math.Round((decimal)value, 2, MidpointRounding.AwayFromZero);
     }
 
-    private decimal NextMeasuredNoiseDb(decimal sessionNoiseDb)
+    private decimal NextMeasuredNoiseDb(decimal sessionNoiseDb, NoiseRequirement requirement)
     {
         const double SensorToleranceDb = 0.8;
+        var roll = _random.NextDouble();
+        if (roll < NoiseFailRate)
+        {
+            return requirement switch
+            {
+                NoiseRequirement.Silent => RoundDb(NextDouble(55.5, 59.0)),
+                NoiseRequirement.Quiet => RoundDb(NextDouble(65.5, 68.0)),
+                _ => RoundDb(NextDouble(66.0, 68.0))
+            };
+        }
+
+        if (roll < NoiseFailRate + NoiseWarningRate)
+        {
+            return requirement switch
+            {
+                NoiseRequirement.Silent => RoundDb(NextDouble(45.5, 54.5)),
+                NoiseRequirement.Quiet => RoundDb(NextDouble(55.5, 64.5)),
+                _ => RoundDb(NextDouble(65.5, 67.5))
+            };
+        }
+
         var measured = (double)sessionNoiseDb + NextDouble(-SensorToleranceDb, SensorToleranceDb);
-        return Math.Round((decimal)Math.Max(0.0, measured), 2, MidpointRounding.AwayFromZero);
+        return RoundDb(Math.Max(0.0, measured));
     }
+
+    private static decimal RoundDb(double value)
+        => Math.Round((decimal)value, 2, MidpointRounding.AwayFromZero);
 
     private string DifferentKey(string keyCode)
     {

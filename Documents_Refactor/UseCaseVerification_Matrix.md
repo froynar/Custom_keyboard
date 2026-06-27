@@ -23,7 +23,7 @@ dotnet run --project WpfUiVerification\WpfUiVerification.csproj -- --app=D:\path
 
 | ID | Use case / activity | Layer hien co | Status | Ghi chu / viec tiep theo |
 | --- | --- | --- | --- | --- |
-| UC-01.1 | Buyer dang ky | Service/SQL | Covered | `AccountService validates email/phone on register`. UI flow can them AutomationId register da co. |
+| UC-01.1 | Khach dang ky tai khoan Buyer | Service/SQL | Covered | `AccountService.RegisterBuyerAsync` validates email/phone and creates role Buyer. UI flow can them AutomationId register da co. |
 | UC-01.2 | Buyer dang nhap | Service/SQL + WPF UI smoke | Covered | UI runner login `buyer_refactor` va xac nhan `BuyerDashboardRoot`. |
 | UC-01.3 | Buyer dang xuat | WPF UI flow | Planned | Can AutomationId cho nut logout tren dashboard. |
 | UC-01.4 | Xem profile tai khoan | WPF UI smoke | Covered | UI runner mo user menu va bam `UserMenuProfileButton`, xac nhan `UserMenuProfileDetails` hien tren buyer/seller/admin. |

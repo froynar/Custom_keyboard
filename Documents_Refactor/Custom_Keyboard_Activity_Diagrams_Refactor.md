@@ -26,9 +26,9 @@ flowchart LR
         Start((Bat dau))
         OpenApp[Mo ung dung]
         HasAccount{Da co tai khoan?}
-        ChooseRegister[Buyer chon Dang ky]
-        InputRegister[Buyer nhap thong tin dang ky]
-        ClickRegister[Buyer bam nut Dang ky]
+        ChooseRegister[Khach chua dang nhap chon Dang ky]
+        InputRegister[Khach nhap thong tin dang ky]
+        ClickRegister[Khach bam nut Dang ky]
         ChooseLogin[Chon Dang nhap]
         InputLogin[Nhap email va password]
         ClickLogin[Bam nut Dang nhap]
@@ -74,9 +74,9 @@ flowchart LR
 | Buoc | Hoat dong | FHD |
 | --- | --- | --- |
 | 1 | Nguoi dung mo ung dung va quyet dinh dang ky hoac dang nhap. | 1. Tai khoan |
-| 2 | Neu la Buyer chua co tai khoan, Buyer chon dang ky. | 1.1 Dang ky |
+| 2 | Neu chua co tai khoan, khach chua dang nhap chon dang ky. | 1.1 Dang ky |
 | 3 | He thong hien thi man hinh dang ky. | 1.1 Dang ky |
-| 4 | Buyer nhap thong tin dang ky va bam nut dang ky. | 1.1 Dang ky |
+| 4 | Khach nhap thong tin dang ky va bam nut dang ky. | 1.1 Dang ky |
 | 5 | He thong kiem tra thong tin dang ky; neu khong hop le thi hien thong bao loi. | 1.1 Dang ky |
 | 6 | Neu dang ky thanh cong, he thong hien thong bao thanh cong va chuyen sang man hinh dang nhap. | 1.1, 1.2 |
 | 7 | Nguoi dung nhap email/password va bam dang nhap. | 1.2 Dang nhap |
@@ -90,7 +90,7 @@ flowchart LR
 ### Ghi Chu
 
 - Activity Diagram nay chi mo ta thao tac nguoi dung nhin thay tren UI.
-- Dang ky moi tu UI la self-register cho Buyer; Seller/Admin dang nhap bang tai khoan/role duoc quan tri trong he thong.
+- Dang ky moi tu UI do khach chua dang nhap thuc hien; tai khoan tao ra co role mac dinh Buyer. Seller/Admin dang nhap bang tai khoan/role duoc quan tri trong he thong.
 - Khong the hien cac xu ly ky thuat ben trong nhu token, API, database, hash password hoac phan quyen he thong.
 - Sau khi dang nhap thanh cong, nguoi dung se di tiep sang activity diagram rieng cua role tuong ung: Buyer, Seller hoac Admin.
 
@@ -253,7 +253,7 @@ flowchart LR
         ChooseRequest[Chon mot request]
         ViewRequestDetail[Xem chi tiet request]
         ChooseStatusAction{Chon thao tac xu ly}
-        UpdateStatus[Cap nhat trang thai: Chap nhan, Bat dau lam, Huy]
+        UpdateStatus[Cap nhat trang thai: Chap nhan, Dang lam, Huy]
         StartQc[Bam Bat dau QC test]
         ReviewQc[Xem ket qua QC tung phim]
         FixIssue[Khac phuc phim loi va test lai]
@@ -299,7 +299,7 @@ flowchart LR
 | 4 | He thong hien thi danh sach request duoc gan cho seller. | 3.2 Xem danh sach request |
 | 5 | Seller chon mot request de xem chi tiet. | 3.3 Xem chi tiet request |
 | 6 | He thong hien thi kit, build items, mod, ghi chu va tong gia snapshot. | 3.3 |
-| 7 | Seller chon thao tac theo trang thai hien tai: Chap nhan, Bat dau lam, Bat dau QC, Hoan thanh sau QC hoac Huy. | 3.4, 3.5, 3.6, 3.7, 3.8 |
+| 7 | Seller chon thao tac theo trang thai hien tai: Chap nhan, Dang lam, Bat dau QC, Hoan thanh sau QC hoac Huy. | 3.4, 3.5, 3.6, 3.7, 3.8 |
 | 8 | He thong cap nhat trang thai request theo state machine va hien ket qua. | 3.4, 3.5, 3.7 |
 | 9 | Khi request dang In_progress, Seller bat dau QC test. | 3.8, 6.2 |
 | 10 | He thong tao/lay device QC_STATION, tao phien QC va nhan telemetry tung phim. | 6.1, 6.2, 6.3, 6.4, 6.5 |
@@ -409,7 +409,7 @@ flowchart LR
     subgraph UserLane["Buyer / Seller / Admin"]
         StartChat((Bat dau))
         OpenChatEntry[Mo diem vao chat]
-        ChooseConversation[Chon hoac tao hoi thoai hop le]
+        ChooseConversation[Chon hoac tao hoi thoai tu danh sach hop le]
         TypeMessage[Nhap noi dung tin nhan]
         SendMessage[Bam gui tin nhan]
         ViewHistory[Xem lich su tin nhan]
@@ -417,17 +417,17 @@ flowchart LR
     end
 
     subgraph SystemLane["He thong"]
-        CheckParticipants{Hoi thoai hop le?}
-        ShowChatError[Hien thi loi neu Buyer-Admin hoac sai quyen]
+        CheckPermission{Co quyen hoi thoai?}
+        ShowChatError[Hien thi loi neu sai quyen hoac conversation khong hop le]
         LoadConversation[Load hoi thoai va tin nhan tu DB]
         SaveMessage[Luu tin nhan vao DB]
         PublishRealtime[Tuy chon: day realtime cho nguoi nhan online - defer Phase 8A]
         AppendMessage[Cap nhat tin nhan moi tren man hinh]
     end
 
-    StartChat --> OpenChatEntry --> ChooseConversation --> CheckParticipants
-    CheckParticipants -- Khong --> ShowChatError --> EndChat
-    CheckParticipants -- Co --> LoadConversation --> ViewHistory
+    StartChat --> OpenChatEntry --> ChooseConversation --> CheckPermission
+    CheckPermission -- Khong --> ShowChatError --> EndChat
+    CheckPermission -- Co --> LoadConversation --> ViewHistory
     ViewHistory --> TypeMessage --> SendMessage --> SaveMessage --> PublishRealtime --> AppendMessage --> ViewHistory
 ```
 
@@ -438,8 +438,8 @@ flowchart LR
 | 1 | Buyer mo tab Chat, chon seller hop le trong danh sach va mo hoi thoai. | 5.1 |
 | 2 | Seller mo tab Chat, chon buyer hoac admin hop le theo quyen va mo hoi thoai. | 5.2, 5.3 |
 | 3 | Admin mo tab Chat, chon seller hop le va mo hoi thoai. | 5.4 |
-| 4 | He thong kiem tra conversation co seller va dung cap Buyer-Seller hoac Seller-Admin. | 5.1-5.4 |
-| 5 | Neu la Buyer-Admin hoac sai quyen, he thong tu choi mo/gui chat. | 5.1-5.4 |
+| 4 | He thong kiem tra quyen hoi thoai: user phai nam trong conversation va conversation phai thuoc cap Buyer-Seller hoac Seller-Admin. | 5.1-5.4 |
+| 5 | Neu sai quyen hoac conversation khong hop le, he thong tu choi mo/gui chat. | 5.1-5.4 |
 | 6 | He thong load lich su tin nhan tu DB. | 5.1-5.4 |
 | 7 | Nguoi dung nhap va gui tin nhan. | 5.1-5.4 |
 | 8 | He thong luu tin nhan vao DB truoc. | 5.1-5.4 |
@@ -481,37 +481,38 @@ flowchart LR
 
     subgraph SystemLane["He thong"]
         ValidateRequest{Request hop le de QC?}
+        ShowRequestError[Hien loi request khong hop le]
         GetOrCreateDevice[Tao/lay QC_STATION cua seller]
         CreateSession[Tao device_test_session Running]
         SelectTransport{MQTT dang bat va broker kha dung?}
         SubscribeTelemetry[Subscriber nhan telemetry]
-        DirectFallback[Goi DeviceService in-process fallback]
+        DirectFallback[Luu telemetry truc tiep bang DeviceService fallback]
         PersistKeyResult[Luu device_key_test_results]
         AllKeysDone{Da du total_keys?}
         AggregateSession[Tong hop session Passed/Warning/Failed]
         PersistSummary[Luu tested/pass/warning/fail, latency, noise]
-        BlockComplete[Chan hoan thanh va hien phim fail]
-        AllowComplete[Cho phep hoan thanh]
+        ShowIssueMetrics[Hien so lieu can khac phuc]
+        EnableComplete[Mo thao tac hoan thanh]
+        UpdateCompleted[Cap nhat request Completed]
     end
 
     subgraph DeviceLane["Device Simulator"]
         SimulateKeys[Sinh du lieu tung phim theo request_payload_json]
         PublishKeyTelemetry[Publish key telemetry MQTT]
-        PublishSessionSummary[Publish session summary]
     end
 
     StartQcFlow --> SelectRequest --> ClickStartQc --> ValidateRequest
-    ValidateRequest -- Khong --> BlockComplete --> ReviewPerKey
-    ValidateRequest -- Co --> GetOrCreateDevice --> CreateSession --> SelectTransport
-    SelectTransport -- Co --> SimulateKeys --> PublishKeyTelemetry --> SubscribeTelemetry
+    ValidateRequest -- Khong --> ShowRequestError --> SelectRequest
+    ValidateRequest -- Co --> GetOrCreateDevice --> CreateSession --> SimulateKeys --> SelectTransport
+    SelectTransport -- Co --> PublishKeyTelemetry --> SubscribeTelemetry
     SelectTransport -- Khong --> DirectFallback
     SubscribeTelemetry --> PersistKeyResult
     DirectFallback --> PersistKeyResult
     PersistKeyResult --> AllKeysDone
     AllKeysDone -- Chua --> SimulateKeys
-    AllKeysDone -- Roi --> PublishSessionSummary --> AggregateSession --> PersistSummary --> ReviewSummary --> ReviewPerKey --> Decide
-    Decide -- Khong --> BlockComplete --> FixKeyboard --> ClickStartQc
-    Decide -- Co --> AllowComplete --> ConfirmComplete --> EndQcFlow
+    AllKeysDone -- Roi --> AggregateSession --> PersistSummary --> ReviewSummary --> ReviewPerKey --> Decide
+    Decide -- Khong --> ShowIssueMetrics --> FixKeyboard --> ClickStartQc
+    Decide -- Co --> EnableComplete --> ConfirmComplete --> UpdateCompleted --> EndQcFlow
 ```
 
 ### Mo Ta Luong
@@ -523,11 +524,11 @@ flowchart LR
 | 3 | He thong tao device_test_session Running, lay total_keys va switch_technology tu request/build payload. | 6.2 |
 | 4 | Device simulator sinh du lieu tung phim: signal press/release, latency, press_event_count, bounce_count, hold_duration, noise. | 6.3, 6.4, 6.5 |
 | 5 | Neu MQTT bat va broker kha dung, simulator publish telemetry; app subscriber nhan va goi service luu DB. | 6.3 |
-| 6 | Neu MQTT tat/khong kha dung hoac dang unit test, he thong dung fallback in-process de luu cung mot model du lieu. | 6.3 |
+| 6 | Neu MQTT tat/khong kha dung hoac dang unit test, simulator van sinh telemetry va he thong dung fallback in-process de luu cung mot model du lieu. | 6.3 |
 | 7 | He thong luu device_key_test_results va lap lai den khi tested_keys = total_keys. | 6.6 |
 | 8 | He thong tong hop session: pass/warning/fail, latency trung binh/cao nhat, do on trung binh/cao nhat. | 6.7 |
-| 9 | Seller xem ket qua tung phim; neu co fail thi sua switch/phim va chay QC lai. | 3.9, 6.6 |
-| 10 | Neu ket qua dat, Seller xac nhan hoan thanh request. | 3.10, 3.6 |
+| 9 | Seller xem so lieu QC va tu danh gia; neu chua chap nhan duoc thi sua switch/phim va chay QC lai. | 3.9, 6.6 |
+| 10 | Neu Seller danh gia ket qua dat, Seller xac nhan hoan thanh va he thong cap nhat request sang Completed. | 3.10, 3.6 |
 
 ### Ghi Chu
 

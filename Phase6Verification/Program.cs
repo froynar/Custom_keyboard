@@ -45,6 +45,7 @@ internal sealed class Phase6Runner
         await Run("AccountService logout clears the active session", UnitAccountServiceLogoutAsync);
         await Run("AdminService writes audit entries for admin actions", UnitAdminServiceAuditActionsAsync);
         await Run("AdminService hides and restores catalog components", UnitAdminServiceCatalogAvailabilityAsync);
+        await Run("AdminService deletes only unused brands", UnitAdminServiceDeleteBrandGuardsAsync);
         await Run("SellerApplicationService submit/approve/reject + guards", UnitSellerApplicationServiceAsync);
         await Run("StatsService revalidates role/active boundaries", UnitStatsServiceAuthorizationAsync);
         await Run("Buyer dashboard filters switches by selected kit", UnitBuyerDashboardFiltersCompatibleSwitchesAsync);
@@ -167,12 +168,14 @@ internal sealed class Phase6Runner
         await buildRepository.SaveAsync(build);
 
         var requestRepository = new FakeRequestRepository();
+        var deviceService = new FakeDeviceService();
         var service = new RequestService(
             buildRepository,
             FakeSellerRepository.Standard(),
             requestRepository,
             new AlwaysValidBuildService(217.30m),
             FakeCatalog.Standard(),
+            deviceService,
             NullRealtimeNotifier.Instance);
 
         var request = await service.SendRequestAsync(build.BuildId, build.BuyerId, 20, "phase 6 snapshot");
@@ -193,6 +196,11 @@ internal sealed class Phase6Runner
         var inProgress = await service.UpdateStatusAsync(request.RequestId, 20, RequestStatus.In_progress);
         AssertEqual(RequestStatus.In_progress, inProgress.Status, "in progress status");
 
+        await AssertThrowsAsync<InvalidOperationException>(
+            () => service.UpdateStatusAsync(request.RequestId, 20, RequestStatus.Completed),
+            "in progress cannot complete before QC");
+
+        deviceService.SetLatestSession(request.RequestId, TestSessionStatus.Warning);
         var completed = await service.UpdateStatusAsync(request.RequestId, 20, RequestStatus.Completed);
         AssertEqual(RequestStatus.Completed, completed.Status, "completed status");
         AssertTrue(completed.CompletedAt is not null, "completed timestamp");
@@ -249,6 +257,7 @@ internal sealed class Phase6Runner
             new FakeRequestRepository(),
             new AlwaysValidBuildService(217.30m),
             FakeCatalog.Standard(),
+            new FakeDeviceService(),
             NullRealtimeNotifier.Instance);
 
         // Seller 21 has a profile but is_verified = false -> request must be rejected.
@@ -274,6 +283,7 @@ internal sealed class Phase6Runner
             new FakeRequestRepository(),
             new AlwaysValidBuildService(217.30m),
             FakeCatalog.Standard(),
+            new FakeDeviceService(),
             NullRealtimeNotifier.Instance);
 
         var request = await service.SendRequestAsync(build.BuildId, build.BuyerId, 20, "scoping");
@@ -303,6 +313,7 @@ internal sealed class Phase6Runner
             new FakeRequestRepository(),
             new AlwaysValidBuildService(217.30m),
             FakeCatalog.Standard(),
+            new FakeDeviceService(),
             notifier);
 
         // Publish happens after the DB write, with the right identifiers.
@@ -325,6 +336,7 @@ internal sealed class Phase6Runner
             new FakeRequestRepository(),
             new AlwaysValidBuildService(217.30m),
             FakeCatalog.Standard(),
+            new FakeDeviceService(),
             new FakeRealtimeNotifier { Throw = true });
 
         var saved2 = await service2.SendRequestAsync(build2.BuildId, build2.BuyerId, 20, "should still save");
@@ -478,6 +490,44 @@ internal sealed class Phase6Runner
         AssertContains(audit.Entries.Select(entry => entry.Action), "ComponentRestore", "catalog restore audit");
     }
 
+    private static async Task UnitAdminServiceDeleteBrandGuardsAsync()
+    {
+        var components = new FakeComponentRepository();
+        var audit = new FakeAuditLogRepository();
+        var service = new AdminService(
+            FakeUserRepository.Standard(),
+            FakeSellerRepository.Standard(),
+            components,
+            new FakeRequestRepository(),
+            audit);
+
+        var unused = await service.SaveBrandAsync(new Brand { BrandName = "Unused Brand" }, 30);
+        await service.DeleteBrandAsync(unused.BrandId, 30);
+        AssertTrue(await components.GetBrandByIdAsync(unused.BrandId) is null, "unused brand deleted");
+        AssertContains(audit.Entries.Select(entry => entry.Action), "BrandDelete", "delete brand audit");
+
+        var used = await service.SaveBrandAsync(new Brand { BrandName = "Used Brand" }, 30);
+        await service.SaveComponentAsync(
+            new AdminComponentRecord
+            {
+                ComponentType = AdminComponentType.Switch,
+                ComponentId = "SW_BRAND_GUARD",
+                BrandId = used.BrandId,
+                Name = "Brand Guard Switch",
+                SwitchTechnology = "Mechanical",
+                MountType = "MX 5-pin",
+                ActuationForceG = 55,
+                PriceUsd = 0.40m,
+                IsAvailable = true
+            },
+            30);
+
+        await AssertThrowsAsync<InvalidOperationException>(
+            () => service.DeleteBrandAsync(used.BrandId, 30),
+            "brand in use cannot be deleted");
+        AssertTrue(await components.GetBrandByIdAsync(used.BrandId) is not null, "used brand remains");
+    }
+
     private static async Task UnitStatsServiceAuthorizationAsync()
     {
         var users = FakeUserRepository.Standard();
@@ -548,6 +598,7 @@ internal sealed class Phase6Runner
             new FakeRequestRepository(),
             buildService,
             catalog,
+            new FakeDeviceService(),
             NullRealtimeNotifier.Instance);
         var chatService = new ChatService(new FakeChatRepository(), FakeUserRepository.Standard(), FakeSellerRepository.Standard());
         var statsService = new StatsService(new FakeStatsRepository(), FakeUserRepository.Standard(), FakeSellerRepository.Standard());
@@ -768,7 +819,7 @@ internal sealed class Phase6Runner
             var chatRepository = new SqlChatRepository(factory);
             var catalog = new ComponentCatalogService(componentRepository);
             var buildService = new BuildService(buildRepository, catalog);
-            var requestService = new RequestService(buildRepository, sellerRepository, requestRepository, buildService, catalog, NullRealtimeNotifier.Instance);
+            var requestService = new RequestService(buildRepository, sellerRepository, requestRepository, buildService, catalog, new FakeDeviceService(), NullRealtimeNotifier.Instance);
             var chatService = new ChatService(chatRepository, userRepository, sellerRepository);
 
             var buyer = await userRepository.FindByUsernameAsync("buyer_refactor")
@@ -829,7 +880,7 @@ internal sealed class Phase6Runner
             var adminService = new AdminService(userRepository, sellerRepository, componentRepository, requestRepository, auditRepository);
             var catalog = new ComponentCatalogService(componentRepository);
             var buildService = new BuildService(buildRepository, catalog);
-            var requestService = new RequestService(buildRepository, sellerRepository, requestRepository, buildService, catalog, NullRealtimeNotifier.Instance);
+            var requestService = new RequestService(buildRepository, sellerRepository, requestRepository, buildService, catalog, new FakeDeviceService(), NullRealtimeNotifier.Instance);
 
             var admin = await userRepository.FindByUsernameAsync("admin_refactor")
                 ?? throw new InvalidOperationException("Missing seed admin_refactor.");
@@ -998,8 +1049,8 @@ internal sealed class Phase6Runner
             var keyResultRepository = new SqlDeviceKeyTestResultRepository(factory);
             var catalog = new ComponentCatalogService(componentRepository);
             var buildService = new BuildService(buildRepository, catalog);
-            var requestService = new RequestService(buildRepository, sellerRepository, requestRepository, buildService, catalog, NullRealtimeNotifier.Instance);
             var deviceService = new DeviceService(deviceRepository, sessionRepository, keyResultRepository);
+            var requestService = new RequestService(buildRepository, sellerRepository, requestRepository, buildService, catalog, deviceService, NullRealtimeNotifier.Instance);
             var simulator = new DeviceSimulator(deviceService, new NullDeviceTelemetryPublisher());
 
             var buyer = await userRepository.FindByUsernameAsync("buyer_refactor")
@@ -2126,6 +2177,29 @@ internal sealed class FakeRequestRepository : IRequestRepository
 
 internal sealed class FakeDeviceService : IDeviceService
 {
+    private readonly Dictionary<string, DeviceTestSession> _latestSessions = new(StringComparer.OrdinalIgnoreCase);
+
+    public void SetLatestSession(string requestId, TestSessionStatus status)
+    {
+        _latestSessions[requestId] = new DeviceTestSession
+        {
+            SessionId = $"QCSESS_FAKE_{Guid.NewGuid():N}",
+            RequestId = requestId,
+            SellerUserId = 20,
+            DeviceId = "DEV_UNIT_20",
+            SwitchTechnology = "Mechanical",
+            NoiseRequirement = NoiseRequirement.Normal,
+            TotalKeys = 1,
+            TestedKeys = 1,
+            PassedKeys = status == TestSessionStatus.Failed ? 0 : 1,
+            WarningKeys = status == TestSessionStatus.Warning ? 1 : 0,
+            FailedKeys = status == TestSessionStatus.Failed ? 1 : 0,
+            Status = status,
+            StartedAt = DateTime.UtcNow.AddMinutes(-1),
+            CompletedAt = status == TestSessionStatus.Running ? null : DateTime.UtcNow
+        };
+    }
+
     public Task<Device> GetOrCreateQcStationAsync(int sellerUserId, CancellationToken cancellationToken = default)
         => Task.FromResult(new Device
         {
@@ -2191,10 +2265,31 @@ internal sealed class FakeDeviceService : IDeviceService
         });
 
     public Task<DeviceTestSession?> GetLatestSessionByRequestAsync(string requestId, CancellationToken cancellationToken = default)
-        => Task.FromResult<DeviceTestSession?>(null);
+        => Task.FromResult(_latestSessions.TryGetValue(requestId, out var session)
+            ? CloneSession(session)
+            : null);
 
     public Task<IReadOnlyList<DeviceKeyTestResult>> GetKeyResultsAsync(string sessionId, CancellationToken cancellationToken = default)
         => Task.FromResult<IReadOnlyList<DeviceKeyTestResult>>([]);
+
+    private static DeviceTestSession CloneSession(DeviceTestSession session)
+        => new()
+        {
+            SessionId = session.SessionId,
+            RequestId = session.RequestId,
+            SellerUserId = session.SellerUserId,
+            DeviceId = session.DeviceId,
+            SwitchTechnology = session.SwitchTechnology,
+            NoiseRequirement = session.NoiseRequirement,
+            TotalKeys = session.TotalKeys,
+            TestedKeys = session.TestedKeys,
+            PassedKeys = session.PassedKeys,
+            WarningKeys = session.WarningKeys,
+            FailedKeys = session.FailedKeys,
+            Status = session.Status,
+            StartedAt = session.StartedAt,
+            CompletedAt = session.CompletedAt
+        };
 }
 
 internal sealed class RecordingDeviceService : IDeviceService
@@ -2706,6 +2801,17 @@ internal sealed class FakeComponentRepository : IComponentRepository
 
         _brands[brand.BrandId] = brand;
         return Task.FromResult(brand);
+    }
+
+    public Task<bool> IsBrandInUseAsync(int brandId, CancellationToken cancellationToken = default)
+        => Task.FromResult(_adminComponents.Values.Any(component =>
+            component.ComponentType != AdminComponentType.Accessory
+            && component.BrandId == brandId));
+
+    public Task DeleteBrandAsync(int brandId, CancellationToken cancellationToken = default)
+    {
+        _brands.Remove(brandId);
+        return Task.CompletedTask;
     }
 
     public Task<IReadOnlyList<Layout>> GetLayoutsAsync(CancellationToken cancellationToken = default) => Task.FromResult<IReadOnlyList<Layout>>([]);

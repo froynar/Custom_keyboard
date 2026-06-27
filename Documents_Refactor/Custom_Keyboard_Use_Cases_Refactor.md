@@ -2,6 +2,7 @@
 
 Tai lieu nay mo ta use cases chi tiet cho cac role theo FHD refactor, ERD moi va Device Layer mo phong QC keyboard:
 
+- Khach chua dang nhap - dang ky tai khoan mac dinh role Buyer.
 - Buyer - tao build tu keyboard kit va gui request.
 - Seller - nhan, xu ly request va chay QC test truoc khi hoan thanh.
 - Admin - quan tri user, seller profile va catalog.
@@ -13,6 +14,7 @@ Chat duoc gan vao role tuong ung thay vi tach thanh role rieng. Device/QC la du 
 
 ```mermaid
 flowchart LR
+    Guest["Khach chua dang nhap"]
     Buyer["Buyer"]
 
     subgraph System["Custom Keyboard Builder"]
@@ -38,7 +40,7 @@ flowchart LR
         UC51(("Buyer chat voi seller"))
     end
 
-    Buyer --> UC11
+    Guest --> UC11
     Buyer --> UC12
     Buyer --> UC13
     Buyer --> UC14
@@ -72,7 +74,8 @@ flowchart LR
 | Muc | Noi dung |
 | --- | --- |
 | Actor chinh | Buyer |
-| Muc tieu | Buyer dang ky/dang nhap, tao build ban phim dua tren keyboard kit, them linh kien, luu build, gui request cho seller, theo doi request, xem tom tat QC va co the nop don tro thanh seller. |
+| Actor phu | Khach chua dang nhap dung UC 1.1 de tao tai khoan mac dinh role Buyer. |
+| Muc tieu | Buyer dang nhap, tao build ban phim dua tren keyboard kit, them linh kien, luu build, gui request cho seller, theo doi request, xem tom tat QC va co the nop don tro thanh seller. |
 | Tien dieu kien | Buyer co tai khoan active va dang nhap. |
 | Hau dieu kien | Build duoc luu; request duoc gui den seller verified; buyer co the theo doi trang thai, xem tom tat QC neu da co va chat voi seller. |
 
@@ -80,23 +83,23 @@ flowchart LR
 
 | Buoc | Thao tac cua Buyer | Chuc nang FHD |
 | --- | --- | --- |
-| 1 | Buyer dang ky tai khoan neu chua co. | 1.1 |
-| 2 | Buyer dang nhap vao ung dung. | 1.2 |
-| 3 | Buyer xem dashboard va danh sach build da tao. | 2.1, 2.2 |
-| 4 | Buyer tao build moi. | 2.3 |
-| 5 | Buyer chon keyboard kit. | 2.4 |
-| 6 | Buyer them switch, keycap, stabilizer package, accessory hoac mod preset vao build; neu chon Spring swap thi chon gram 30-76g va so switch can mod. | 2.5 |
-| 7 | Buyer xem canh bao tuong thich neu co. | 2.6 |
-| 8 | Buyer xem tong gia tam tinh. | 2.7 |
-| 9 | Buyer luu build. | 2.8 |
-| 10 | Buyer chon seller verified. | 2.9 |
-| 11 | Buyer gui request cho seller. | 2.10 |
-| 12 | Buyer theo doi trang thai request. | 2.11 |
-| 13 | Neu seller da chay QC, Buyer xem tom tat QC gom so phim pass/warning/fail, latency va noise. | 2.11, 6.7 |
-| 14 | Buyer co the luu tru build khong con can thao tac trong danh sach chinh. | 2.12 |
-| 15 | Buyer co the nop don Dang ky tro thanh seller va xem trang thai don. | 2.13 |
-| 16 | Buyer chat voi seller neu can trao doi them. | 5.1 |
-| 17 | Buyer mo user menu goc tren phai de xem profile tai khoan hoac dang xuat khi ket thuc. | 1.3, 1.4 |
+| 0 | Neu chua co tai khoan, khach chua dang nhap dang ky tai khoan moi; he thong tao user role Buyer. | 1.1 |
+| 1 | Buyer dang nhap vao ung dung. | 1.2 |
+| 2 | Buyer xem dashboard va danh sach build da tao. | 2.1, 2.2 |
+| 3 | Buyer tao build moi. | 2.3 |
+| 4 | Buyer chon keyboard kit. | 2.4 |
+| 5 | Buyer them switch, keycap, stabilizer package, accessory hoac mod preset vao build; neu chon Spring swap thi chon gram 30-76g va so switch can mod. | 2.5 |
+| 6 | Buyer xem canh bao tuong thich neu co. | 2.6 |
+| 7 | Buyer xem tong gia tam tinh. | 2.7 |
+| 8 | Buyer luu build. | 2.8 |
+| 9 | Buyer chon seller verified. | 2.9 |
+| 10 | Buyer gui request cho seller. | 2.10 |
+| 11 | Buyer theo doi trang thai request. | 2.11 |
+| 12 | Neu seller da chay QC, Buyer xem tom tat QC gom so phim pass/warning/fail, latency va noise. | 2.11, 6.7 |
+| 13 | Buyer co the luu tru build khong con can thao tac trong danh sach chinh. | 2.12 |
+| 14 | Buyer co the nop don Dang ky tro thanh seller va xem trang thai don. | 2.13 |
+| 15 | Buyer chat voi seller neu can trao doi them. | 5.1 |
+| 16 | Buyer mo user menu goc tren phai de xem profile tai khoan hoac dang xuat khi ket thuc. | 1.3, 1.4 |
 
 ### Chi Tiet Nghiep Vu
 
@@ -128,7 +131,7 @@ flowchart LR
 
 | Nhom | Ma FHD duoc bao phu |
 | --- | --- |
-| Tai khoan | 1.1, 1.2, 1.3, 1.4 |
+| Tai khoan | 1.2, 1.3, 1.4; 1.1 chi ap dung cho khach chua dang nhap tao tai khoan Buyer |
 | Buyer | 2.1, 2.2, 2.3, 2.4, 2.5, 2.6, 2.7, 2.8, 2.9, 2.10, 2.11, 2.12, 2.13 |
 | Device/QC | 6.7 |
 | Chat | 5.1 |
@@ -409,7 +412,7 @@ flowchart LR
 
 | Ma FHD | Chuc nang | Use case bao phu |
 | --- | --- | --- |
-| 1.1 | Dang ky | UC-01 |
+| 1.1 | Dang ky | UC-01 (Khach chua dang nhap tao tai khoan Buyer) |
 | 1.2 | Dang nhap | UC-01, UC-02, UC-03 |
 | 1.3 | Dang xuat | UC-01, UC-02, UC-03 |
 | 1.4 | Xem profile tai khoan | UC-01, UC-02, UC-03 |

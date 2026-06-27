@@ -25,7 +25,7 @@ dotnet run --project Phase6Verification/Phase6Verification.csproj
 
 | Mã | Test case | Trạng thái | Phủ bởi (case trong runner) |
 |---|---|---|---|
-| **T01** | Buyer đăng ký và đăng nhập | ✅ Pass | `AccountService validates email/phone on register` (đăng ký) + `AccountService login accepts valid and blocks wrong/banned` (đăng nhập đúng → set session) |
+| **T01** | Khách đăng ký tài khoản Buyer và Buyer đăng nhập | ✅ Pass | `AccountService validates email/phone on register` (đăng ký tạo role Buyer) + `AccountService login accepts valid and blocks wrong/banned` (đăng nhập đúng → set session) |
 | **T02** | User bị ban không đăng nhập được | ✅ Pass | `...login accepts valid and blocks wrong/banned` — user `is_active = 0` + mật khẩu đúng → `InactiveUser`; test `Logout()` trước rồi thử banned-login và assert `CurrentUser` vẫn `null` (không tạo session mới) |
 | **T03** | Admin thêm/sửa/ẩn/khôi phục linh kiện | 🟡 Một phần | Tự động: `AdminService writes audit entries...` (tạo brand + ghi audit) + invariant catalog (giá ≥ 0, kit switch qty). **Ẩn/khôi phục** (`SetComponentAvailabilityAsync`) hiện kiểm thủ công trên UI Admin |
 | **T04** | Buyer tạo build hợp lệ và lưu | ✅ Pass | `BuildService validates totals and applies snapshots` (tổng giá + snapshot 5 item) |

@@ -584,8 +584,8 @@
                                                     </TextBlock.Text>
                                                 </TextBlock>
                                             </Border>
-                                            <TextBlock AutomationProperties.AutomationId="BuyerQcSummaryStatusLabel"
-                                                       Text="{loc:Tr QcTest_Status}" FontWeight="SemiBold" VerticalAlignment="Center"/>
+                                            <TextBlock AutomationProperties.AutomationId="BuyerQcSummaryResultLabel"
+                                                       Text="{loc:Tr QcTest_ColResult}" FontWeight="SemiBold" VerticalAlignment="Center"/>
                                         </DockPanel>
                                         <DockPanel Margin="0,0,0,3">
                                             <TextBlock DockPanel.Dock="Right" FontWeight="SemiBold">

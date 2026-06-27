@@ -352,11 +352,10 @@
                     </Border>
                 </Grid>
 
-                <!-- ============ Brand & Layout ============ -->
+                <!-- ============ Brand ============ -->
                 <Grid Visibility="{Binding IsChecked, ElementName=NavBrand, Converter={StaticResource BoolToVis}}">
                     <Grid.ColumnDefinitions>
-                        <ColumnDefinition Width="*"/>
-                        <ColumnDefinition Width="16"/>
+                        <ColumnDefinition Width="640"/>
                         <ColumnDefinition Width="*"/>
                     </Grid.ColumnDefinitions>
 
@@ -380,36 +379,8 @@
                             <TextBox Text="{Binding BrandEditor.Country, UpdateSourceTrigger=PropertyChanged}" Margin="0,0,0,12"/>
                             <WrapPanel>
                                 <Button Content="{loc:Tr Common_New}" Command="{Binding NewBrandCommand}" Style="{StaticResource SecondaryButton}" Margin="0,0,8,0"/>
-                                <Button Content="{loc:Tr Admin_SaveBrand}" Command="{Binding SaveBrandCommand}" Style="{StaticResource PrimaryButton}"/>
-                            </WrapPanel>
-                        </StackPanel>
-                    </Border>
-
-                    <Border Grid.Column="2" Style="{StaticResource DashboardCard}">
-                        <StackPanel>
-                            <TextBlock Text="{loc:Tr Admin_Layouts}" Style="{StaticResource SectionTitle}"/>
-                            <Grid Height="180">
-                                <ListBox x:Name="AdminLayoutsList" ItemsSource="{Binding Layouts}" SelectedItem="{Binding SelectedLayout}" DisplayMemberPath="LayoutName"/>
-                                <Border Style="{StaticResource EmptyStateCard}"
-                                        Visibility="{Binding Items.Count, ElementName=AdminLayoutsList, Converter={StaticResource CountToVisibility}}">
-                                    <StackPanel>
-                                        <TextBlock Text="{loc:Tr Admin_EmptyLayoutsTitle}" Style="{StaticResource EmptyStateTitle}"/>
-                                        <TextBlock Text="{loc:Tr Admin_EmptyLayoutsText}"
-                                                   Style="{StaticResource EmptyStateText}"/>
-                                    </StackPanel>
-                                </Border>
-                            </Grid>
-                            <TextBlock Text="{loc:Tr Admin_LayoutId}" Style="{StaticResource FieldLabel}" Margin="0,10,0,3"/>
-                            <TextBox Text="{Binding LayoutEditor.LayoutId, UpdateSourceTrigger=PropertyChanged}" Margin="0,0,0,10"/>
-                            <TextBlock Text="{loc:Tr Admin_Name}" Style="{StaticResource FieldLabel}"/>
-                            <TextBox Text="{Binding LayoutEditor.LayoutName, UpdateSourceTrigger=PropertyChanged}" Margin="0,0,0,10"/>
-                            <TextBlock Text="{loc:Tr Admin_FormFactor}" Style="{StaticResource FieldLabel}"/>
-                            <TextBox Text="{Binding LayoutEditor.FormFactor, UpdateSourceTrigger=PropertyChanged}" Margin="0,0,0,10"/>
-                            <TextBlock Text="{loc:Tr Admin_KeyCount}" Style="{StaticResource FieldLabel}"/>
-                            <TextBox Text="{Binding LayoutEditor.KeyCount, UpdateSourceTrigger=PropertyChanged}" Margin="0,0,0,12"/>
-                            <WrapPanel>
-                                <Button Content="{loc:Tr Common_New}" Command="{Binding NewLayoutCommand}" Style="{StaticResource SecondaryButton}" Margin="0,0,8,0"/>
-                                <Button Content="{loc:Tr Admin_SaveLayout}" Command="{Binding SaveLayoutCommand}" Style="{StaticResource PrimaryButton}"/>
+                                <Button Content="{loc:Tr Admin_SaveBrand}" Command="{Binding SaveBrandCommand}" Style="{StaticResource PrimaryButton}" Margin="0,0,8,0"/>
+                                <Button Content="{loc:Tr Admin_DeleteBrand}" Command="{Binding DeleteBrandCommand}" Style="{StaticResource DangerButton}"/>
                             </WrapPanel>
                         </StackPanel>
                     </Border>
