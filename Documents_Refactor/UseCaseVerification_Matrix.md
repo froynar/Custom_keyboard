@@ -23,32 +23,31 @@ dotnet run --project WpfUiVerification\WpfUiVerification.csproj -- --app=D:\path
 
 | ID | Use case / activity | Layer hien co | Status | Ghi chu / viec tiep theo |
 | --- | --- | --- | --- | --- |
-| UC-01.1 | Khach dang ky tai khoan Buyer | Service/SQL | Covered | `AccountService.RegisterBuyerAsync` validates email/phone and creates role Buyer. UI flow can them AutomationId register da co. |
-| UC-01.2 | Buyer dang nhap | Service/SQL + WPF UI smoke | Covered | UI runner login `buyer_refactor` va xac nhan `BuyerDashboardRoot`. |
-| UC-01.3 | Buyer dang xuat | WPF UI flow | Planned | Can AutomationId cho nut logout tren dashboard. |
-| UC-01.4 | Xem profile tai khoan | WPF UI smoke | Covered | UI runner mo user menu va bam `UserMenuProfileButton`, xac nhan `UserMenuProfileDetails` hien tren buyer/seller/admin. |
-| UC-01.2.1 | Xem dashboard buyer | WPF UI smoke | Covered | `BuyerDashboardRoot`. |
-| UC-01.2.2 | Xem danh sach build | Service/SQL | Covered | `BuildService hides archived builds from the buyer list`; can them UI click nav build list. |
-| UC-01.2.3-2.8 | Tao build, chon kit/linh kien, validation, tong gia, luu build | Service/SQL + VM | Covered | BuildService + Buyer VM compatible switch test. UI flow can them AutomationId configurator. |
-| UC-01.2.9-2.10 | Chon seller verified va gui request | Service/SQL | Covered | RequestService rejects unverified sellers + SQL integration CRUD. UI flow planned. |
-| UC-01.2.11 | Theo doi request | Service/SQL | Covered | Buyer request list + realtime reload tested at service level. |
-| UC-01.2.12 | Luu tru build | Service/SQL | Covered | Archived builds hidden from buyer list. |
-| UC-01.2.13 / UC-03.4.6 | Buyer nop don seller, admin duyet/tu choi | Service/SQL | Covered | SellerApplicationService guards + DB invariant + unique pending index. UI flow planned. |
-| UC-01.5.1 | Buyer chat voi seller | Service/SQL | Covered | ChatService participant checks + SQL integration. UI flow planned. |
-| UC-02.1 | Seller dang nhap | WPF UI smoke | Covered | UI runner login `seller_soigear` va xac nhan `SellerDashboardRoot`. |
-| UC-02.3.1-3.3 | Seller xem dashboard/request/detail | Service/SQL + WPF UI smoke | Partial | Request scoping covered; UI detail flow planned. |
-| UC-02.3.4-3.7 | Seller cap nhat request Accepted/In_progress/Completed/Cancelled | Service/SQL | Covered | RequestService state machine + seller ownership tests. |
-| UC-02.5.2 | Seller chat voi buyer | Service/SQL | Covered | ChatService supports buyer-seller conversation. |
-| UC-02.5.3 | Seller chat voi admin | Service/SQL | Covered | ChatService supports admin-seller conversation. |
-| UC-03.1 | Admin dang nhap/dashboard | WPF UI smoke | Covered | UI runner login `admin_refactor` va xac nhan `AdminDashboardRoot`. |
-| UC-03.4.1 | Admin dashboard/analytics | Service/SQL + WPF UI smoke | Covered | StatsService auth + SQL analytics aggregates. |
-| UC-03.4.2 | Quan ly user | Service/SQL | Covered | AdminService audit actions; UI flow planned. |
-| UC-03.4.3 | Quan ly seller profile/verify | Service/SQL | Covered | Seller public/request eligibility + admin audit. UI flow planned. |
-| UC-03.4.4 | Quan ly catalog | Service/SQL | Partial | Component repository/service used by app; can add explicit CRUD scenario. |
-| UC-03.4.5 | Xem audit log | Service/SQL | Covered | Admin audit tests + SQL seed invariant. UI flow planned. |
-| UC-03.5.4 | Admin chat voi seller | Service/SQL | Covered | ChatService admin-seller test. |
+| UC-01.0 | Khach dang ky tai khoan Buyer | Service/SQL | Covered | `AccountService.RegisterBuyerAsync` validates email/phone and creates role Buyer. UI flow can them AutomationId register da co. |
+| UC-01.1 | Buyer quan ly tai khoan | Service/SQL + WPF UI smoke | Partial | Login `buyer_refactor` va profile qua user menu covered; logout UI flow planned. |
+| UC-01.2 | Buyer mo Trang chu | WPF UI smoke | Covered | UI runner login buyer va xac nhan `BuyerDashboardRoot`. |
+| UC-01.3 | Buyer mo Build cua toi | Service/SQL | Covered | `BuildService hides archived builds from the buyer list`; can them UI click nav build list/archive flow. |
+| UC-01.4 | Buyer tao build moi / configurator | Service/SQL + VM | Covered | BuildService + Buyer VM compatible switch test covers 2.3-2.8. UI flow can them AutomationId configurator. |
+| UC-01.4a | Buyer chon seller va gui request | Service/SQL | Covered | RequestService rejects unverified sellers + SQL integration CRUD. UI flow planned. |
+| UC-01.5 | Buyer mo Request da gui | Service/SQL + WPF UI flow | Covered | Buyer request list + realtime reload tested at service level; UI QC summary covered by device QC scenario. |
+| UC-01.6 | Buyer chat voi seller | Service/SQL | Covered | ChatService participant checks + SQL integration. UI flow planned. |
+| UC-01.7 / UC-03.5 | Buyer nop don Seller, Admin duyet/tu choi | Service/SQL | Covered | SellerApplicationService guards + DB invariant + unique pending index. UI flow planned. |
+| UC-02.1 | Seller quan ly tai khoan | WPF UI smoke | Partial | Login `seller_soigear` va profile qua user menu covered; logout UI flow planned. |
+| UC-02.2 | Seller xu ly request duoc gan | Service/SQL + WPF UI flow | Partial | Request scoping, state machine 3.4-3.7 va snapshot render covered; full manual-click happy path van nam backlog. |
+| UC-02.3 | Seller kiem tra QC keyboard | Service/SQL + WPF UI flow | Partial | UI runner co flow seller chay QC va buyer xem summary; can them case fail/warning neu can day du. |
+| UC-02.4 | Seller phan tich | WPF UI flow | Covered | UI runner mo `NavAnalytics`, kiem tra chart/label va doi ngon ngu. |
+| UC-02.5 | Seller chat | Service/SQL | Covered | ChatService supports buyer-seller va admin-seller conversations. UI flow planned. |
+| UC-03.1 | Admin quan ly tai khoan | WPF UI smoke | Partial | Login `admin_refactor` va profile qua user menu covered; logout UI flow planned. |
+| UC-03.2 | Admin mo Tong quan | Service/SQL + WPF UI smoke | Covered | StatsService auth + SQL analytics aggregates; UI runner xac nhan `AdminDashboardRoot`. |
+| UC-03.3 | Admin mo Nguoi dung | Service/SQL + WPF UI flow | Covered | AdminService audit actions; UI runner mo tab `NavUser`. Full CRUD click planned. |
+| UC-03.4 | Admin mo Seller | Service/SQL + WPF UI flow | Covered | Seller public/request eligibility + admin audit; UI runner mo tab `NavSeller`. Full edit click planned. |
+| UC-03.5 | Admin mo Don xin Seller | Service/SQL + WPF UI flow | Covered | SellerApplicationService approve/reject covered; UI runner mo tab `NavApplications`. |
+| UC-03.6 | Admin mo Brand | WPF UI flow | Partial | UI runner mo tab `NavBrand`; can add explicit brand CRUD scenario. |
+| UC-03.7 | Admin mo Linh kien | Service/SQL + WPF UI flow | Partial | Component repository/service used by app; UI runner mo tab `NavComponent`; can add explicit CRUD scenario. |
+| UC-03.8 | Admin mo Audit log | Service/SQL + WPF UI flow | Covered | Admin audit tests + SQL seed invariant; UI runner mo tab `NavAudit`. |
+| UC-03.9 | Admin chat voi seller | Service/SQL | Covered | ChatService admin-seller test. UI flow planned. |
 | AD-01 | Tai khoan | Service/SQL + WPF UI smoke | Partial | Login + xem profile qua user menu covered; full register/logout UI flow planned. |
-| AD-02 | Buyer tao va gui build | Service/SQL + VM | Partial | Activity doc cu con nhac case/PCB/plate; can cap nhat sang kit-based truoc khi UI flow full. |
+| AD-02 | Buyer tao va gui build | Service/SQL + VM | Partial | Kit-based flow covered at service/VM level; full UI click flow planned. |
 | AD-03 | Seller xu ly request | Service/SQL + WPF UI smoke | Partial | Status state machine covered; full UI click planned. |
 | AD-04 | Admin quan tri | Service/SQL + WPF UI smoke | Partial | Admin login covered; full tab CRUD click planned. |
 | AD-05 | Chat realtime | Service/SQL | Covered | DB-first chat covered; realtime best-effort covered by request notifier test. |

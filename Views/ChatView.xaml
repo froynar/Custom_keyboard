@@ -4,12 +4,11 @@
              xmlns:loc="clr-namespace:Custom_keyboard.Localization">
     <Grid>
         <Grid.ColumnDefinitions>
-            <ColumnDefinition Width="280"/>
-            <ColumnDefinition Width="16"/>
+            <ColumnDefinition Width="300"/>
+            <ColumnDefinition Width="18"/>
             <ColumnDefinition Width="*"/>
         </Grid.ColumnDefinitions>
 
-        <!-- Conversation list + start panel -->
         <Border Style="{StaticResource DashboardCard}">
             <Grid>
                 <Grid.RowDefinitions>
@@ -19,18 +18,25 @@
                     <RowDefinition Height="Auto"/>
                 </Grid.RowDefinitions>
 
-                <TextBlock Grid.Row="0" Text="{loc:Tr Chat_Title}" Style="{StaticResource SectionTitle}"/>
-
-                <StackPanel Grid.Row="1" Visibility="{Binding StartConversationVisibility}" Margin="0,0,0,10">
-                    <TextBlock Text="{Binding CounterpartLabel}" Style="{StaticResource FieldLabel}"/>
-                    <ComboBox ItemsSource="{Binding Counterparts}"
-                              SelectedItem="{Binding SelectedCounterpart}"
-                              DisplayMemberPath="ShopName"/>
-                    <Button Content="{loc:Tr Chat_OpenWithSeller}"
-                            Command="{Binding StartConversationCommand}"
-                            Margin="0,8,0,0"
-                            Style="{StaticResource PrimaryButton}"/>
+                <StackPanel Margin="0,0,0,14">
+                    <TextBlock Text="{loc:Tr Chat_Title}" Style="{StaticResource SectionTitle}" Margin="0"/>
+                    <TextBlock Text="{Binding CounterpartLabel}" Foreground="{StaticResource TextMutedBrush}" FontSize="12"/>
                 </StackPanel>
+
+                <Border Grid.Row="1" Background="{StaticResource CardBgAltBrush}" BorderBrush="{StaticResource BorderBrush}"
+                        BorderThickness="1" CornerRadius="8" Padding="12" Visibility="{Binding StartConversationVisibility}" Margin="0,0,0,12">
+                    <StackPanel>
+                        <TextBlock Text="{Binding CounterpartLabel}" Style="{StaticResource FieldLabel}"/>
+                        <ComboBox ItemsSource="{Binding Counterparts}"
+                                  SelectedItem="{Binding SelectedCounterpart}"
+                                  DisplayMemberPath="ShopName"/>
+                        <Button Content="{loc:Tr Chat_OpenWithSeller}"
+                                Command="{Binding StartConversationCommand}"
+                                Margin="0,10,0,0"
+                                Style="{StaticResource PrimaryButton}"
+                                HorizontalAlignment="Stretch"/>
+                    </StackPanel>
+                </Border>
 
                 <Grid Grid.Row="2">
                     <ListBox x:Name="ConversationList"
@@ -39,10 +45,15 @@
                              BorderThickness="0">
                         <ListBox.ItemTemplate>
                             <DataTemplate>
-                                <StackPanel Margin="0,4">
-                                    <TextBlock Text="{Binding Title}" FontWeight="SemiBold"/>
-                                    <TextBlock Text="{Binding Subtitle}" Foreground="{StaticResource TextMutedBrush}" FontSize="11"/>
-                                </StackPanel>
+                                <Border Background="White" BorderBrush="{StaticResource BorderBrush}" BorderThickness="1" CornerRadius="8" Padding="10" Margin="0,2">
+                                    <DockPanel LastChildFill="True">
+                                        <Border DockPanel.Dock="Left" Width="6" Background="{StaticResource AccentBrush}" CornerRadius="3" Margin="0,0,10,0"/>
+                                        <StackPanel>
+                                            <TextBlock Text="{Binding Title}" FontWeight="SemiBold" TextTrimming="CharacterEllipsis"/>
+                                            <TextBlock Text="{Binding Subtitle}" Foreground="{StaticResource TextMutedBrush}" FontSize="11" Margin="0,3,0,0"/>
+                                        </StackPanel>
+                                    </DockPanel>
+                                </Border>
                             </DataTemplate>
                         </ListBox.ItemTemplate>
                     </ListBox>
@@ -59,61 +70,89 @@
 
                 <Button Grid.Row="3" Content="{loc:Tr Chat_RefreshConversations}"
                         Command="{Binding RefreshConversationsCommand}"
-                        Margin="0,10,0,0"
-                        Style="{StaticResource SecondaryButton}"/>
+                        Margin="0,12,0,0"
+                        Style="{StaticResource SecondaryButton}"
+                        HorizontalAlignment="Stretch"/>
             </Grid>
         </Border>
 
-        <!-- Messages + composer -->
         <Border Grid.Column="2" Style="{StaticResource DashboardCard}">
             <Grid>
                 <Grid.RowDefinitions>
+                    <RowDefinition Height="Auto"/>
                     <RowDefinition Height="*"/>
                     <RowDefinition Height="Auto"/>
                     <RowDefinition Height="Auto"/>
                 </Grid.RowDefinitions>
 
-                <ScrollViewer Grid.Row="0" VerticalScrollBarVisibility="Auto">
-                    <Grid>
-                        <ItemsControl x:Name="MessageList" ItemsSource="{Binding Messages}">
-                            <ItemsControl.ItemTemplate>
-                                <DataTemplate>
-                                    <Border Margin="0,4" Padding="10,6" CornerRadius="6"
-                                            MaxWidth="420"
-                                            HorizontalAlignment="{Binding Alignment}"
-                                            Background="#EEF2F6">
-                                        <StackPanel>
-                                            <TextBlock Text="{Binding SenderLabel}" FontSize="11" Foreground="{StaticResource TextMutedBrush}"/>
-                                            <TextBlock Text="{Binding Text}" TextWrapping="Wrap"/>
-                                            <TextBlock Text="{Binding SentAt, StringFormat=yyyy-MM-dd HH:mm}"
-                                                       FontSize="10" Foreground="#9098A1" HorizontalAlignment="Right"/>
-                                        </StackPanel>
-                                    </Border>
-                                </DataTemplate>
-                            </ItemsControl.ItemTemplate>
-                        </ItemsControl>
-
-                        <Border Style="{StaticResource EmptyStateCard}"
-                                Visibility="{Binding Items.Count, ElementName=MessageList, Converter={StaticResource CountToVisibility}}">
-                            <StackPanel>
-                                <TextBlock Text="{loc:Tr Chat_EmptyMsgTitle}" Style="{StaticResource EmptyStateTitle}"/>
-                                <TextBlock Text="{loc:Tr Chat_EmptyMsgText}"
-                                           Style="{StaticResource EmptyStateText}"/>
-                            </StackPanel>
-                        </Border>
-                    </Grid>
-                </ScrollViewer>
-
-                <DockPanel Grid.Row="1" Margin="0,10,0,0">
-                    <Button DockPanel.Dock="Right" Content="{loc:Tr Chat_Send}"
-                            Command="{Binding SendMessageCommand}"
-                            Margin="8,0,0,0"
-                            Style="{StaticResource PrimaryButton}"/>
-                    <TextBox Text="{Binding MessageText, UpdateSourceTrigger=PropertyChanged}"
-                             VerticalContentAlignment="Center"/>
+                <DockPanel Margin="0,0,0,12">
+                    <Border DockPanel.Dock="Left" Width="38" Height="38" CornerRadius="8" Background="{StaticResource AccentSoftBrush}" Margin="0,0,12,0">
+                        <TextBlock Text="&#xE8F2;" FontFamily="Segoe MDL2 Assets" Foreground="{StaticResource AccentDarkBrush}"
+                                   HorizontalAlignment="Center" VerticalAlignment="Center" FontSize="17"/>
+                    </Border>
+                    <StackPanel>
+                        <TextBlock Text="{Binding SelectedConversation.Title, TargetNullValue={x:Static sys:String.Empty}}"
+                                   xmlns:sys="clr-namespace:System;assembly=mscorlib"
+                                   FontWeight="SemiBold" FontSize="16" Foreground="{StaticResource TextPrimaryBrush}"/>
+                        <TextBlock Text="{Binding SelectedConversation.Subtitle}" Foreground="{StaticResource TextMutedBrush}" FontSize="12"/>
+                    </StackPanel>
                 </DockPanel>
 
-                <TextBlock Grid.Row="2" Text="{Binding StatusMessage}"
+                <Border Grid.Row="1" Background="#F8FAFC" BorderBrush="{StaticResource BorderBrush}" BorderThickness="1" CornerRadius="8" Padding="12">
+                    <ScrollViewer VerticalScrollBarVisibility="Auto">
+                        <Grid>
+                            <ItemsControl x:Name="MessageList" ItemsSource="{Binding Messages}">
+                                <ItemsControl.ItemTemplate>
+                                    <DataTemplate>
+                                        <Border x:Name="Bubble" Margin="0,5" Padding="12,8" CornerRadius="8"
+                                                MaxWidth="480"
+                                                HorizontalAlignment="{Binding Alignment}"
+                                                Background="#E2E8F0">
+                                            <StackPanel>
+                                                <TextBlock x:Name="Sender" Text="{Binding SenderLabel}" FontSize="11" Foreground="{StaticResource TextMutedBrush}"/>
+                                                <TextBlock x:Name="Body" Text="{Binding Text}" TextWrapping="Wrap" Margin="0,3,0,0"/>
+                                                <TextBlock x:Name="SentAt" Text="{Binding SentAt, StringFormat=yyyy-MM-dd HH:mm}"
+                                                           FontSize="10" Foreground="#64748B" HorizontalAlignment="Right" Margin="0,4,0,0"/>
+                                            </StackPanel>
+                                        </Border>
+                                        <DataTemplate.Triggers>
+                                            <DataTrigger Binding="{Binding IsOwn}" Value="True">
+                                                <Setter TargetName="Bubble" Property="Background" Value="{StaticResource AccentBrush}"/>
+                                                <Setter TargetName="Sender" Property="Foreground" Value="#CCFBF1"/>
+                                                <Setter TargetName="Body" Property="Foreground" Value="White"/>
+                                                <Setter TargetName="SentAt" Property="Foreground" Value="#D1FAE5"/>
+                                            </DataTrigger>
+                                        </DataTemplate.Triggers>
+                                    </DataTemplate>
+                                </ItemsControl.ItemTemplate>
+                            </ItemsControl>
+
+                            <Border Style="{StaticResource EmptyStateCard}"
+                                    Visibility="{Binding Items.Count, ElementName=MessageList, Converter={StaticResource CountToVisibility}}">
+                                <StackPanel>
+                                    <TextBlock Text="{loc:Tr Chat_EmptyMsgTitle}" Style="{StaticResource EmptyStateTitle}"/>
+                                    <TextBlock Text="{loc:Tr Chat_EmptyMsgText}"
+                                               Style="{StaticResource EmptyStateText}"/>
+                                </StackPanel>
+                            </Border>
+                        </Grid>
+                    </ScrollViewer>
+                </Border>
+
+                <Grid Grid.Row="2" Margin="0,12,0,0">
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="*"/>
+                        <ColumnDefinition Width="10"/>
+                        <ColumnDefinition Width="Auto"/>
+                    </Grid.ColumnDefinitions>
+                    <TextBox Text="{Binding MessageText, UpdateSourceTrigger=PropertyChanged}"
+                             VerticalContentAlignment="Center"/>
+                    <Button Grid.Column="2" Content="{loc:Tr Chat_Send}"
+                            Command="{Binding SendMessageCommand}"
+                            Style="{StaticResource PrimaryButton}"/>
+                </Grid>
+
+                <TextBlock Grid.Row="3" Text="{Binding StatusMessage}"
                            Foreground="{StaticResource TextMutedBrush}" FontSize="12" Margin="0,8,0,0"/>
             </Grid>
         </Border>

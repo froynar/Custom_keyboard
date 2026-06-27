@@ -20,10 +20,10 @@ internal sealed class WpfUiRunner
         await RunScenarioAsync("UI login smoke: seller dashboard", appPath, "seller_soigear", "Password123", "SellerDashboardRoot");
         await RunScenarioAsync("UI login smoke: admin dashboard", appPath, "admin_refactor", "Password123", "AdminDashboardRoot");
         await RunLanguageSwitchScenarioAsync("UI i18n: live language switch + persistence", appPath);
-        await RunSellerAnalyticsScenarioAsync("UI flow: seller analytics + chart localization (UC-02.3.1)", appPath);
-        await RunAdminTabsScenarioAsync("UI flow: admin tab navigation renders (UC-03.4.x)", appPath);
-        await RunSellerSnapshotScenarioAsync("UI flow: seller request snapshot renders (UC-02.3.2)", appPath);
-        await RunDeviceQcScenarioAsync("UI flow: seller runs QC and buyer sees summary (Device Layer Phase 7)", appPath);
+        await RunSellerAnalyticsScenarioAsync("UI flow: seller analytics + chart localization (UC-02.4)", appPath);
+        await RunAdminTabsScenarioAsync("UI flow: admin tab navigation renders (UC-03.2-UC-03.8)", appPath);
+        await RunSellerSnapshotScenarioAsync("UI flow: seller request snapshot renders (UC-02.2)", appPath);
+        await RunDeviceQcScenarioAsync("UI flow: seller runs QC and buyer sees summary (UC-02.3 / Device Layer)", appPath);
 
         Console.WriteLine();
         Console.WriteLine($"Passed: {_total - _failures.Count}");
@@ -196,7 +196,7 @@ internal sealed class WpfUiRunner
         }
     }
 
-    // UC-02.3.1: seller opens the Analytics tab; charts (localized series) must render and survive a
+    // UC-02.4: seller opens the Analytics tab; charts (localized series) must render and survive a
     // live language switch (exercises ChartFactory + the OnLanguageChangedCore chart rebuild).
     private async Task RunSellerAnalyticsScenarioAsync(string name, string appPath)
     {
@@ -234,7 +234,7 @@ internal sealed class WpfUiRunner
         finally { await CloseAppAsync(process); }
     }
 
-    // UC-03.4.x: admin navigates every sidebar tab; each must render without a binding crash, and a
+    // UC-03.2-UC-03.8: admin navigates every sidebar tab; each must render without a binding crash, and a
     // language switch on the chart-heavy Overview tab must not bring the app down.
     private async Task RunAdminTabsScenarioAsync(string name, string appPath)
     {
@@ -290,7 +290,7 @@ internal sealed class WpfUiRunner
         finally { await CloseAppAsync(process); }
     }
 
-    // UC-02.3.2: seller selects an assigned request; the build snapshot (localized formatter) must
+    // UC-02.2: seller selects an assigned request; the build snapshot (localized formatter) must
     // render without crashing.
     private async Task RunSellerSnapshotScenarioAsync(string name, string appPath)
     {

@@ -31,7 +31,7 @@
         </DataTemplate>
     </Window.Resources>
 
-    <Grid Background="{StaticResource BodyBgBrush}">
+    <Grid Background="{StaticResource AppBackdropBrush}">
         <ContentControl AutomationProperties.AutomationId="ShellContent"
                         Content="{Binding CurrentViewModel}"/>
     </Grid>

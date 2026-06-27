@@ -6,14 +6,14 @@
              xmlns:loc="clr-namespace:Custom_keyboard.Localization"
              AutomationProperties.AutomationId="AdminDashboardRoot"
              Loaded="OnLoaded">
-    <Grid Background="{StaticResource BodyBgBrush}">
+    <Grid Background="{StaticResource AppBackdropBrush}">
         <Grid.ColumnDefinitions>
             <ColumnDefinition Width="240"/>
             <ColumnDefinition Width="*"/>
         </Grid.ColumnDefinitions>
 
         <!-- Sidebar -->
-        <Border Background="{StaticResource SidebarBgBrush}" Padding="18">
+        <Border Background="{StaticResource SidebarGradientBrush}" Padding="18">
             <DockPanel LastChildFill="True">
                 <StackPanel DockPanel.Dock="Top">
                     <StackPanel Orientation="Horizontal" Margin="0,4,0,2">
@@ -29,7 +29,7 @@
                                    VerticalAlignment="Center"/>
                     </StackPanel>
                     <TextBlock Text="{loc:Tr Admin_Workspace}"
-                               Foreground="#AFC1D0"
+                               Foreground="{StaticResource SidebarMutedBrush}"
                                FontSize="12"
                                Margin="0,0,0,24"/>
 
@@ -52,7 +52,7 @@
                 </StackPanel>
 
                 <Border DockPanel.Dock="Bottom"
-                        Background="{StaticResource SidebarBgAltBrush}"
+                        Background="#1F2937" BorderBrush="#334155" BorderThickness="1"
                         CornerRadius="4"
                         Padding="12">
                     <StackPanel>
@@ -79,7 +79,8 @@
             </Grid.RowDefinitions>
 
             <!-- Topbar -->
-            <DockPanel Margin="0,0,0,16">
+            <Border Style="{StaticResource TopBarChrome}" Margin="0,0,0,16">
+                <DockPanel>
                 <views:UserMenuView DockPanel.Dock="Right"/>
                 <Button DockPanel.Dock="Right" Content="{loc:Tr Common_Refresh}" Command="{Binding RefreshAllCommand}"
                         Style="{StaticResource SecondaryButton}" Margin="0,0,8,0"/>
@@ -88,6 +89,7 @@
                     <TextBlock Text="{Binding Subtitle}" Margin="0,4,0,0" Foreground="{StaticResource TextMutedBrush}"/>
                 </StackPanel>
             </DockPanel>
+            </Border>
 
             <!-- KPI summary (always visible) -->
             <UniformGrid Grid.Row="1" Rows="1" Columns="4" Margin="0,0,0,14">
@@ -642,13 +644,13 @@
 
                 <!-- ============ Chat ============ -->
                 <Border Visibility="{Binding IsChecked, ElementName=NavChat, Converter={StaticResource BoolToVis}}"
-                        Background="{StaticResource BodyBgBrush}">
+                        Background="{StaticResource AppBackdropBrush}">
                     <views:ChatView DataContext="{Binding Chat}"/>
                 </Border>
             </Grid>
 
             <!-- Status bar -->
-            <Border Grid.Row="3" Margin="0,12,0,0" Background="#EEF2F6" CornerRadius="4" Padding="12,8">
+            <Border Grid.Row="3" Margin="0,12,0,0" Style="{StaticResource StatusBarCard}">
                 <DockPanel>
                     <Border DockPanel.Dock="Right"
                             Style="{StaticResource BadgeChrome}"

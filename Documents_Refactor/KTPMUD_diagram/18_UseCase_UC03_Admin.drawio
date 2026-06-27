@@ -1,28 +1,66 @@
-<mxfile host="app.diagrams.net"><diagram name="18_UseCase_UC03_Admin" id="18_UseCase_UC03_Admin"><mxGraphModel dx="1000" dy="700" grid="1" gridSize="10" guides="1" tooltips="1" connect="1" arrows="1" fold="1" page="1" pageScale="1" pageWidth="920" pageHeight="720" math="0" shadow="0"><root><mxCell id="0"/><mxCell id="1" parent="0"/><mxCell id="bnd" value="Custom Keyboard Builder" style="rounded=0;whiteSpace=wrap;html=1;verticalAlign=top;fontSize=13;fontStyle=1;fillColor=none;strokeColor=#000000;dashed=0;" vertex="1" parent="1"><mxGeometry x="300" y="50" width="560" height="620" as="geometry"/></mxCell>
-<mxCell id="admin" value="Admin" style="shape=umlActor;whiteSpace=wrap;html=1;fontSize=11;verticalLabelPosition=bottom;verticalAlign=top;fillColor=none;strokeColor=#000000;" vertex="1" parent="1"><mxGeometry x="40" y="300" width="50" height="90" as="geometry"/></mxCell>
-<mxCell id="uc12" value="Dang nhap" style="ellipse;whiteSpace=wrap;html=1;fillColor=none;strokeColor=#000000;fontSize=10;" vertex="1" parent="1"><mxGeometry x="340" y="90" width="170" height="46" as="geometry"/></mxCell>
-<mxCell id="uc14" value="Xem profile tai khoan" style="ellipse;whiteSpace=wrap;html=1;fillColor=none;strokeColor=#000000;fontSize=10;" vertex="1" parent="1"><mxGeometry x="340" y="170" width="170" height="46" as="geometry"/></mxCell>
-<mxCell id="uc13" value="Dang xuat" style="ellipse;whiteSpace=wrap;html=1;fillColor=none;strokeColor=#000000;fontSize=10;" vertex="1" parent="1"><mxGeometry x="340" y="250" width="170" height="46" as="geometry"/></mxCell>
-<mxCell id="uc41" value="Xem dashboard admin" style="ellipse;whiteSpace=wrap;html=1;fillColor=none;strokeColor=#000000;fontSize=10;" vertex="1" parent="1"><mxGeometry x="340" y="360" width="170" height="46" as="geometry"/></mxCell>
-<mxCell id="uc42" value="Quan ly user" style="ellipse;whiteSpace=wrap;html=1;fillColor=none;strokeColor=#000000;fontSize=10;" vertex="1" parent="1"><mxGeometry x="600" y="90" width="170" height="46" as="geometry"/></mxCell>
-<mxCell id="uc43" value="Quan ly seller profile" style="ellipse;whiteSpace=wrap;html=1;fillColor=none;strokeColor=#000000;fontSize=10;" vertex="1" parent="1"><mxGeometry x="600" y="180" width="170" height="46" as="geometry"/></mxCell>
-<mxCell id="uc44" value="Quan ly catalog" style="ellipse;whiteSpace=wrap;html=1;fillColor=none;strokeColor=#000000;fontSize=10;" vertex="1" parent="1"><mxGeometry x="600" y="270" width="170" height="46" as="geometry"/></mxCell>
-<mxCell id="uc45" value="Xem audit log" style="ellipse;whiteSpace=wrap;html=1;fillColor=none;strokeColor=#000000;fontSize=10;" vertex="1" parent="1"><mxGeometry x="600" y="360" width="170" height="46" as="geometry"/></mxCell>
-<mxCell id="uc46" value="Duyet don xin lam seller" style="ellipse;whiteSpace=wrap;html=1;fillColor=none;strokeColor=#000000;fontSize=10;" vertex="1" parent="1"><mxGeometry x="600" y="450" width="170" height="46" as="geometry"/></mxCell>
-<mxCell id="uc54" value="Admin chat voi seller" style="ellipse;whiteSpace=wrap;html=1;fillColor=none;strokeColor=#000000;fontSize=10;" vertex="1" parent="1"><mxGeometry x="340" y="520" width="170" height="46" as="geometry"/></mxCell>
-<mxCell id="as0" value="" style="endArrow=none;html=1;fontSize=9;strokeColor=#000000;" edge="1" parent="1" source="admin" target="uc12"><mxGeometry relative="1" as="geometry"/></mxCell>
-<mxCell id="as1" value="" style="endArrow=none;html=1;fontSize=9;strokeColor=#000000;" edge="1" parent="1" source="admin" target="uc14"><mxGeometry relative="1" as="geometry"/></mxCell>
-<mxCell id="as2" value="" style="endArrow=none;html=1;fontSize=9;strokeColor=#000000;" edge="1" parent="1" source="admin" target="uc13"><mxGeometry relative="1" as="geometry"/></mxCell>
-<mxCell id="as3" value="" style="endArrow=none;html=1;fontSize=9;strokeColor=#000000;" edge="1" parent="1" source="admin" target="uc41"><mxGeometry relative="1" as="geometry"/></mxCell>
-<mxCell id="as4" value="" style="endArrow=none;html=1;fontSize=9;strokeColor=#000000;" edge="1" parent="1" source="admin" target="uc42"><mxGeometry relative="1" as="geometry"/></mxCell>
-<mxCell id="as5" value="" style="endArrow=none;html=1;fontSize=9;strokeColor=#000000;" edge="1" parent="1" source="admin" target="uc43"><mxGeometry relative="1" as="geometry"/></mxCell>
-<mxCell id="as6" value="" style="endArrow=none;html=1;fontSize=9;strokeColor=#000000;" edge="1" parent="1" source="admin" target="uc44"><mxGeometry relative="1" as="geometry"/></mxCell>
-<mxCell id="as7" value="" style="endArrow=none;html=1;fontSize=9;strokeColor=#000000;" edge="1" parent="1" source="admin" target="uc45"><mxGeometry relative="1" as="geometry"/></mxCell>
-<mxCell id="as8" value="" style="endArrow=none;html=1;fontSize=9;strokeColor=#000000;" edge="1" parent="1" source="admin" target="uc46"><mxGeometry relative="1" as="geometry"/></mxCell>
-<mxCell id="as9" value="" style="endArrow=none;html=1;fontSize=9;strokeColor=#000000;" edge="1" parent="1" source="admin" target="uc54"><mxGeometry relative="1" as="geometry"/></mxCell>
-<mxCell id="i1" value="«include»" style="endArrow=open;dashed=1;html=1;fontSize=9;endFill=0;strokeColor=#000000;fontColor=#000000;" edge="1" parent="1" source="uc41" target="uc42"><mxGeometry relative="1" as="geometry"/></mxCell>
-<mxCell id="i2" value="«include»" style="endArrow=open;dashed=1;html=1;fontSize=9;endFill=0;strokeColor=#000000;fontColor=#000000;" edge="1" parent="1" source="uc41" target="uc43"><mxGeometry relative="1" as="geometry"/></mxCell>
-<mxCell id="i3" value="«include»" style="endArrow=open;dashed=1;html=1;fontSize=9;endFill=0;strokeColor=#000000;fontColor=#000000;" edge="1" parent="1" source="uc41" target="uc44"><mxGeometry relative="1" as="geometry"/></mxCell>
-<mxCell id="x1" value="«extend»" style="endArrow=open;dashed=1;html=1;fontSize=9;endFill=0;strokeColor=#000000;fontColor=#000000;" edge="1" parent="1" source="uc42" target="uc45"><mxGeometry relative="1" as="geometry"/></mxCell>
-<mxCell id="x2" value="«extend»" style="endArrow=open;dashed=1;html=1;fontSize=9;endFill=0;strokeColor=#000000;fontColor=#000000;" edge="1" parent="1" source="uc43" target="uc54"><mxGeometry relative="1" as="geometry"/></mxCell>
-<mxCell id="x3" value="«extend»" style="endArrow=open;dashed=1;html=1;fontSize=9;endFill=0;strokeColor=#000000;fontColor=#000000;" edge="1" parent="1" source="uc46" target="uc43"><mxGeometry relative="1" as="geometry"/></mxCell></root></mxGraphModel></diagram></mxfile>
+<mxfile host="app.diagrams.net">
+  <diagram name="18_UseCase_UC03_Admin" id="18_UseCase_UC03_Admin">
+    <mxGraphModel dx="1100" dy="820" grid="1" gridSize="10" guides="1" tooltips="1" connect="1" arrows="1" fold="1" page="1" pageScale="1" pageWidth="1050" pageHeight="860" math="0" shadow="0">
+      <root>
+        <mxCell id="0"/>
+        <mxCell id="1" parent="0"/>
+        <mxCell id="bnd" value="Custom Keyboard Builder" style="rounded=0;whiteSpace=wrap;html=1;verticalAlign=top;fontSize=13;fontStyle=1;fillColor=none;strokeColor=#000000;dashed=0;" vertex="1" parent="1">
+          <mxGeometry x="250" y="40" width="760" height="780" as="geometry"/>
+        </mxCell>
+        <mxCell id="admin" value="Admin" style="shape=umlActor;whiteSpace=wrap;html=1;fontSize=11;verticalLabelPosition=bottom;verticalAlign=top;fillColor=none;strokeColor=#000000;" vertex="1" parent="1">
+          <mxGeometry x="40" y="380" width="50" height="90" as="geometry"/>
+        </mxCell>
+
+        <mxCell id="uca" value="Quan ly tai khoan" style="ellipse;whiteSpace=wrap;html=1;fillColor=none;strokeColor=#000000;fontSize=10;fontStyle=1;" vertex="1" parent="1"><mxGeometry x="300" y="80" width="180" height="48" as="geometry"/></mxCell>
+        <mxCell id="uco" value="Tong quan" style="ellipse;whiteSpace=wrap;html=1;fillColor=none;strokeColor=#000000;fontSize=10;fontStyle=1;" vertex="1" parent="1"><mxGeometry x="300" y="170" width="180" height="48" as="geometry"/></mxCell>
+        <mxCell id="ucu" value="Nguoi dung" style="ellipse;whiteSpace=wrap;html=1;fillColor=none;strokeColor=#000000;fontSize=10;fontStyle=1;" vertex="1" parent="1"><mxGeometry x="300" y="250" width="180" height="48" as="geometry"/></mxCell>
+        <mxCell id="ucs" value="Seller" style="ellipse;whiteSpace=wrap;html=1;fillColor=none;strokeColor=#000000;fontSize=10;fontStyle=1;" vertex="1" parent="1"><mxGeometry x="300" y="330" width="180" height="48" as="geometry"/></mxCell>
+        <mxCell id="ucd" value="Don xin Seller" style="ellipse;whiteSpace=wrap;html=1;fillColor=none;strokeColor=#000000;fontSize=10;fontStyle=1;" vertex="1" parent="1"><mxGeometry x="300" y="410" width="180" height="48" as="geometry"/></mxCell>
+        <mxCell id="ucb" value="Brand" style="ellipse;whiteSpace=wrap;html=1;fillColor=none;strokeColor=#000000;fontSize=10;fontStyle=1;" vertex="1" parent="1"><mxGeometry x="300" y="490" width="180" height="48" as="geometry"/></mxCell>
+        <mxCell id="ucl" value="Linh kien" style="ellipse;whiteSpace=wrap;html=1;fillColor=none;strokeColor=#000000;fontSize=10;fontStyle=1;" vertex="1" parent="1"><mxGeometry x="300" y="570" width="180" height="48" as="geometry"/></mxCell>
+        <mxCell id="ucaud" value="Audit log" style="ellipse;whiteSpace=wrap;html=1;fillColor=none;strokeColor=#000000;fontSize=10;fontStyle=1;" vertex="1" parent="1"><mxGeometry x="300" y="650" width="180" height="48" as="geometry"/></mxCell>
+        <mxCell id="ucc" value="Chat" style="ellipse;whiteSpace=wrap;html=1;fillColor=none;strokeColor=#000000;fontSize=10;fontStyle=1;" vertex="1" parent="1"><mxGeometry x="300" y="730" width="180" height="48" as="geometry"/></mxCell>
+
+        <mxCell id="uc12" value="Dang nhap" style="ellipse;whiteSpace=wrap;html=1;fillColor=none;strokeColor=#000000;fontSize=10;" vertex="1" parent="1"><mxGeometry x="575" y="55" width="165" height="38" as="geometry"/></mxCell>
+        <mxCell id="uc14" value="Xem profile tai khoan" style="ellipse;whiteSpace=wrap;html=1;fillColor=none;strokeColor=#000000;fontSize=10;" vertex="1" parent="1"><mxGeometry x="575" y="100" width="165" height="38" as="geometry"/></mxCell>
+        <mxCell id="uc13" value="Dang xuat" style="ellipse;whiteSpace=wrap;html=1;fillColor=none;strokeColor=#000000;fontSize=10;" vertex="1" parent="1"><mxGeometry x="575" y="145" width="165" height="38" as="geometry"/></mxCell>
+        <mxCell id="uc41" value="Xem dashboard admin" style="ellipse;whiteSpace=wrap;html=1;fillColor=none;strokeColor=#000000;fontSize=10;" vertex="1" parent="1"><mxGeometry x="575" y="200" width="165" height="38" as="geometry"/></mxCell>
+        <mxCell id="uc42" value="Quan ly user" style="ellipse;whiteSpace=wrap;html=1;fillColor=none;strokeColor=#000000;fontSize=10;" vertex="1" parent="1"><mxGeometry x="575" y="260" width="165" height="38" as="geometry"/></mxCell>
+        <mxCell id="uc43" value="Quan ly seller profile" style="ellipse;whiteSpace=wrap;html=1;fillColor=none;strokeColor=#000000;fontSize=10;" vertex="1" parent="1"><mxGeometry x="575" y="340" width="165" height="38" as="geometry"/></mxCell>
+        <mxCell id="uc46" value="Duyet don xin lam seller" style="ellipse;whiteSpace=wrap;html=1;fillColor=none;strokeColor=#000000;fontSize=10;" vertex="1" parent="1"><mxGeometry x="575" y="420" width="165" height="38" as="geometry"/></mxCell>
+        <mxCell id="uc44b" value="Quan ly brand" style="ellipse;whiteSpace=wrap;html=1;fillColor=none;strokeColor=#000000;fontSize=10;" vertex="1" parent="1"><mxGeometry x="575" y="500" width="165" height="38" as="geometry"/></mxCell>
+        <mxCell id="uc44c" value="Quan ly linh kien/catalog" style="ellipse;whiteSpace=wrap;html=1;fillColor=none;strokeColor=#000000;fontSize=10;" vertex="1" parent="1"><mxGeometry x="575" y="580" width="165" height="38" as="geometry"/></mxCell>
+        <mxCell id="uc45" value="Xem audit log" style="ellipse;whiteSpace=wrap;html=1;fillColor=none;strokeColor=#000000;fontSize=10;" vertex="1" parent="1"><mxGeometry x="575" y="660" width="165" height="38" as="geometry"/></mxCell>
+        <mxCell id="uc54" value="Admin chat voi seller" style="ellipse;whiteSpace=wrap;html=1;fillColor=none;strokeColor=#000000;fontSize=10;" vertex="1" parent="1"><mxGeometry x="575" y="740" width="165" height="38" as="geometry"/></mxCell>
+
+        <mxCell id="as0" value="" style="endArrow=none;html=1;fontSize=9;strokeColor=#000000;" edge="1" parent="1" source="admin" target="uca"><mxGeometry relative="1" as="geometry"/></mxCell>
+        <mxCell id="as1" value="" style="endArrow=none;html=1;fontSize=9;strokeColor=#000000;" edge="1" parent="1" source="admin" target="uco"><mxGeometry relative="1" as="geometry"/></mxCell>
+        <mxCell id="as2" value="" style="endArrow=none;html=1;fontSize=9;strokeColor=#000000;" edge="1" parent="1" source="admin" target="ucu"><mxGeometry relative="1" as="geometry"/></mxCell>
+        <mxCell id="as3" value="" style="endArrow=none;html=1;fontSize=9;strokeColor=#000000;" edge="1" parent="1" source="admin" target="ucs"><mxGeometry relative="1" as="geometry"/></mxCell>
+        <mxCell id="as4" value="" style="endArrow=none;html=1;fontSize=9;strokeColor=#000000;" edge="1" parent="1" source="admin" target="ucd"><mxGeometry relative="1" as="geometry"/></mxCell>
+        <mxCell id="as5" value="" style="endArrow=none;html=1;fontSize=9;strokeColor=#000000;" edge="1" parent="1" source="admin" target="ucb"><mxGeometry relative="1" as="geometry"/></mxCell>
+        <mxCell id="as6" value="" style="endArrow=none;html=1;fontSize=9;strokeColor=#000000;" edge="1" parent="1" source="admin" target="ucl"><mxGeometry relative="1" as="geometry"/></mxCell>
+        <mxCell id="as7" value="" style="endArrow=none;html=1;fontSize=9;strokeColor=#000000;" edge="1" parent="1" source="admin" target="ucaud"><mxGeometry relative="1" as="geometry"/></mxCell>
+        <mxCell id="as8" value="" style="endArrow=none;html=1;fontSize=9;strokeColor=#000000;" edge="1" parent="1" source="admin" target="ucc"><mxGeometry relative="1" as="geometry"/></mxCell>
+
+        <mxCell id="i1" value="&lt;&lt;include&gt;&gt;" style="endArrow=open;dashed=1;html=1;fontSize=9;endFill=0;strokeColor=#000000;fontColor=#000000;" edge="1" parent="1" source="uca" target="uc12"><mxGeometry relative="1" as="geometry"/></mxCell>
+        <mxCell id="i2" value="&lt;&lt;include&gt;&gt;" style="endArrow=open;dashed=1;html=1;fontSize=9;endFill=0;strokeColor=#000000;fontColor=#000000;" edge="1" parent="1" source="uca" target="uc14"><mxGeometry relative="1" as="geometry"/></mxCell>
+        <mxCell id="i3" value="&lt;&lt;include&gt;&gt;" style="endArrow=open;dashed=1;html=1;fontSize=9;endFill=0;strokeColor=#000000;fontColor=#000000;" edge="1" parent="1" source="uca" target="uc13"><mxGeometry relative="1" as="geometry"/></mxCell>
+        <mxCell id="i4" value="&lt;&lt;include&gt;&gt;" style="endArrow=open;dashed=1;html=1;fontSize=9;endFill=0;strokeColor=#000000;fontColor=#000000;" edge="1" parent="1" source="uco" target="uc41"><mxGeometry relative="1" as="geometry"/></mxCell>
+        <mxCell id="i5" value="&lt;&lt;include&gt;&gt;" style="endArrow=open;dashed=1;html=1;fontSize=9;endFill=0;strokeColor=#000000;fontColor=#000000;" edge="1" parent="1" source="ucu" target="uc42"><mxGeometry relative="1" as="geometry"/></mxCell>
+        <mxCell id="i6" value="&lt;&lt;include&gt;&gt;" style="endArrow=open;dashed=1;html=1;fontSize=9;endFill=0;strokeColor=#000000;fontColor=#000000;" edge="1" parent="1" source="ucs" target="uc43"><mxGeometry relative="1" as="geometry"/></mxCell>
+        <mxCell id="i7" value="&lt;&lt;include&gt;&gt;" style="endArrow=open;dashed=1;html=1;fontSize=9;endFill=0;strokeColor=#000000;fontColor=#000000;" edge="1" parent="1" source="ucd" target="uc46"><mxGeometry relative="1" as="geometry"/></mxCell>
+        <mxCell id="i8" value="&lt;&lt;include&gt;&gt;" style="endArrow=open;dashed=1;html=1;fontSize=9;endFill=0;strokeColor=#000000;fontColor=#000000;" edge="1" parent="1" source="ucb" target="uc44b"><mxGeometry relative="1" as="geometry"/></mxCell>
+        <mxCell id="i9" value="&lt;&lt;include&gt;&gt;" style="endArrow=open;dashed=1;html=1;fontSize=9;endFill=0;strokeColor=#000000;fontColor=#000000;" edge="1" parent="1" source="ucl" target="uc44c"><mxGeometry relative="1" as="geometry"/></mxCell>
+        <mxCell id="i10" value="&lt;&lt;include&gt;&gt;" style="endArrow=open;dashed=1;html=1;fontSize=9;endFill=0;strokeColor=#000000;fontColor=#000000;" edge="1" parent="1" source="ucaud" target="uc45"><mxGeometry relative="1" as="geometry"/></mxCell>
+        <mxCell id="i11" value="&lt;&lt;include&gt;&gt;" style="endArrow=open;dashed=1;html=1;fontSize=9;endFill=0;strokeColor=#000000;fontColor=#000000;" edge="1" parent="1" source="ucc" target="uc54"><mxGeometry relative="1" as="geometry"/></mxCell>
+        <mxCell id="x1" value="&lt;&lt;extend&gt;&gt;" style="endArrow=open;dashed=1;html=1;fontSize=9;endFill=0;strokeColor=#000000;fontColor=#000000;" edge="1" parent="1" source="ucd" target="ucs"><mxGeometry relative="1" as="geometry"/></mxCell>
+        <mxCell id="x2" value="&lt;&lt;extend&gt;&gt;" style="endArrow=open;dashed=1;html=1;fontSize=9;endFill=0;strokeColor=#000000;fontColor=#000000;" edge="1" parent="1" source="ucu" target="ucaud"><mxGeometry relative="1" as="geometry"/></mxCell>
+        <mxCell id="x3" value="&lt;&lt;extend&gt;&gt;" style="endArrow=open;dashed=1;html=1;fontSize=9;endFill=0;strokeColor=#000000;fontColor=#000000;" edge="1" parent="1" source="ucs" target="ucaud"><mxGeometry relative="1" as="geometry"/></mxCell>
+        <mxCell id="x4" value="&lt;&lt;extend&gt;&gt;" style="endArrow=open;dashed=1;html=1;fontSize=9;endFill=0;strokeColor=#000000;fontColor=#000000;" edge="1" parent="1" source="ucb" target="ucaud"><mxGeometry relative="1" as="geometry"/></mxCell>
+        <mxCell id="x5" value="&lt;&lt;extend&gt;&gt;" style="endArrow=open;dashed=1;html=1;fontSize=9;endFill=0;strokeColor=#000000;fontColor=#000000;" edge="1" parent="1" source="ucl" target="ucaud"><mxGeometry relative="1" as="geometry"/></mxCell>
+        <mxCell id="x6" value="&lt;&lt;extend&gt;&gt;" style="endArrow=open;dashed=1;html=1;fontSize=9;endFill=0;strokeColor=#000000;fontColor=#000000;" edge="1" parent="1" source="ucc" target="ucs"><mxGeometry relative="1" as="geometry"/></mxCell>
+      </root>
+    </mxGraphModel>
+  </diagram>
+</mxfile>

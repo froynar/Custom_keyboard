@@ -1,16 +1,23 @@
-# Custom Keyboard Builder - Use Cases Refactor Theo Role Va Device Layer
+# Custom Keyboard Builder - Use Cases Nghiep Vu Theo Role
 
-Tai lieu nay mo ta use cases chi tiet cho cac role theo FHD refactor, ERD moi va Device Layer mo phong QC keyboard:
+Tai lieu nay mo ta use cases o muc nghiep vu de dua vao bao cao du an. Pham vi chi gom cac chuc nang chinh ma nguoi dung thao tac theo role:
 
-- Khach chua dang nhap - dang ky tai khoan mac dinh role Buyer.
-- Buyer - tao build tu keyboard kit va gui request.
-- Seller - nhan, xu ly request va chay QC test truoc khi hoan thanh.
-- Admin - quan tri user, seller profile va catalog.
-- Device/QC - mo phong tram test keyboard, sinh ket qua tung phim.
+- Khach chua dang nhap: dang ky tai khoan Buyer.
+- Buyer: tao build, gui request, theo doi request, xem tom tat QC, chat voi Seller va dang ky tro thanh Seller.
+- Seller: tiep nhan request, cap nhat tien do, kiem tra QC keyboard, hoan thanh/huy request, xem phan tich va chat.
+- Admin: quan ly nguoi dung, Seller, don xin Seller, catalog, audit log va chat voi Seller.
 
-Chat duoc gan vao role tuong ung thay vi tach thanh role rieng. Device/QC la du lieu mo phong qua MQTT hoac fallback in-process, khong nhung phan cung that trong phase nay. He thong khong co seller inventory trong phase refactor nay.
+Cac chi tiet trien khai he thong khong duoc trinh bay nhu use case nghiep vu. QC duoc xem la chuc nang nghiep vu cua Seller: Seller kiem tra keyboard, xem ket qua, sua/test lai neu chua dat va hoan thanh request khi du dieu kien.
 
-## UC-01: Buyer Tao Build Tu Kit Va Gui Request
+## Quy Uoc Include / Extend
+
+| Quan he | Cach dung trong tai lieu nay |
+| --- | --- |
+| `include` | Use case A bat buoc phai thuc hien use case B moi hoan thanh dung nghiep vu. |
+| `extend` | Use case B chi xay ra khi co dieu kien hoac lua chon phu trong use case A. |
+| Khong noi quan he | Hai use case doc lap, chi cung thuoc mot role hoac cung man hinh UI. |
+
+## UC-01: Buyer Tao Build Va Gui Request
 
 ```mermaid
 flowchart LR
@@ -18,125 +25,119 @@ flowchart LR
     Buyer["Buyer"]
 
     subgraph System["Custom Keyboard Builder"]
-        UC11(("Dang ky"))
+        UC11(("Dang ky tai khoan Buyer"))
         UC12(("Dang nhap"))
-        UC13(("Dang xuat"))
         UC14(("Xem profile tai khoan"))
+        UC13(("Dang xuat"))
 
-        UC21(("Xem dashboard buyer"))
-        UC22(("Xem danh sach build"))
-        UC23(("Tao build moi"))
+        UC21(("Xem dashboard Buyer"))
+        UC22(("Quan ly build cua toi"))
+        UC23(("Tao va cau hinh build"))
         UC24(("Chon keyboard kit"))
-        UC25(("Them linh kien vao build"))
+        UC25(("Them linh kien va mod"))
         UC26(("Xem canh bao tuong thich"))
         UC27(("Xem tong gia"))
         UC28(("Luu build"))
-        UC29(("Chon seller"))
-        UC210(("Gui request"))
-        UC211(("Theo doi request"))
         UC212(("Luu tru build"))
-        UC213(("Dang ky tro thanh seller"))
+
+        UC210(("Gui request cho Seller"))
+        UC29(("Chon Seller"))
+        UC211(("Theo doi request da gui"))
         UC214(("Xem tom tat QC"))
-        UC51(("Buyer chat voi seller"))
+        UC213(("Dang ky tro thanh Seller"))
+        UC51(("Chat voi Seller"))
     end
 
     Guest --> UC11
+
     Buyer --> UC12
-    Buyer --> UC13
     Buyer --> UC14
+    Buyer --> UC13
     Buyer --> UC21
     Buyer --> UC22
     Buyer --> UC23
-    Buyer --> UC24
-    Buyer --> UC25
-    Buyer --> UC26
-    Buyer --> UC27
-    Buyer --> UC28
-    Buyer --> UC29
     Buyer --> UC210
     Buyer --> UC211
-    Buyer --> UC212
     Buyer --> UC213
-    Buyer --> UC214
     Buyer --> UC51
 
     UC23 -. include .-> UC24
-    UC24 -. include .-> UC25
-    UC25 -. include .-> UC26
-    UC25 -. include .-> UC27
-    UC28 -. extend .-> UC210
-    UC28 -. extend .-> UC212
+    UC23 -. include .-> UC25
+    UC23 -. include .-> UC26
+    UC23 -. include .-> UC27
+    UC23 -. include .-> UC28
+
+    UC212 -. extend .-> UC22
     UC210 -. include .-> UC29
-    UC211 -. extend .-> UC51
-    UC211 -. extend .-> UC214
+    UC214 -. extend .-> UC211
 ```
 
 | Muc | Noi dung |
 | --- | --- |
 | Actor chinh | Buyer |
-| Actor phu | Khach chua dang nhap dung UC 1.1 de tao tai khoan mac dinh role Buyer. |
-| Muc tieu | Buyer dang nhap, tao build ban phim dua tren keyboard kit, them linh kien, luu build, gui request cho seller, theo doi request, xem tom tat QC va co the nop don tro thanh seller. |
-| Tien dieu kien | Buyer co tai khoan active va dang nhap. |
-| Hau dieu kien | Build duoc luu; request duoc gui den seller verified; buyer co the theo doi trang thai, xem tom tat QC neu da co va chat voi seller. |
+| Actor phu | Khach chua dang nhap chi tham gia use case Dang ky tai khoan Buyer. |
+| Muc tieu | Buyer tao build ban phim, luu build, gui request cho Seller, theo doi tien do va trao doi khi can. |
+| Tien dieu kien | Buyer co tai khoan active va dang nhap. Rieng Dang ky tai khoan Buyer khong yeu cau dang nhap. |
+| Hau dieu kien | Build duoc luu; request duoc gui den Seller hop le; Buyer co the theo doi trang thai va xem tom tat QC neu da co. |
+
+### Cac Chuc Nang Chinh Cua Buyer
+
+| Use case | Mo ta nghiep vu |
+| --- | --- |
+| Dang ky tai khoan Buyer | Khach tao tai khoan moi voi role Buyer mac dinh. |
+| Dang nhap / Dang xuat / Xem profile | Buyer truy cap he thong, xem thong tin ca nhan va ket thuc phien lam viec. |
+| Xem dashboard Buyer | Buyer xem tong quan workflow va trang thai lam viec. |
+| Quan ly build cua toi | Buyer xem danh sach build da luu, mo lai build hoac luu tru build khong con dung. |
+| Tao va cau hinh build | Buyer chon kit, them linh kien/mod, xem canh bao, xem tong gia va luu build. |
+| Gui request cho Seller | Buyer chon Seller phu hop va gui request build da luu. |
+| Theo doi request da gui | Buyer xem trang thai request va thong tin QC neu Seller da kiem tra. |
+| Dang ky tro thanh Seller | Buyer nop don xin nang cap vai tro thanh Seller. |
+| Chat voi Seller | Buyer trao doi voi Seller ve build/request. |
 
 ### Luong Chinh
 
 | Buoc | Thao tac cua Buyer | Chuc nang FHD |
 | --- | --- | --- |
-| 0 | Neu chua co tai khoan, khach chua dang nhap dang ky tai khoan moi; he thong tao user role Buyer. | 1.1 |
-| 1 | Buyer dang nhap vao ung dung. | 1.2 |
-| 2 | Buyer xem dashboard va danh sach build da tao. | 2.1, 2.2 |
-| 3 | Buyer tao build moi. | 2.3 |
-| 4 | Buyer chon keyboard kit. | 2.4 |
-| 5 | Buyer them switch, keycap, stabilizer package, accessory hoac mod preset vao build; neu chon Spring swap thi chon gram 30-76g va so switch can mod. | 2.5 |
-| 6 | Buyer xem canh bao tuong thich neu co. | 2.6 |
-| 7 | Buyer xem tong gia tam tinh. | 2.7 |
-| 8 | Buyer luu build. | 2.8 |
-| 9 | Buyer chon seller verified. | 2.9 |
-| 10 | Buyer gui request cho seller. | 2.10 |
-| 11 | Buyer theo doi trang thai request. | 2.11 |
-| 12 | Neu seller da chay QC, Buyer xem tom tat QC gom so phim pass/warning/fail, latency va noise. | 2.11, 6.7 |
-| 13 | Buyer co the luu tru build khong con can thao tac trong danh sach chinh. | 2.12 |
-| 14 | Buyer co the nop don Dang ky tro thanh seller va xem trang thai don. | 2.13 |
-| 15 | Buyer chat voi seller neu can trao doi them. | 5.1 |
-| 16 | Buyer mo user menu goc tren phai de xem profile tai khoan hoac dang xuat khi ket thuc. | 1.3, 1.4 |
-
-### Chi Tiet Nghiep Vu
-
-| Chuc nang | Chi tiet |
-| --- | --- |
-| Chon keyboard kit | Kit quyet dinh layout, cong nghe PCB, switch mount va so switch can mua. |
-| Them switch | Buyer chon switch va quantity; quantity phai dap ung `required_switch_quantity` cua kit. |
-| Them keycap | Buyer chon keycap co form factor phu hop voi kit. |
-| Them stabilizer | Buyer chon stabilizer package phu hop layout/form factor. |
-| Them accessory | Buyer chon phu kien chung nhu lube, film, cable, foam hoac tool. |
-| Ghi chu mod | Buyer chon mod preset theo target; mod Switch co so luong switch can mod, Spring swap co spring weight integer 30-76g; chi tiet lube/film/foam/tape them vao notes. |
+| 0 | Neu chua co tai khoan, khach chua dang nhap dang ky tai khoan Buyer. | 1.1 |
+| 1 | Buyer dang nhap vao he thong. | 1.2 |
+| 2 | Buyer xem dashboard Buyer. | 2.1 |
+| 3 | Buyer quan ly danh sach build da luu. | 2.2, 2.12 |
+| 4 | Buyer tao va cau hinh build moi: chon kit, them linh kien/mod, xem canh bao va xem tong gia. | 2.3, 2.4, 2.5, 2.6, 2.7 |
+| 5 | Buyer luu build. | 2.8 |
+| 6 | Buyer chon Seller verified va gui request. | 2.9, 2.10 |
+| 7 | Buyer theo doi request da gui. | 2.11 |
+| 8 | Neu request da co QC, Buyer xem tom tat QC read-only. | 6.7 |
+| 9 | Buyer chat voi Seller khi can lam ro yeu cau. | 5.1 |
+| 10 | Buyer co the nop don dang ky tro thanh Seller. | 2.13 |
+| 11 | Buyer xem profile hoac dang xuat khi ket thuc. | 1.3, 1.4 |
 
 ### Luong Phu / Ngoai Le
 
-| Tinh huong | Xu ly tren UI | Chuc nang FHD |
+| Tinh huong | Xu ly nghiep vu | Chuc nang FHD |
 | --- | --- | --- |
 | Buyer chi muon luu build | Buyer luu build va chua gui request. | 2.8 |
-| Kit hoac linh kien bi an | UI khong hien san pham hidden trong flow tao build. | 2.4, 2.5 |
-| Linh kien khong tuong thich | UI hien canh bao va chan luu/gui neu la loi nghiem trong. | 2.6 |
-| Chua du switch | UI canh bao so switch chua dat yeu cau cua kit. | 2.6 |
-| Seller chua verified | Seller khong hien trong danh sach chon. | 2.9 |
-| Buyer muon doi seller | Buyer quay lai man chon seller truoc khi gui request. | 2.9 |
-| Buyer muon xem tien do | Buyer mo danh sach request hoac dashboard buyer. | 2.1, 2.11 |
-| Chua co ket qua QC | UI van cho Buyer theo doi request, nhung phan tom tat QC hien "chua co du lieu". | 2.11, 6.7 |
+| Build chua hop le | He thong hien canh bao/loi; Buyer can dieu chinh truoc khi luu hoac gui request. | 2.6 |
+| Seller chua verified | Seller khong nam trong danh sach de Buyer chon. | 2.9 |
+| Chua co ket qua QC | Buyer van theo doi request, phan tom tat QC hien chua co du lieu. | 2.11, 6.7 |
 | Buyer khong con can build | Buyer luu tru build de an khoi danh sach chinh. | 2.12 |
-| Buyer muon tro thanh seller | Buyer gui don voi ten shop, phone, dia chi va ghi chu; he thong hien trang thai Pending/Approved/Rejected. | 2.13 |
+| Don Seller dang Pending | Buyer xem trang thai don, khong nop trung don Pending. | 2.13 |
 
-### Mapping FHD Cho Buyer
+### Mapping Buyer
 
-| Nhom | Ma FHD duoc bao phu |
+| Use case nghiep vu | Ma FHD duoc bao phu |
 | --- | --- |
-| Tai khoan | 1.2, 1.3, 1.4; 1.1 chi ap dung cho khach chua dang nhap tao tai khoan Buyer |
-| Buyer | 2.1, 2.2, 2.3, 2.4, 2.5, 2.6, 2.7, 2.8, 2.9, 2.10, 2.11, 2.12, 2.13 |
-| Device/QC | 6.7 |
-| Chat | 5.1 |
+| Dang ky tai khoan Buyer | 1.1 |
+| Dang nhap / Dang xuat / Xem profile | 1.2, 1.3, 1.4 |
+| Xem dashboard Buyer | 2.1 |
+| Quan ly build cua toi | 2.2, 2.12 |
+| Tao va cau hinh build | 2.3, 2.4, 2.5, 2.6, 2.7, 2.8 |
+| Gui request cho Seller | 2.9, 2.10 |
+| Theo doi request da gui | 2.11 |
+| Xem tom tat QC | 6.7 |
+| Dang ky tro thanh Seller | 2.13 |
+| Chat voi Seller | 5.1 |
 
-## UC-02: Seller Xu Ly Request Build
+## UC-02: Seller Xu Ly Request Va Kiem Tra QC
 
 ```mermaid
 flowchart LR
@@ -144,97 +145,109 @@ flowchart LR
 
     subgraph System["Custom Keyboard Builder"]
         UC12(("Dang nhap"))
-        UC13(("Dang xuat"))
         UC14(("Xem profile tai khoan"))
+        UC13(("Dang xuat"))
 
-        UC31(("Xem dashboard seller"))
-        UC32(("Xem danh sach request"))
+        UC31(("Xem dashboard va phan tich Seller"))
+        UC32(("Xem request duoc gan"))
         UC33(("Xem chi tiet request"))
         UC34(("Chap nhan request"))
-        UC35(("Cap nhat dang xu ly"))
-        UC36(("Hoan thanh request"))
+        UC35(("Chuyen request sang dang lam"))
         UC37(("Huy request"))
-        UC38(("Bat dau QC test"))
-        UC39(("Xem ket qua QC tung phim"))
-        UC310(("Xac nhan hoan thanh sau QC"))
-        UC52(("Seller chat voi buyer"))
-        UC53(("Seller chat voi admin"))
+        UC38(("Kiem tra QC keyboard"))
+        UC39(("Xem ket qua QC"))
+        UC310(("Hoan thanh request sau QC"))
+        UC52(("Chat voi Buyer"))
+        UC53(("Chat voi Admin"))
     end
 
     Seller --> UC12
-    Seller --> UC13
     Seller --> UC14
+    Seller --> UC13
     Seller --> UC31
     Seller --> UC32
     Seller --> UC33
-    Seller --> UC34
-    Seller --> UC35
-    Seller --> UC36
-    Seller --> UC37
     Seller --> UC38
-    Seller --> UC39
-    Seller --> UC310
     Seller --> UC52
     Seller --> UC53
 
-    UC32 -. include .-> UC33
-    UC33 -. extend .-> UC34
-    UC34 -. extend .-> UC35
-    UC35 -. extend .-> UC38
+    UC34 -. extend .-> UC33
+    UC35 -. extend .-> UC33
+    UC37 -. extend .-> UC33
+    UC310 -. extend .-> UC33
     UC38 -. include .-> UC39
-    UC39 -. extend .-> UC310
-    UC310 -. include .-> UC36
-    UC33 -. extend .-> UC37
-    UC33 -. extend .-> UC52
 ```
 
 | Muc | Noi dung |
 | --- | --- |
 | Actor chinh | Seller |
-| Muc tieu | Seller xem request duoc gui den, xu ly trang thai, chay QC test tung phim va trao doi voi buyer/admin khi can. |
-| Tien dieu kien | Seller co tai khoan active, role Seller va seller profile da verified. |
-| Hau dieu kien | Request duoc cap nhat dung trang thai; ket qua QC tung phim duoc luu neu seller da test; buyer co the theo doi tien do va tom tat QC. |
+| Muc tieu | Seller tiep nhan request build, cap nhat tien do, kiem tra QC keyboard va hoan thanh hoac huy request theo trang thai hop le. |
+| Tien dieu kien | Seller co tai khoan active, role Seller, profile verified va request thuoc Seller dang nhap. |
+| Hau dieu kien | Request duoc cap nhat dung trang thai; ket qua QC duoc ghi nhan o muc dat/canh bao/khong dat; Buyer co the theo doi tien do va tom tat QC. |
+
+### Cac Chuc Nang Chinh Cua Seller
+
+| Use case | Mo ta nghiep vu |
+| --- | --- |
+| Dang nhap / Dang xuat / Xem profile | Seller truy cap he thong, xem thong tin tai khoan va ket thuc phien lam viec. |
+| Xem dashboard va phan tich Seller | Seller xem KPI, don dang xu ly, doanh thu/don va thong tin tong quan. |
+| Xem request duoc gan | Seller xem danh sach request Buyer gui den minh. |
+| Xem chi tiet request | Seller xem cau hinh build, ghi chu, tong gia snapshot va thong tin lien quan. |
+| Chap nhan request | Seller nhan xu ly request moi. |
+| Chuyen request sang dang lam | Seller cap nhat request sang trang thai dang xu ly. |
+| Kiem tra QC keyboard | Seller kiem tra keyboard truoc khi ban giao. |
+| Xem ket qua QC | Seller xem QC dat, canh bao hoac khong dat de quyet dinh sua/test lai. |
+| Hoan thanh request sau QC | Seller hoan thanh request khi QC dat hoac canh bao chap nhan duoc. |
+| Huy request | Seller huy request khi khong the tiep tuc xu ly theo trang thai hop le. |
+| Chat voi Buyer | Seller trao doi voi Buyer ve request/build. |
+| Chat voi Admin | Seller trao doi voi Admin khi can ho tro. |
 
 ### Luong Chinh
 
 | Buoc | Thao tac cua Seller | Chuc nang FHD |
 | --- | --- | --- |
-| 1 | Seller dang nhap vao ung dung. | 1.2 |
-| 2 | Seller xem dashboard seller. | 3.1 |
-| 3 | Seller xem danh sach request duoc gui den. | 3.2 |
+| 1 | Seller dang nhap vao he thong. | 1.2 |
+| 2 | Seller xem dashboard va phan tich Seller. | 3.1 |
+| 3 | Seller xem danh sach request duoc gan. | 3.2 |
 | 4 | Seller mo chi tiet request. | 3.3 |
-| 5 | Seller chap nhan request neu co the xu ly. | 3.4 |
-| 6 | Seller cap nhat request sang dang xu ly. | 3.5 |
-| 7 | Seller bat dau QC test khi request dang In_progress. | 3.8, 6.2 |
-| 8 | He thong mo phong test tung phim: signal, latency, noise va luu ket qua. | 6.3, 6.4, 6.5, 6.6 |
-| 9 | Seller xem ket qua QC tung phim de biet phim nao NoSignal, WrongKey, Chatter, StuckKey, HighLatency hoac TooNoisy. | 3.9, 6.6 |
-| 10 | Seller khac phuc loi va test lai neu co fail. | 3.8, 3.9 |
-| 11 | Seller xac nhan hoan thanh sau QC khi ket qua dat hoac warning chap nhan duoc. | 3.10, 3.6 |
-| 12 | Seller chat voi buyer neu can lam ro build. | 5.2 |
-| 13 | Seller chat voi admin neu can ho tro profile/tai khoan. | 5.3 |
-| 14 | Seller mo user menu goc tren phai de xem profile tai khoan hoac dang xuat khi ket thuc. | 1.3, 1.4 |
+| 5 | Seller chap nhan request moi neu co the xu ly. | 3.4 |
+| 6 | Seller chuyen request sang trang thai dang lam. | 3.5 |
+| 7 | Seller kiem tra QC keyboard cho request dang lam. | 3.8 |
+| 8 | Seller xem ket qua QC. | 3.9 |
+| 9 | Neu QC chua dat, Seller sua loi va kiem tra lai. | 3.8, 3.9 |
+| 10 | Neu QC dat hoac canh bao chap nhan duoc, Seller hoan thanh request. | 3.10, 3.6 |
+| 11 | Seller chat voi Buyer/Admin khi can trao doi them. | 5.2, 5.3 |
+| 12 | Seller xem profile hoac dang xuat khi ket thuc. | 1.3, 1.4 |
 
 ### Luong Phu / Ngoai Le
 
-| Tinh huong | Xu ly tren UI | Chuc nang FHD |
+| Tinh huong | Xu ly nghiep vu | Chuc nang FHD |
 | --- | --- | --- |
 | Seller chua co request | Dashboard va danh sach request hien trang thai rong. | 3.1, 3.2 |
-| Request khong the xu ly | Seller huy request. | 3.7 |
-| Seller muon xem lai cau hinh | Seller mo chi tiet request de xem kit, build items, mod notes va tong gia snapshot. | 3.3 |
-| Seller chua verified | Seller khong duoc nhan request trong flow buyer. | 3.1 |
-| Seller can lam ro yeu cau | Seller chat voi buyer trong request minh phu trach. | 5.2 |
-| QC chua chay | UI khong nen cho xac nhan hoan thanh sau QC hoac can hien canh bao chua co ket qua QC. | 3.10, 6.7 |
-| QC co phim fail | UI hien chinh xac key_code/failure_type; request giu In_progress de seller sua va test lai. | 3.9, 6.6 |
-| MQTT khong kha dung | He thong dung fallback in-process de sinh/luu cung model telemetry, khong lam mat luong QC. | 6.3 |
+| Request moi Pending | Seller co the chap nhan hoac huy request. | 3.4, 3.7 |
+| Request da Accepted | Seller co the chuyen sang dang lam hoac huy. | 3.5, 3.7 |
+| Request dang In_progress | Seller co the kiem tra QC, huy request hoac hoan thanh neu QC hop le. | 3.6, 3.7, 3.8, 3.9, 3.10 |
+| QC chua chay | Seller chua duoc hoan thanh request. | 3.10 |
+| QC khong dat | Request giu trang thai dang lam de Seller sua va kiem tra lai. | 3.8, 3.9 |
+| QC dat canh bao | Seller xem canh bao; neu chap nhan duoc thi co the hoan thanh, neu khong thi sua/test lai. | 3.9, 3.10 |
+| Request da Completed hoac Cancelled | Seller chi xem lai thong tin, khong cap nhat trang thai tiep. | 3.6, 3.7 |
 
-### Mapping FHD Cho Seller
+### Mapping Seller
 
-| Nhom | Ma FHD duoc bao phu |
+| Use case nghiep vu | Ma FHD duoc bao phu |
 | --- | --- |
-| Tai khoan | 1.2, 1.3, 1.4 |
-| Seller | 3.1, 3.2, 3.3, 3.4, 3.5, 3.6, 3.7, 3.8, 3.9, 3.10 |
-| Device/QC | 6.1, 6.2, 6.3, 6.4, 6.5, 6.6, 6.7 |
-| Chat | 5.2, 5.3 |
+| Dang nhap / Dang xuat / Xem profile | 1.2, 1.3, 1.4 |
+| Xem dashboard va phan tich Seller | 3.1 |
+| Xem request duoc gan | 3.2 |
+| Xem chi tiet request | 3.3 |
+| Chap nhan request | 3.4 |
+| Chuyen request sang dang lam | 3.5 |
+| Hoan thanh request sau QC | 3.6, 3.10 |
+| Huy request | 3.7 |
+| Kiem tra QC keyboard | 3.8 |
+| Xem ket qua QC | 3.9 |
+| Chat voi Buyer | 5.2 |
+| Chat voi Admin | 5.3 |
 
 ## UC-03: Admin Quan Tri He Thong
 
@@ -244,241 +257,119 @@ flowchart LR
 
     subgraph System["Custom Keyboard Builder"]
         UC12(("Dang nhap"))
-        UC13(("Dang xuat"))
         UC14(("Xem profile tai khoan"))
+        UC13(("Dang xuat"))
 
-        UC41(("Xem dashboard admin"))
-        UC42(("Quan ly user"))
-        UC43(("Quan ly seller profile"))
-        UC44(("Quan ly catalog"))
+        UC41(("Xem dashboard Admin"))
+        UC42(("Quan ly nguoi dung"))
+        UC43(("Quan ly Seller"))
+        UC46(("Duyet don xin Seller"))
+        UC44B(("Quan ly Brand"))
+        UC44C(("Quan ly linh kien"))
         UC45(("Xem audit log"))
-        UC46(("Duyet don xin lam seller"))
-        UC54(("Admin chat voi seller"))
+        UC54(("Chat voi Seller"))
     end
 
     Admin --> UC12
-    Admin --> UC13
     Admin --> UC14
+    Admin --> UC13
     Admin --> UC41
     Admin --> UC42
     Admin --> UC43
-    Admin --> UC44
-    Admin --> UC45
     Admin --> UC46
+    Admin --> UC44B
+    Admin --> UC44C
+    Admin --> UC45
     Admin --> UC54
-
-    UC46 -. extend .-> UC43
-
-    UC41 -. include .-> UC42
-    UC41 -. include .-> UC43
-    UC41 -. include .-> UC44
-    UC42 -. extend .-> UC45
-    UC43 -. extend .-> UC54
 ```
 
 | Muc | Noi dung |
 | --- | --- |
 | Actor chinh | Admin |
-| Muc tieu | Admin quan ly user, seller profile, catalog, audit log va duyet don xin lam seller. |
+| Muc tieu | Admin quan tri nguoi dung, Seller, don xin Seller, catalog, audit log va ho tro Seller qua chat. |
 | Tien dieu kien | Admin co tai khoan active, role Admin va dang nhap. |
-| Hau dieu kien | Du lieu user, seller profile, catalog hoac don xin seller duoc cap nhat; thao tac quan trong co the duoc ghi audit log. |
+| Hau dieu kien | Du lieu user, Seller, catalog hoac don xin Seller duoc cap nhat dung nghiep vu; thao tac quan trong co the duoc ghi nhan de tra cuu. |
+
+### Cac Chuc Nang Chinh Cua Admin
+
+| Use case | Mo ta nghiep vu |
+| --- | --- |
+| Dang nhap / Dang xuat / Xem profile | Admin truy cap he thong, xem tai khoan va ket thuc phien lam viec. |
+| Xem dashboard Admin | Admin xem KPI, doanh thu/don, user, Seller va tong quan he thong. |
+| Quan ly nguoi dung | Admin xem danh sach user, doi role, khoa hoac mo khoa tai khoan. |
+| Quan ly Seller | Admin cap nhat seller profile, verify hoac unverify Seller. |
+| Duyet don xin Seller | Admin chap nhan hoac tu choi don Buyer xin tro thanh Seller. |
+| Quan ly Brand | Admin tao, cap nhat hoac xoa brand neu hop le. |
+| Quan ly linh kien | Admin quan ly kit, switch, keycap, stabilizer va accessory. |
+| Xem audit log | Admin xem lich su thao tac quan trong. |
+| Chat voi Seller | Admin trao doi voi Seller khi can ho tro. |
 
 ### Luong Chinh
 
 | Buoc | Thao tac cua Admin | Chuc nang FHD |
 | --- | --- | --- |
-| 1 | Admin dang nhap vao ung dung. | 1.2 |
-| 2 | Admin xem dashboard admin. | 4.1 |
-| 3 | Admin quan ly user: xem danh sach, khoa/mo tai khoan, cap nhat role. | 4.2 |
-| 4 | Admin quan ly seller profile: tao/cap nhat profile, verify/unverify seller. | 4.3 |
-| 5 | Admin quan ly catalog: brand, layout, keyboard kit, switch, keycap, stabilizer, accessory. | 4.4 |
-| 6 | Admin xem audit log khi can kiem tra lich su thao tac. | 4.5 |
-| 7 | Admin duyet don xin lam seller: xem hang doi, chap nhan hoac tu choi. | 4.6 |
-| 8 | Admin chat voi seller neu can ho tro. | 5.4 |
-| 9 | Admin mo user menu goc tren phai de xem profile tai khoan hoac dang xuat khi ket thuc. | 1.3, 1.4 |
-
-### Chi Tiet Nghiep Vu
-
-| Chuc nang | Chi tiet |
-| --- | --- |
-| Quan ly user | Admin cap nhat active status va role Buyer/Seller/Admin. |
-| Quan ly seller profile | Seller chi duoc buyer chon khi user active, role Seller va profile verified. |
-| Duyet don xin seller | Khi chap nhan don, he thong doi role Buyer thanh Seller, tao/cap nhat seller profile verified va ghi audit log; khi tu choi, he thong luu ly do va trang thai Rejected. |
-| Quan ly brand | Brand dung cho keyboard kit, switch, keycap va stabilizer. |
-| Quan ly layout | Layout gom form factor va key count. |
-| Quan ly keyboard kit | Kit gom brand, layout, PCB technology, switch mount, required switch quantity, included parts, price va availability. |
-| Quan ly switch | Switch gom brand, technology, mount type, type, force, price va availability. |
-| Quan ly keycap | Keycap gom brand, supported form factor, profile, material, price va availability. |
-| Quan ly stabilizer | Stabilizer la package theo layout/form factor, co price va availability. |
-| Quan ly accessory | Accessory gom type, name, target component, price va availability. |
+| 1 | Admin dang nhap vao he thong. | 1.2 |
+| 2 | Admin xem dashboard Admin. | 4.1 |
+| 3 | Admin quan ly nguoi dung: doi role, khoa hoac mo khoa tai khoan. | 4.2 |
+| 4 | Admin quan ly Seller: cap nhat ho so, verify hoac unverify. | 4.3 |
+| 5 | Admin duyet don xin Seller: chap nhan hoac tu choi. | 4.6 |
+| 6 | Admin quan ly Brand. | 4.4 |
+| 7 | Admin quan ly linh kien/catalog. | 4.4 |
+| 8 | Admin xem audit log khi can tra cuu lich su thao tac. | 4.5 |
+| 9 | Admin chat voi Seller khi can ho tro. | 5.4 |
+| 10 | Admin xem profile hoac dang xuat khi ket thuc. | 1.3, 1.4 |
 
 ### Luong Phu / Ngoai Le
 
-| Tinh huong | Xu ly tren UI | Chuc nang FHD |
+| Tinh huong | Xu ly nghiep vu | Chuc nang FHD |
 | --- | --- | --- |
-| User bi khoa nham | Admin mo lai tai khoan. | 4.2 |
-| Buyer can thanh seller | Admin duyet don xin lam seller; neu chap nhan thi cap role Seller, tao seller profile va verify seller. | 4.6 |
-| Seller tam ngung nhan request | Admin unverify seller hoac khoa tai khoan. | 4.2, 4.3 |
-| San pham catalog khong con dung | Admin an item bang `is_available = false`. | 4.4 |
-| San pham catalog duoc dung lai | Admin hien item bang `is_available = true`. | 4.4 |
-| Seller can ho tro | Admin mo chat voi seller tu khu vuc seller profile. | 5.4 |
+| User bi khoa nham | Admin mo khoa tai khoan. | 4.2 |
+| Admin dang thao tac tren tai khoan cua chinh minh | He thong chan cac thao tac nguy hiem nhu tu khoa minh hoac bo role Admin cua minh. | 4.2 |
+| Seller tam ngung nhan request | Admin unverify Seller hoac khoa tai khoan Seller. | 4.2, 4.3 |
+| Buyer xin tro thanh Seller | Admin xem don, chap nhan de cap role Seller va tao/cap nhat seller profile, hoac tu choi voi ghi chu. | 4.6, 4.3 |
+| Brand/linh kien dang duoc su dung | Admin khong xoa cung neu bi rang buoc; co the an/khoi phuc item neu phu hop. | 4.4 |
+| Can kiem tra lich su | Admin mo audit log de xem thao tac da ghi nhan. | 4.5 |
 
-### Mapping FHD Cho Admin
+### Mapping Admin
 
-| Nhom | Ma FHD duoc bao phu |
+| Use case nghiep vu | Ma FHD duoc bao phu |
 | --- | --- |
-| Tai khoan | 1.2, 1.3, 1.4 |
-| Admin | 4.1, 4.2, 4.3, 4.4, 4.5, 4.6 |
-| Chat | 5.4 |
+| Dang nhap / Dang xuat / Xem profile | 1.2, 1.3, 1.4 |
+| Xem dashboard Admin | 4.1 |
+| Quan ly nguoi dung | 4.2 |
+| Quan ly Seller | 4.3 |
+| Duyet don xin Seller | 4.6 |
+| Quan ly Brand | 4.4 |
+| Quan ly linh kien | 4.4 |
+| Xem audit log | 4.5 |
+| Chat voi Seller | 5.4 |
 
-## UC-04: Device/QC Station Kiem Tra Keyboard
+## Bang Kiem Tra Include / Extend
 
-```mermaid
-flowchart LR
-    Seller["Seller"]
-    Device["Device Simulator"]
+| Pham vi | Quan he | Ly do dung |
+| --- | --- | --- |
+| Buyer | `Tao va cau hinh build` include `Chon keyboard kit`, `Them linh kien va mod`, `Xem canh bao tuong thich`, `Xem tong gia`, `Luu build` | Day la cac buoc bat buoc de tao mot build hop le va co the luu. |
+| Buyer | `Gui request cho Seller` include `Chon Seller` | Gui request luon can Seller nhan request. |
+| Buyer | `Luu tru build` extend `Quan ly build cua toi` | Luu tru chi la lua chon phu khi Buyer khong con can build. |
+| Buyer | `Xem tom tat QC` extend `Theo doi request da gui` | Tom tat QC chi hien khi Seller da co ket qua QC. |
+| Seller | `Chap nhan request`, `Chuyen request sang dang lam`, `Huy request`, `Hoan thanh request sau QC` extend `Xem chi tiet request` | Cac hanh dong nay chi xuat hien theo trang thai request va lua chon cua Seller. |
+| Seller | `Kiem tra QC keyboard` include `Xem ket qua QC` | Sau khi kiem tra QC, Seller can xem ket qua de quyet dinh sua/test lai hoac hoan thanh. |
+| Admin | Khong can include/extend chinh trong diagram | Cac chuc nang Admin doc lap theo nghiep vu; audit log va chat la entry point rieng, khong nen ep thanh include/extend ky thuat. |
 
-    subgraph System["Custom Keyboard Builder"]
-        UC61(("Tao/lay tram QC"))
-        UC62(("Bat dau phien QC"))
-        UC63(("Kiem tra tin hieu phim"))
-        UC64(("Kiem tra latency"))
-        UC65(("Kiem tra do on"))
-        UC66(("Xem ket qua tung phim"))
-        UC67(("Tong hop ket qua QC"))
-    end
+## Bang Tong Hop Theo Role
 
-    Seller --> UC61
-    Seller --> UC62
-    Seller --> UC66
-    Seller --> UC67
-
-    Device --> UC63
-    Device --> UC64
-    Device --> UC65
-
-    UC62 -. include .-> UC61
-    UC62 -. include .-> UC63
-    UC63 -. include .-> UC64
-    UC63 -. include .-> UC65
-    UC63 -. include .-> UC66
-    UC66 -. include .-> UC67
-```
-
-| Muc | Noi dung |
+| Role | Use cases nghiep vu day du |
 | --- | --- |
-| Actor chinh | Seller |
-| Actor phu | Device Simulator |
-| Muc tieu | Mo phong tram QC keyboard de ghi nhan ket qua tung phim: co nhan signal khong, co release khong, double click/chatter, stuck, latency va do on. |
-| Tien dieu kien | Seller dang nhap, request thuoc seller va dang In_progress; build/request co thong tin kit de xac dinh total_keys va switch_technology. |
-| Hau dieu kien | He thong luu device_test_session va device_key_test_results; seller xem duoc phim nao pass/warning/fail va buyer xem duoc tom tat QC. |
+| Khach chua dang nhap | Dang ky tai khoan Buyer |
+| Buyer | Dang nhap; Xem profile tai khoan; Dang xuat; Xem dashboard Buyer; Quan ly build cua toi; Tao va cau hinh build; Gui request cho Seller; Theo doi request da gui; Xem tom tat QC; Dang ky tro thanh Seller; Chat voi Seller |
+| Seller | Dang nhap; Xem profile tai khoan; Dang xuat; Xem dashboard va phan tich Seller; Xem request duoc gan; Xem chi tiet request; Chap nhan request; Chuyen request sang dang lam; Kiem tra QC keyboard; Xem ket qua QC; Hoan thanh request sau QC; Huy request; Chat voi Buyer; Chat voi Admin |
+| Admin | Dang nhap; Xem profile tai khoan; Dang xuat; Xem dashboard Admin; Quan ly nguoi dung; Quan ly Seller; Duyet don xin Seller; Quan ly Brand; Quan ly linh kien; Xem audit log; Chat voi Seller |
 
-### Luong Chinh
+## Ranh Gioi Bao Cao Use Case
 
-| Buoc | Thao tac | Chuc nang FHD |
-| --- | --- | --- |
-| 1 | Seller bam Bat dau QC test tren request dang In_progress. | 3.8, 6.2 |
-| 2 | He thong tao hoac lay device QC_STATION cua seller. | 6.1 |
-| 3 | He thong tao session Running, gan request_id, device_id, seller_user_id, total_keys va switch_technology. | 6.2 |
-| 4 | Device Simulator sinh telemetry tung phim theo key map cua layout/kit. | 6.3 |
-| 5 | He thong ghi press_signal_detected, release_signal_detected, expected_key, received_key va press_event_count. | 6.3 |
-| 6 | He thong ghi latency_ms, ap dung nguong chat hon cho HE switch. | 6.4 |
-| 7 | He thong ghi noise_db de danh gia switch co dap ung yeu cau it on hay khong. | 6.5 |
-| 8 | He thong gan result va failure_type cho tung phim. | 6.6 |
-| 9 | Khi tested_keys = total_keys, he thong tong hop session Passed/Warning/Failed. | 6.7 |
-| 10 | Seller xem chi tiet tung phim va quyet dinh hoan thanh hoac sua/test lai. | 3.9, 3.10 |
-
-### Luong Phu / Ngoai Le
-
-| Tinh huong | Xu ly tren UI / He thong | Chuc nang FHD |
-| --- | --- | --- |
-| Phim khong nhan signal | press_signal_detected=false, result=Fail, failure_type=NoSignal. | 6.3, 6.6 |
-| Phim nhan sai key | expected_key khac received_key, result=Fail, failure_type=WrongKey. | 6.3, 6.6 |
-| Phim double click/chatter | press_event_count > 1 hoac bounce_count vuot nguong sau chu ky press-release, result=Fail/Warning tuy nguong. | 6.3, 6.6 |
-| Phim stuck | release_signal_detected=false, is_stuck=true, result=Fail, failure_type=StuckKey. | 6.3, 6.6 |
-| Phim HE latency cao | latency_ms > nguong, result=Warning hoac Fail voi failure_type=HighLatency. | 6.4, 6.6 |
-| Switch qua on | noise_db > nguong, result=Warning hoac Fail voi failure_type=TooNoisy. | 6.5, 6.6 |
-| Chua du total_keys | Session giu Running, chua tong hop Passed/Warning/Failed. | 6.7 |
-| MQTT khong kha dung | He thong dung fallback in-process, van luu cung cau truc du lieu. | 6.3 |
-
-### Mapping FHD Cho Device/QC
-
-| Nhom | Ma FHD duoc bao phu |
-| --- | --- |
-| Seller | 3.8, 3.9, 3.10 |
-| Device/QC | 6.1, 6.2, 6.3, 6.4, 6.5, 6.6, 6.7 |
-
-## Bang Doi Chieu FHD
-
-| Ma FHD | Chuc nang | Use case bao phu |
-| --- | --- | --- |
-| 1.1 | Dang ky | UC-01 (Khach chua dang nhap tao tai khoan Buyer) |
-| 1.2 | Dang nhap | UC-01, UC-02, UC-03 |
-| 1.3 | Dang xuat | UC-01, UC-02, UC-03 |
-| 1.4 | Xem profile tai khoan | UC-01, UC-02, UC-03 |
-| 2.1 | Xem dashboard buyer | UC-01 |
-| 2.2 | Xem danh sach build | UC-01 |
-| 2.3 | Tao build moi | UC-01 |
-| 2.4 | Chon keyboard kit | UC-01 |
-| 2.5 | Them linh kien vao build | UC-01 |
-| 2.6 | Xem canh bao tuong thich | UC-01 |
-| 2.7 | Xem tong gia | UC-01 |
-| 2.8 | Luu build | UC-01 |
-| 2.9 | Chon seller | UC-01 |
-| 2.10 | Gui request | UC-01 |
-| 2.11 | Theo doi request | UC-01 |
-| 2.12 | Luu tru build | UC-01 |
-| 2.13 | Dang ky tro thanh seller | UC-01 |
-| 3.1 | Xem dashboard seller | UC-02 |
-| 3.2 | Xem danh sach request | UC-02 |
-| 3.3 | Xem chi tiet request | UC-02 |
-| 3.4 | Chap nhan request | UC-02 |
-| 3.5 | Cap nhat dang xu ly | UC-02 |
-| 3.6 | Hoan thanh request | UC-02 |
-| 3.7 | Huy request | UC-02 |
-| 3.8 | Bat dau QC test | UC-02, UC-04 |
-| 3.9 | Xem ket qua QC tung phim | UC-02, UC-04 |
-| 3.10 | Xac nhan hoan thanh sau QC | UC-02, UC-04 |
-| 4.1 | Xem dashboard admin | UC-03 |
-| 4.2 | Quan ly user | UC-03 |
-| 4.3 | Quan ly seller profile | UC-03 |
-| 4.4 | Quan ly catalog | UC-03 |
-| 4.5 | Xem audit log | UC-03 |
-| 4.6 | Duyet don xin lam seller | UC-03 |
-| 5.1 | Buyer chat voi seller | UC-01 |
-| 5.2 | Seller chat voi buyer | UC-02 |
-| 5.3 | Seller chat voi admin | UC-02 |
-| 5.4 | Admin chat voi seller | UC-03 |
-| 6.1 | Tao/lay tram QC | UC-04 |
-| 6.2 | Bat dau phien QC | UC-04 |
-| 6.3 | Kiem tra tin hieu phim | UC-04 |
-| 6.4 | Kiem tra latency | UC-04 |
-| 6.5 | Kiem tra do on | UC-04 |
-| 6.6 | Xem ket qua tung phim | UC-02, UC-04 |
-| 6.7 | Tong hop ket qua QC | UC-01, UC-04 |
-
-## Bang Kiem Tra Cheo Diagram
-
-Bang nay dung de doi chieu nhanh giua use case, sequence diagram, activity diagram va ERD.
-
-| Pham vi | Use case | Sequence | Activity | ERD / du lieu chinh |
-| --- | --- | --- | --- | --- |
-| Tai khoan, profile, logout | UC-01, UC-02, UC-03 | SD-S01, SD-S09 | AD-01, AD-S01 | roles, users |
-| Buyer tao build tu kit | UC-01 | SD-S02, SD-S10 | AD-02, AD-S02 | keyboard_kits, switches, keycap_sets, stabilizers, accessories, builds, build_items, build_mods |
-| Buyer gui request cho seller | UC-01 | SD-S02 | AD-02, AD-S02 | build_requests, request_payload_json, builds.noise_requirement |
-| Buyer xem request va QC summary | UC-01, UC-04 | SD-S03, SD-S04 | AD-02, AD-S02, AD-06, AD-S06 | build_requests, device_test_sessions |
-| Seller xu ly request | UC-02 | SD-S03 | AD-03, AD-S03 | build_requests.status |
-| Seller chay QC tung phim | UC-02, UC-04 | SD-S03, SD-S04 | AD-03, AD-S03, AD-06, AD-S06 | devices, device_test_sessions, device_key_test_results |
-| Admin quan tri user/seller/catalog | UC-03 | SD-S05, SD-S10 | AD-04, AD-S04 | users, seller_profiles, brands, layouts, catalog tables, audit_log |
-| Buyer xin thanh seller va admin duyet | UC-01, UC-03 | SD-S06 | AD-02, AD-S02, AD-04, AD-S04 | seller_applications, users.role_id, seller_profiles, audit_log |
-| Chat theo role | UC-01, UC-02, UC-03 | SD-S07 | AD-05, AD-S05 | chat_conversations, chat_messages |
-| Dashboard/analytics | UC-01, UC-02, UC-03 | SD-S08 | AD-02, AD-S02, AD-03, AD-S03, AD-04, AD-S04 | aggregate tu builds, build_requests, device_test_sessions, catalog, users |
-
-## Ranh Gioi
-
+- Khong tach thanh phan ho tro QC thanh role rieng trong bao cao nghiep vu.
+- Khong dua chi tiet trien khai ky thuat vao use case diagram.
 - Khong co use case quan ly inventory/stock trong phase nay.
 - Khong co use case chon case, PCB, plate rieng le; cac phan nay nam trong keyboard kit.
 - Khong co use case chat truc tiep Buyer-Admin.
-- Khong mo ta API, database, FK, service validation, migration hoac DTO.
-- Device/QC trong phase nay la mo phong du lieu; khong co use case ket noi ESP32, HID reader, microphone hay phan cung that.
-- MQTT la transport chinh cho telemetry mo phong; fallback in-process chi dung khi MQTT tat/khong kha dung hoac khi test.
+- QC duoc trinh bay o muc nghiep vu: Seller kiem tra keyboard, xem ket qua, sua/test lai neu chua dat, va hoan thanh request khi du dieu kien.
