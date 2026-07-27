@@ -1,4 +1,3 @@
 <Solution>
-  <Project Path="BuildDeviceVerification/BuildDeviceVerification.csproj" />
   <Project Path="Custom_keyboard.csproj" />
 </Solution>

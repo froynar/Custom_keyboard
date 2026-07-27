@@ -11,12 +11,6 @@
   </PropertyGroup>
 
   <ItemGroup>
-    <Compile Remove="Phase6Verification\**\*.cs" />
-    <Compile Remove="WpfUiVerification\**\*.cs" />
-    <Compile Remove="BuildDeviceVerification\**\*.cs" />
-  </ItemGroup>
-
-  <ItemGroup>
     <PackageReference Include="LiveChartsCore.SkiaSharpView.WPF" Version="2.0.4" />
     <PackageReference Include="Microsoft.Data.SqlClient" Version="6.1.1" />
     <PackageReference Include="MQTTnet" Version="4.3.7.1207" />
