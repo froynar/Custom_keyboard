@@ -6,3 +6,4 @@ obj/
 *.cache
 *.tmp
 .codex/
+.claude/
