@@ -13,6 +13,7 @@
   <ItemGroup>
     <Compile Remove="Phase6Verification\**\*.cs" />
     <Compile Remove="WpfUiVerification\**\*.cs" />
+    <Compile Remove="BuildDeviceVerification\**\*.cs" />
   </ItemGroup>
 
   <ItemGroup>

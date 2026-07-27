@@ -20,6 +20,8 @@ public sealed class DeviceKeyTestResult
     public DateTime RecordedAt { get; set; }
 
     // Transient dashboard diagnostics reconstructed from the compact row.
+    public int? BounceCount { get; set; }
+    public bool IsStuck { get; set; }
     public KeyFailureType? FailureType { get; set; }
     public string? FailureReason { get; set; }
 }

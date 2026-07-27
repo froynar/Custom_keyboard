@@ -178,8 +178,8 @@ Table builds {
   id varchar(50) [pk]
   buyer_id int [not null, ref: > users.id]
   kit_id varchar(50) [not null, ref: > keyboard_kits.id]
-  name varchar(255) [not null]
-  notes varchar(500)
+  name nvarchar(255) [not null]
+  notes nvarchar(500)
   noise_requirement NoiseRequirement [not null]
   status BuildStatus [not null]
   total_cost_snapshot decimal(10,2) [not null]
@@ -196,7 +196,7 @@ Table build_items {
   accessory_id varchar(50) [ref: > accessories.id]
   quantity int [not null]
   unit_price_snapshot decimal(10,2) [not null]
-  notes varchar(500)
+  notes nvarchar(500)
 
   Note: 'Exactly one product FK must be set. Kit is stored on builds.kit_id.'
 }
@@ -204,9 +204,9 @@ Table build_items {
 Table build_mods {
   id int [pk, increment]
   build_id varchar(50) [not null, ref: > builds.id]
-  mod_type varchar(100) [not null]
-  target_component varchar(100) [not null]
-  notes varchar(500)
+  mod_type nvarchar(100) [not null]
+  target_component nvarchar(100) [not null]
+  notes nvarchar(500)
 }
 
 Table build_requests {
@@ -215,23 +215,25 @@ Table build_requests {
   seller_user_id int [not null, ref: > users.id]
   request_payload_json text [not null]
   status RequestStatus [not null]
-  note varchar(500)
+  note nvarchar(500)
   requested_at datetime [not null]
   accepted_at datetime
   completed_at datetime
   updated_at datetime
+
+  Note: 'At most one Pending/Accepted/In_progress request per build; enforced by a filtered unique SQL index.'
 }
 
 Table devices {
   id varchar(50) [pk]
   seller_user_id int [not null, ref: > users.id]
-  device_name varchar(100) [not null]
+  device_name nvarchar(100) [not null]
   device_type DeviceType [not null]
   is_active boolean [not null]
   last_seen_at datetime
   created_at datetime [not null]
 
-  Note: 'Seller-owned QC device or station. Current implementation creates a simulated QC_STATION on demand.'
+  Note: 'Seller-owned QC device or station. At most one active QC_STATION per seller; enforced by a filtered unique SQL index.'
 }
 
 Table device_test_sessions {
@@ -243,7 +245,7 @@ Table device_test_sessions {
   total_keys int [not null]
   status TestSessionStatus [not null]
 
-  Note: 'Compact QC session. Seller context is resolved through request_id and device_id.'
+  Note: 'Compact QC session. Seller context is resolved through request_id and device_id. At most one Running session per request.'
 }
 
 Table device_key_test_results {

@@ -5,6 +5,18 @@ namespace Custom_keyboard.Repositories.SqlServer;
 
 internal static class SqlRepositoryHelpers
 {
+    // Required by SQL Server for DML against tables that have filtered indexes.
+    public const string IndexedDmlSetOptions = """
+        SET ANSI_NULLS ON;
+        SET ANSI_PADDING ON;
+        SET ANSI_WARNINGS ON;
+        SET ARITHABORT ON;
+        SET CONCAT_NULL_YIELDS_NULL ON;
+        SET QUOTED_IDENTIFIER ON;
+        SET NUMERIC_ROUNDABORT OFF;
+
+        """;
+
     public static SqlParameter AddParameter(this SqlCommand command, string name, SqlDbType type, object? value, int size = 0)
     {
         var parameter = command.Parameters.Add(name, type);

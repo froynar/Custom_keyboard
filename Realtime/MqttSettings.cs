@@ -1,3 +1,5 @@
+using System.Security.Cryptography;
+
 namespace Custom_keyboard.Realtime;
 
 /// <summary>
@@ -21,4 +23,13 @@ public sealed class MqttSettings
 
     /// <summary>How long to wait for a broker connection before giving up (best-effort).</summary>
     public TimeSpan ConnectTimeout { get; set; } = TimeSpan.FromSeconds(5);
+
+    /// <summary>
+    /// HMAC secret for device telemetry envelopes. Set CUSTOM_KEYBOARD_DEVICE_TELEMETRY_SECRET
+    /// when an external device/process must publish trusted QC messages. A per-process secret is
+    /// generated otherwise, which is sufficient for the in-app simulator/publisher/subscriber.
+    /// </summary>
+    public string DeviceTelemetrySecret { get; set; } =
+        Environment.GetEnvironmentVariable("CUSTOM_KEYBOARD_DEVICE_TELEMETRY_SECRET")
+        ?? Convert.ToHexString(RandomNumberGenerator.GetBytes(32));
 }

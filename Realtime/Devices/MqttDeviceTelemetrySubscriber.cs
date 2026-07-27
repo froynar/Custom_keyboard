@@ -1,4 +1,3 @@
-using System.Text.Json;
 using Custom_keyboard.Diagnostics;
 using Custom_keyboard.Models.Devices;
 using Custom_keyboard.Models.Enums;
@@ -14,6 +13,7 @@ namespace Custom_keyboard.Realtime.Devices;
 public sealed class MqttDeviceTelemetrySubscriber : IDeviceTelemetrySubscriber, IAsyncDisposable
 {
     private const int CompleteRetryAttempts = 10;
+    private const int MaxPayloadCharacters = 64 * 1024;
     private static readonly TimeSpan CompleteRetryDelay = TimeSpan.FromMilliseconds(150);
 
     private readonly MqttSettings _settings;
@@ -125,23 +125,44 @@ public sealed class MqttDeviceTelemetrySubscriber : IDeviceTelemetrySubscriber, 
         await _processGate.WaitAsync();
         try
         {
-            if (topic.EndsWith(DeviceTelemetryTransport.KeyTestSuffix, StringComparison.OrdinalIgnoreCase))
+            if (payload.Length > MaxPayloadCharacters)
             {
-                var telemetry = JsonSerializer.Deserialize<KeyTelemetry>(payload, DeviceTelemetryTransport.Json);
-                if (telemetry is not null)
-                {
-                    await _deviceService.RecordKeyResultAsync(telemetry);
-                    await RaiseAsync(KeyTestReceived, telemetry);
-                }
+                throw new InvalidOperationException("Device telemetry payload exceeds the accepted size.");
             }
-            else if (topic.EndsWith(DeviceTelemetryTransport.SessionSummarySuffix, StringComparison.OrdinalIgnoreCase))
+
+            if (DeviceTelemetryTransport.TryParseKeyTestTopic(
+                    _settings.TopicRoot,
+                    topic,
+                    out var topicDeviceId,
+                    out var topicRequestId))
             {
-                var summary = JsonSerializer.Deserialize<DeviceTestSession>(payload, DeviceTelemetryTransport.Json);
-                if (summary is not null)
+                var telemetry = DeviceTelemetryTransport.DeserializeSigned<KeyTelemetry>(
+                    payload,
+                    _settings.DeviceTelemetrySecret);
+                EnsureTopicIdentity(topicDeviceId, topicRequestId, telemetry.DeviceId, telemetry.RequestId);
+                await _deviceService.RecordKeyResultAsync(telemetry);
+                await RaiseAsync(KeyTestReceived, telemetry);
+            }
+            else if (DeviceTelemetryTransport.TryParseSessionSummaryTopic(
+                         _settings.TopicRoot,
+                         topic,
+                         out topicDeviceId,
+                         out topicRequestId))
+            {
+                var summary = DeviceTelemetryTransport.DeserializeSigned<DeviceTestSession>(
+                    payload,
+                    _settings.DeviceTelemetrySecret);
+                EnsureTopicIdentity(topicDeviceId, topicRequestId, summary.DeviceId, summary.RequestId);
+                var persisted = await _deviceService.GetLatestSessionByRequestAsync(topicRequestId);
+                if (persisted is null
+                    || !string.Equals(persisted.SessionId, summary.SessionId, StringComparison.OrdinalIgnoreCase)
+                    || !string.Equals(persisted.DeviceId, topicDeviceId, StringComparison.OrdinalIgnoreCase))
                 {
-                    var completed = await CompleteWhenReadyAsync(summary.SessionId);
-                    await RaiseAsync(SessionSummaryReceived, completed ?? summary);
+                    throw new InvalidOperationException("Session summary does not match the active persisted QC session.");
                 }
+
+                var completed = await CompleteWhenReadyAsync(summary.SessionId);
+                await RaiseAsync(SessionSummaryReceived, completed ?? summary);
             }
         }
         catch (Exception ex)
@@ -151,6 +172,19 @@ public sealed class MqttDeviceTelemetrySubscriber : IDeviceTelemetrySubscriber, 
         finally
         {
             _processGate.Release();
+        }
+    }
+
+    private static void EnsureTopicIdentity(
+        string topicDeviceId,
+        string topicRequestId,
+        string payloadDeviceId,
+        string payloadRequestId)
+    {
+        if (!string.Equals(topicDeviceId, payloadDeviceId, StringComparison.Ordinal)
+            || !string.Equals(topicRequestId, payloadRequestId, StringComparison.Ordinal))
+        {
+            throw new InvalidOperationException("Device telemetry topic identity does not match its payload.");
         }
     }
 

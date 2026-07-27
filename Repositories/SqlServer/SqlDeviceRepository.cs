@@ -26,7 +26,7 @@ public sealed class SqlDeviceRepository : IDeviceRepository
         await connection.OpenAsync(cancellationToken);
 
         await using var command = connection.CreateCommand();
-        command.CommandText = """
+        command.CommandText = SqlRepositoryHelpers.IndexedDmlSetOptions + """
             IF EXISTS (SELECT 1 FROM devices WHERE id = @device_id)
             BEGIN
                 UPDATE devices
@@ -80,6 +80,86 @@ public sealed class SqlDeviceRepository : IDeviceRepository
         }
 
         throw new InvalidOperationException("Could not save device.");
+    }
+
+    public async Task<Device> GetOrCreateActiveQcStationAsync(
+        int sellerUserId,
+        string deviceName,
+        CancellationToken cancellationToken = default)
+    {
+        var newDeviceId = $"DEV_{Guid.NewGuid():N}";
+
+        await using var connection = _connectionFactory.CreateConnection();
+        await connection.OpenAsync(cancellationToken);
+
+        await using var command = connection.CreateCommand();
+        command.CommandText = SqlRepositoryHelpers.IndexedDmlSetOptions + """
+            SET XACT_ABORT ON;
+            SET TRANSACTION ISOLATION LEVEL SERIALIZABLE;
+
+            DECLARE @device_id VARCHAR(50);
+            BEGIN TRANSACTION;
+
+            SELECT TOP (1) @device_id = id
+            FROM devices WITH (UPDLOCK, HOLDLOCK)
+            WHERE seller_user_id = @seller_user_id
+              AND device_type = 'QC_STATION'
+              AND is_active = 1
+            ORDER BY created_at, id;
+
+            IF @device_id IS NULL
+            BEGIN
+                SET @device_id = @new_device_id;
+                INSERT INTO devices (
+                    id,
+                    seller_user_id,
+                    device_name,
+                    device_type,
+                    is_active,
+                    last_seen_at,
+                    created_at
+                )
+                VALUES (
+                    @device_id,
+                    @seller_user_id,
+                    @device_name,
+                    'QC_STATION',
+                    1,
+                    SYSUTCDATETIME(),
+                    SYSUTCDATETIME()
+                );
+            END
+            ELSE
+            BEGIN
+                UPDATE devices
+                SET last_seen_at = SYSUTCDATETIME()
+                WHERE id = @device_id;
+            END;
+
+            COMMIT TRANSACTION;
+
+            SELECT
+                id AS device_id,
+                seller_user_id,
+                device_name,
+                device_type,
+                is_active,
+                last_seen_at,
+                created_at
+            FROM devices
+            WHERE id = @device_id;
+            """;
+        command.AddParameter("@seller_user_id", SqlDbType.Int, sellerUserId);
+        command.AddParameter("@device_name", SqlDbType.NVarChar, deviceName, 100);
+        command.AddParameter("@new_device_id", SqlDbType.VarChar, newDeviceId, 50);
+
+        await using var reader = await command.ExecuteReaderAsync(cancellationToken);
+        if (await reader.ReadAsync(cancellationToken))
+        {
+            return MapDevice(reader);
+        }
+
+        throw new InvalidOperationException("Could not get or create the seller QC station.");
     }
 
     public async Task<IReadOnlyList<Device>> GetBySellerAsync(int sellerUserId, CancellationToken cancellationToken = default)

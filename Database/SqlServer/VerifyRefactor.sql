@@ -12,13 +12,13 @@ GO
 SET NOCOUNT ON;
 GO
 
-DECLARE @ExpectedSchemaVersion varchar(64) = '2026.07.27-qc-concise';
+DECLARE @ExpectedSchemaVersion varchar(64) = '2026.07.27-build-device-hardening';
 
 DECLARE @SchemaMigrationsObjectId int = OBJECT_ID(N'dbo.schema_migrations', N'U');
 
 IF @SchemaMigrationsObjectId IS NULL
 BEGIN
-    THROW 51000, 'VerifyRefactor.sql requires clean schema version 2026.07.27-qc-concise.', 1;
+    THROW 51000, 'VerifyRefactor.sql requires clean schema version 2026.07.27-build-device-hardening.', 1;
 END;
 
 IF (
@@ -72,7 +72,7 @@ EXEC sys.sp_executesql
 
 IF @SchemaVersionFound = 0
 BEGIN
-    THROW 51000, 'VerifyRefactor.sql requires clean schema version 2026.07.27-qc-concise.', 1;
+    THROW 51000, 'VerifyRefactor.sql requires clean schema version 2026.07.27-build-device-hardening.', 1;
 END;
 
 DECLARE @ExpectedPrimaryKey TABLE (

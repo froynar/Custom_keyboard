@@ -1,4 +1,3 @@
-using System.Text.Json;
 using Custom_keyboard.Diagnostics;
 using Custom_keyboard.Models.Devices;
 using MQTTnet;
@@ -52,7 +51,9 @@ public sealed class MqttDeviceTelemetryPublisher : IDeviceTelemetryPublisher, IA
                 return false;
             }
 
-            var json = JsonSerializer.Serialize(payload, DeviceTelemetryTransport.Json);
+            var json = DeviceTelemetryTransport.SerializeSigned(
+                payload,
+                _settings.DeviceTelemetrySecret);
             var message = new MqttApplicationMessageBuilder()
                 .WithTopic(topic)
                 .WithPayload(json)

@@ -5,7 +5,7 @@ namespace Custom_keyboard.Data.SqlServer;
 
 public sealed class SqlServerHealthCheck
 {
-    public const string ExpectedSchemaVersion = "2026.07.27-qc-concise";
+    public const string ExpectedSchemaVersion = "2026.07.27-build-device-hardening";
 
     private const int ExpectedPrimaryKeyCount = 21;
     private const int ExpectedForeignKeyCount = 30;
@@ -103,6 +103,22 @@ public sealed class SqlServerHealthCheck
         if (qcColumnState.WrongShapeCount > 0)
         {
             issues.Add($"{qcColumnState.WrongShapeCount} concise QC column(s) have an unexpected type or nullability");
+        }
+
+        var hardeningState = await ReadBuildDeviceHardeningStateAsync(connection, cancellationToken);
+        if (hardeningState.InvalidUnicodeColumnCount > 0)
+        {
+            issues.Add($"{hardeningState.InvalidUnicodeColumnCount} build/request Unicode column(s) are missing or malformed");
+        }
+
+        if (hardeningState.InvalidIndexCount > 0)
+        {
+            issues.Add($"{hardeningState.InvalidIndexCount} build/device concurrency guard index(es) are missing or disabled");
+        }
+
+        if (hardeningState.InvalidCheckConstraintCount > 0)
+        {
+            issues.Add($"{hardeningState.InvalidCheckConstraintCount} build/device check constraint(s) are missing or untrusted");
         }
 
         if (issues.Count > 0)
@@ -554,6 +570,96 @@ public sealed class SqlServerHealthCheck
             reader.GetInt32(3));
     }
 
+    private static async Task<BuildDeviceHardeningState> ReadBuildDeviceHardeningStateAsync(
+        SqlConnection connection,
+        CancellationToken cancellationToken)
+    {
+        await using var command = connection.CreateCommand();
+        command.CommandText = """
+            WITH expected_unicode AS (
+                SELECT *
+                FROM (VALUES
+                    (N'builds', N'name', CONVERT(smallint, 510), CONVERT(bit, 0)),
+                    (N'builds', N'notes', CONVERT(smallint, 1000), CONVERT(bit, 1)),
+                    (N'build_items', N'notes', CONVERT(smallint, 1000), CONVERT(bit, 1)),
+                    (N'build_mods', N'mod_type', CONVERT(smallint, 200), CONVERT(bit, 0)),
+                    (N'build_mods', N'target_component', CONVERT(smallint, 200), CONVERT(bit, 0)),
+                    (N'build_mods', N'notes', CONVERT(smallint, 1000), CONVERT(bit, 1)),
+                    (N'build_requests', N'note', CONVERT(smallint, 1000), CONVERT(bit, 1))
+                ) AS values_list(table_name, column_name, max_length, is_nullable)
+            ),
+            expected_indexes AS (
+                SELECT index_name
+                FROM (VALUES
+                    (N'UX_build_requests_one_active_per_build'),
+                    (N'UX_devices_one_active_qc_station_per_seller'),
+                    (N'UX_dts_one_running_per_request')
+                ) AS values_list(index_name)
+            ),
+            expected_checks AS (
+                SELECT constraint_name
+                FROM (VALUES
+                    (N'CK_builds_name_not_blank'),
+                    (N'CK_devices_name_not_blank'),
+                    (N'CK_dts_switch_technology_not_blank'),
+                    (N'CK_dts_total_keys'),
+                    (N'CK_dktr_key_code_not_blank'),
+                    (N'CK_dktr_press_count'),
+                    (N'CK_dktr_latency'),
+                    (N'CK_dktr_hold_duration'),
+                    (N'CK_dktr_noise')
+                ) AS values_list(constraint_name)
+            )
+            SELECT
+                (
+                    SELECT COUNT(*)
+                    FROM expected_unicode AS expected
+                    LEFT JOIN sys.tables AS table_info
+                        ON table_info.name = expected.table_name
+                       AND table_info.schema_id = SCHEMA_ID(N'dbo')
+                    LEFT JOIN sys.columns AS column_info
+                        ON column_info.object_id = table_info.object_id
+                       AND column_info.name = expected.column_name
+                    LEFT JOIN sys.types AS type_info
+                        ON type_info.user_type_id = column_info.user_type_id
+                    WHERE column_info.column_id IS NULL
+                       OR type_info.name <> N'nvarchar'
+                       OR column_info.max_length <> expected.max_length
+                       OR column_info.is_nullable <> expected.is_nullable
+                ) AS invalid_unicode_column_count,
+                (
+                    SELECT COUNT(*)
+                    FROM expected_indexes AS expected
+                    LEFT JOIN sys.indexes AS index_info
+                        ON index_info.name = expected.index_name
+                    WHERE index_info.index_id IS NULL
+                       OR index_info.is_unique <> 1
+                       OR index_info.has_filter <> 1
+                       OR index_info.is_disabled <> 0
+                ) AS invalid_index_count,
+                (
+                    SELECT COUNT(*)
+                    FROM expected_checks AS expected
+                    LEFT JOIN sys.check_constraints AS check_info
+                        ON check_info.name = expected.constraint_name
+                    WHERE check_info.object_id IS NULL
+                       OR check_info.is_disabled <> 0
+                       OR check_info.is_not_trusted <> 0
+                ) AS invalid_check_constraint_count;
+            """;
+
+        await using var reader = await command.ExecuteReaderAsync(cancellationToken);
+        if (!await reader.ReadAsync(cancellationToken))
+        {
+            return new BuildDeviceHardeningState(7, 3, 9);
+        }
+
+        return new BuildDeviceHardeningState(
+            reader.GetInt32(0),
+            reader.GetInt32(1),
+            reader.GetInt32(2));
+    }
+
     private sealed record PrimaryKeyState(
         int MissingTableCount,
         int IdPrimaryKeyCount,
@@ -572,4 +678,9 @@ public sealed class SqlServerHealthCheck
         int MissingColumnCount,
         int UnexpectedColumnCount,
         int WrongShapeCount);
+
+    private sealed record BuildDeviceHardeningState(
+        int InvalidUnicodeColumnCount,
+        int InvalidIndexCount,
+        int InvalidCheckConstraintCount);
 }

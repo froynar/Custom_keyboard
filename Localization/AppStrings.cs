@@ -517,6 +517,7 @@ public static class AppStrings
         ["Admin_Reject"] = ("Từ chối", "Reject"),
 
         // ===== Service-level validation / errors (thrown, shown via catch) =====
+        ["Service_RequestChanged"] = ("Request vừa được thay đổi ở nơi khác; hãy làm mới rồi thử lại.", "The request changed elsewhere; refresh and try again."),
         ["Service_InvalidBuyer"] = ("Buyer không hợp lệ.", "Invalid buyer."),
         ["Service_RequestNotExist"] = ("Request không tồn tại.", "Request does not exist."),
         ["Service_RequestNotOwned"] = ("Request không thuộc seller hiện tại.", "This request does not belong to the current seller."),

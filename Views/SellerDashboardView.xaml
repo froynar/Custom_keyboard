@@ -297,7 +297,9 @@
                                         <DataGridCheckBoxColumn Header="{loc:Tr QcTest_ColPress}" Binding="{Binding PressSignalDetected}" Width="70" IsReadOnly="True"/>
                                         <DataGridCheckBoxColumn Header="{loc:Tr QcTest_ColRelease}" Binding="{Binding ReleaseSignal}" Width="80" IsReadOnly="True"/>
                                         <DataGridTextColumn Header="{loc:Tr QcTest_ColPressEvents}" Binding="{Binding PressCount}" Width="100"/>
+                                        <DataGridTextColumn Header="{loc:Tr QcTest_ColBounce}" Binding="{Binding BounceCount, TargetNullValue=-}" Width="85"/>
                                         <DataGridTextColumn Header="{loc:Tr QcTest_ColLatency}" Binding="{Binding Latency, StringFormat=N2}" Width="100"/>
+                                        <DataGridCheckBoxColumn Header="{loc:Tr QcTest_ColStuck}" Binding="{Binding IsStuck}" Width="70" IsReadOnly="True"/>
                                         <DataGridTemplateColumn Header="{loc:Tr QcTest_ColResult}" Width="110">
                                             <DataGridTemplateColumn.CellTemplate>
                                                 <DataTemplate>

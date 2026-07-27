@@ -31,6 +31,22 @@ public sealed class SqlDeviceKeyTestResultRepository : IDeviceKeyTestResultRepos
 
             BEGIN TRANSACTION;
 
+            IF NOT EXISTS (
+                SELECT 1
+                FROM device_test_sessions AS session_row WITH (UPDLOCK, HOLDLOCK)
+                INNER JOIN build_requests AS request_row
+                    ON request_row.id = session_row.request_id
+                INNER JOIN devices AS device_row
+                    ON device_row.id = session_row.device_id
+                   AND device_row.seller_user_id = request_row.seller_user_id
+                WHERE session_row.id = @session_id
+                  AND session_row.status = 'Running'
+                  AND request_row.status = 'In_progress'
+                  AND device_row.device_type = 'QC_STATION'
+                  AND device_row.is_active = 1
+            )
+                THROW 51420, 'Key telemetry requires an active QC session, request, and seller device.', 1;
+
             SELECT TOP (1) @key_test_id = id
             FROM device_key_test_results WITH (UPDLOCK, HOLDLOCK)
             WHERE session_id = @session_id

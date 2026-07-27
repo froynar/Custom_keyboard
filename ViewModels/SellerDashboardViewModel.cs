@@ -24,8 +24,10 @@ public sealed class SellerDashboardViewModel : RoleDashboardViewModel
     private readonly IStatsService _statsService;
     private readonly IDeviceService _deviceService;
     private readonly DeviceSimulator _deviceSimulator;
+    private readonly SemaphoreSlim _operationGate = new(1, 1);
     private bool _hasLoaded;
     private bool _isBusy;
+    private int _qcSelectionVersion;
     private string _statusMessage = Tr("Common_Ready");
     private BuildRequest? _selectedRequest;
     private DeviceTestSession? _qcSession;
@@ -111,7 +113,8 @@ public sealed class SellerDashboardViewModel : RoleDashboardViewModel
             {
                 OnPropertyChanged(nameof(SelectedRequestPayload));
                 RaiseCommandStatesChanged();
-                _ = LoadSelectedRequestQcAsync();
+                var loadVersion = Interlocked.Increment(ref _qcSelectionVersion);
+                _ = LoadSelectedRequestQcAsync(value?.RequestId, loadVersion);
             }
         }
     }
@@ -238,8 +241,10 @@ public sealed class SellerDashboardViewModel : RoleDashboardViewModel
     private async Task RefreshRequestsAsync()
     {
         var previousId = SelectedRequest?.RequestId;
+        var refreshed = await _requestService.GetSellerRequestsAsync(CurrentUser.UserId);
+
         Requests.Clear();
-        foreach (var request in await _requestService.GetSellerRequestsAsync(CurrentUser.UserId))
+        foreach (var request in refreshed)
         {
             Requests.Add(request);
         }
@@ -290,55 +295,94 @@ public sealed class SellerDashboardViewModel : RoleDashboardViewModel
     {
         var request = SelectedRequest ?? throw new InvalidOperationException(Tr("Seller_SelectRequestFirst"));
         await _deviceSimulator.RunQcTestAsync(request);
-        await LoadQcAsync(request.RequestId);
+        await LoadQcAsync(request.RequestId, requireCurrentSelection: true);
+        StatusMessage = _deviceSimulator.LastStatusMessage ?? Tr("QcTest_Completed");
     }
 
-    private async Task LoadQcAsync(string requestId)
+    private async Task LoadQcAsync(string requestId, bool requireCurrentSelection = false)
     {
         var session = await _deviceService.GetLatestSessionByRequestAsync(requestId);
-        QcSession = session;
-        KeyResults.Clear();
+        IReadOnlyList<DeviceKeyTestResult> results = [];
         if (session is not null)
         {
-            foreach (var result in await _deviceService.GetKeyResultsAsync(session.SessionId))
+            results = await _deviceService.GetKeyResultsAsync(session.SessionId);
+        }
+
+        if (requireCurrentSelection
+            && !string.Equals(SelectedRequest?.RequestId, requestId, StringComparison.OrdinalIgnoreCase))
+        {
+            return;
+        }
+
+        QcSession = session;
+        KeyResults.Clear();
+        foreach (var result in results)
+        {
+            KeyResults.Add(result);
+        }
+    }
+
+    // A selection can change while SQL is loading. Only the newest selection may update the QC panel.
+    private async Task LoadSelectedRequestQcAsync(string? requestId, int loadVersion)
+    {
+        try
+        {
+            if (requestId is null)
+            {
+                if (loadVersion == Volatile.Read(ref _qcSelectionVersion))
+                {
+                    QcSession = null;
+                    KeyResults.Clear();
+                }
+
+                return;
+            }
+
+            var session = await _deviceService.GetLatestSessionByRequestAsync(requestId);
+            IReadOnlyList<DeviceKeyTestResult> results = session is null
+                ? []
+                : await _deviceService.GetKeyResultsAsync(session.SessionId);
+
+            if (loadVersion != Volatile.Read(ref _qcSelectionVersion)
+                || !string.Equals(SelectedRequest?.RequestId, requestId, StringComparison.OrdinalIgnoreCase))
+            {
+                return;
+            }
+
+            QcSession = session;
+            KeyResults.Clear();
+            foreach (var result in results)
             {
                 KeyResults.Add(result);
             }
         }
-    }
-
-    // Best-effort: show the latest QC result for the newly selected request (a request may have none).
-    private async Task LoadSelectedRequestQcAsync()
-    {
-        try
-        {
-            var request = SelectedRequest;
-            if (request is null)
-            {
-                QcSession = null;
-                KeyResults.Clear();
-                return;
-            }
-
-            await LoadQcAsync(request.RequestId);
-        }
         catch (Exception ex)
         {
             AppLog.Error("SellerDashboard.LoadQc", ex);
-            QcSession = null;
-            KeyResults.Clear();
+            if (loadVersion == Volatile.Read(ref _qcSelectionVersion)
+                && string.Equals(SelectedRequest?.RequestId, requestId, StringComparison.OrdinalIgnoreCase))
+            {
+                QcSession = null;
+                KeyResults.Clear();
+                StatusMessage = AppLog.ToUserMessage(ex);
+            }
         }
     }
 
     private async Task ExecuteSafeAsync(Func<Task> action, string? successMessage = null)
     {
+        await _operationGate.WaitAsync();
+        var processingMessage = Tr("Common_Processing");
         IsBusy = true;
-        StatusMessage = Tr("Common_Processing");
+        StatusMessage = processingMessage;
 
         try
         {
             await action();
-            StatusMessage = successMessage ?? Tr("Common_Done");
+            if (string.Equals(StatusMessage, processingMessage, StringComparison.Ordinal))
+            {
+                StatusMessage = successMessage ?? Tr("Common_Done");
+            }
         }
         catch (Exception ex)
         {
@@ -348,6 +392,7 @@ public sealed class SellerDashboardViewModel : RoleDashboardViewModel
         finally
         {
             IsBusy = false;
+            _operationGate.Release();
         }
     }
 

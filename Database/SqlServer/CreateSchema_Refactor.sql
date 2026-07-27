@@ -12,7 +12,7 @@
 --        -> audit_log -> chat_conversations -> chat_messages
 -- This script is idempotent: it drops the 21 tables (reverse FK order), resets schema
 -- migration history, and recreates the clean schema.
--- Clean installs and upgraded databases both record schema version 2026.07.27-qc-concise.
+-- Clean installs record both the concise QC and build/device hardening schema versions.
 
 IF DB_ID(N'CustomKeyboard_Refactor') IS NULL
 BEGIN
@@ -24,7 +24,13 @@ USE CustomKeyboard_Refactor;
 GO
 
 SET XACT_ABORT ON;
-SET QUOTED_IDENTIFIER ON;   -- required by filtered index UX_seller_applications_pending_buyer
+SET ANSI_NULLS ON;
+SET ANSI_PADDING ON;
+SET ANSI_WARNINGS ON;
+SET ARITHABORT ON;
+SET CONCAT_NULL_YIELDS_NULL ON;
+SET QUOTED_IDENTIFIER ON;
+SET NUMERIC_ROUNDABORT OFF;
 GO
 
 -- ---------------------------------------------------------------------------
@@ -228,8 +234,8 @@ CREATE TABLE builds (
     id VARCHAR(50) PRIMARY KEY,
     buyer_id INT NOT NULL,
     kit_id VARCHAR(50) NOT NULL,
-    name VARCHAR(255) NOT NULL,
-    notes VARCHAR(500) NULL,
+    name NVARCHAR(255) NOT NULL,
+    notes NVARCHAR(500) NULL,
     noise_requirement VARCHAR(20) NOT NULL DEFAULT 'Normal', -- Normal / Quiet / Silent
     status VARCHAR(50) NOT NULL,                     -- Draft, Saved, Requested, Archived
     total_cost_snapshot DECIMAL(10,2) NOT NULL,
@@ -239,7 +245,8 @@ CREATE TABLE builds (
     CONSTRAINT FK_builds_kit FOREIGN KEY (kit_id) REFERENCES keyboard_kits(id),
     CONSTRAINT CK_builds_noise_requirement CHECK (noise_requirement IN ('Normal','Quiet','Silent')),
     CONSTRAINT CK_builds_status CHECK (status IN ('Draft', 'Saved', 'Requested', 'Archived')),
-    CONSTRAINT CK_builds_total CHECK (total_cost_snapshot >= 0)
+    CONSTRAINT CK_builds_total CHECK (total_cost_snapshot >= 0),
+    CONSTRAINT CK_builds_name_not_blank CHECK (LEN(LTRIM(RTRIM(name))) > 0)
 );
 GO
 
@@ -255,7 +262,7 @@ CREATE TABLE build_items (
     accessory_id VARCHAR(50) NULL,
     quantity INT NOT NULL,
     unit_price_snapshot DECIMAL(10,2) NOT NULL,
-    notes VARCHAR(500) NULL,
+    notes NVARCHAR(500) NULL,
     CONSTRAINT FK_build_items_build FOREIGN KEY (build_id) REFERENCES builds(id),
     CONSTRAINT FK_build_items_switch FOREIGN KEY (switch_id) REFERENCES switches(id),
     CONSTRAINT FK_build_items_keycap FOREIGN KEY (keycap_id) REFERENCES keycap_sets(id),
@@ -279,9 +286,9 @@ GO
 CREATE TABLE build_mods (
     id INT IDENTITY(1,1) PRIMARY KEY,
     build_id VARCHAR(50) NOT NULL,
-    mod_type VARCHAR(100) NOT NULL,                  -- Lube, Film, Spring_swap, Tape_mod, Foam_mod
-    target_component VARCHAR(100) NOT NULL,          -- Switch, Stabilizer, Kit, Build
-    notes VARCHAR(500) NULL,
+    mod_type NVARCHAR(100) NOT NULL,                 -- Lube, Film, Spring_swap, Tape_mod, Foam_mod
+    target_component NVARCHAR(100) NOT NULL,         -- Switch, Stabilizer, Kit, Build
+    notes NVARCHAR(500) NULL,
     CONSTRAINT FK_build_mods_build FOREIGN KEY (build_id) REFERENCES builds(id)
 );
 GO
@@ -295,7 +302,7 @@ CREATE TABLE build_requests (
     seller_user_id INT NOT NULL,
     request_payload_json NVARCHAR(MAX) NOT NULL,
     status VARCHAR(50) NOT NULL,                     -- Pending, Accepted, In_progress, Completed, Cancelled
-    note VARCHAR(500) NULL,
+    note NVARCHAR(500) NULL,
     requested_at DATETIME2 NOT NULL DEFAULT SYSUTCDATETIME(),
     accepted_at DATETIME2 NULL,
     completed_at DATETIME2 NULL,
@@ -318,7 +325,8 @@ CREATE TABLE devices (
     last_seen_at     DATETIME2    NULL,
     created_at       DATETIME2    NOT NULL DEFAULT SYSUTCDATETIME(),
     CONSTRAINT FK_devices_seller FOREIGN KEY (seller_user_id) REFERENCES users(id),
-    CONSTRAINT CK_devices_type CHECK (device_type IN ('QC_STATION','KEY_SIGNAL_TESTER','LATENCY_TESTER','NOISE_SENSOR'))
+    CONSTRAINT CK_devices_type CHECK (device_type IN ('QC_STATION','KEY_SIGNAL_TESTER','LATENCY_TESTER','NOISE_SENSOR')),
+    CONSTRAINT CK_devices_name_not_blank CHECK (LEN(LTRIM(RTRIM(device_name))) > 0)
 );
 GO
 
@@ -337,7 +345,8 @@ CREATE TABLE device_test_sessions (
     CONSTRAINT FK_dts_device  FOREIGN KEY (device_id)  REFERENCES devices(id),
     CONSTRAINT CK_dts_noise_requirement CHECK (noise_requirement IN ('Normal','Quiet','Silent')),
     CONSTRAINT CK_dts_status CHECK (status IN ('Running','Passed','Warning','Failed')),
-    CONSTRAINT CK_dts_total_keys CHECK (total_keys > 0)
+    CONSTRAINT CK_dts_total_keys CHECK (total_keys BETWEEN 1 AND 256),
+    CONSTRAINT CK_dts_switch_technology_not_blank CHECK (LEN(LTRIM(RTRIM(switch_technology))) > 0)
 );
 GO
 
@@ -359,10 +368,11 @@ CREATE TABLE device_key_test_results (
     recorded_at             DATETIME2   NOT NULL DEFAULT SYSUTCDATETIME(),
     CONSTRAINT FK_dktr_session FOREIGN KEY (session_id) REFERENCES device_test_sessions(id),
     CONSTRAINT CK_dktr_result CHECK (result IN ('Pass','Warning','Fail')),
-    CONSTRAINT CK_dktr_press_count CHECK (press_count >= 0),
-    CONSTRAINT CK_dktr_latency CHECK (latency IS NULL OR latency >= 0),
-    CONSTRAINT CK_dktr_hold_duration CHECK (hold_duration IS NULL OR hold_duration >= 0),
-    CONSTRAINT CK_dktr_noise CHECK (noise IS NULL OR noise >= 0)
+    CONSTRAINT CK_dktr_press_count CHECK (press_count BETWEEN 0 AND 100),
+    CONSTRAINT CK_dktr_latency CHECK (latency IS NULL OR latency BETWEEN 0 AND 10000),
+    CONSTRAINT CK_dktr_hold_duration CHECK (hold_duration IS NULL OR hold_duration BETWEEN 0 AND 3600000),
+    CONSTRAINT CK_dktr_noise CHECK (noise IS NULL OR noise BETWEEN 0 AND 200),
+    CONSTRAINT CK_dktr_key_code_not_blank CHECK (LEN(LTRIM(RTRIM(key_code))) > 0)
 );
 GO
 
@@ -453,6 +463,9 @@ CREATE INDEX IX_build_mods_build_id ON build_mods(build_id);
 CREATE INDEX IX_build_requests_build_id ON build_requests(build_id);
 CREATE INDEX IX_build_requests_seller_status ON build_requests(seller_user_id, status);
 CREATE INDEX IX_build_requests_status ON build_requests(status);
+CREATE UNIQUE INDEX UX_build_requests_one_active_per_build
+ON build_requests(build_id)
+WHERE status IN ('Pending', 'Accepted', 'In_progress');
 
 CREATE INDEX IX_audit_log_user_changed_at ON audit_log(user_id, changed_at DESC);
 
@@ -472,8 +485,14 @@ WHERE status = 'Pending';
 
 -- Device QC layer
 CREATE INDEX IX_devices_seller ON devices(seller_user_id);
+CREATE UNIQUE INDEX UX_devices_one_active_qc_station_per_seller
+ON devices(seller_user_id)
+WHERE is_active = 1 AND device_type = 'QC_STATION';
 CREATE INDEX IX_dts_request ON device_test_sessions(request_id);
 CREATE INDEX IX_dts_device ON device_test_sessions(device_id);
+CREATE UNIQUE INDEX UX_dts_one_running_per_request
+ON device_test_sessions(request_id)
+WHERE status = 'Running';
 CREATE INDEX IX_dktr_session ON device_key_test_results(session_id);
 CREATE UNIQUE INDEX UX_dktr_session_key_code ON device_key_test_results(session_id, key_code);
 GO
@@ -492,6 +511,14 @@ INSERT INTO dbo.schema_migrations (version, description, applied_at, succeeded)
 VALUES (
     '2026.07.27-qc-concise',
     'Concise normalized QC schema with 21 business tables and 30 foreign keys',
+    SYSUTCDATETIME(),
+    1
+);
+
+INSERT INTO dbo.schema_migrations (version, description, applied_at, succeeded)
+VALUES (
+    '2026.07.27-build-device-hardening',
+    'Atomic build requests, Unicode text, and hardened device QC invariants',
     SYSUTCDATETIME(),
     1
 );

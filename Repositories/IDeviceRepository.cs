@@ -6,6 +6,10 @@ public interface IDeviceRepository
 {
     // Upsert. Generates a DEV_{Guid:N} id when DeviceId is empty.
     Task<Device> SaveAsync(Device device, CancellationToken cancellationToken = default);
+    Task<Device> GetOrCreateActiveQcStationAsync(
+        int sellerUserId,
+        string deviceName,
+        CancellationToken cancellationToken = default);
     Task<IReadOnlyList<Device>> GetBySellerAsync(int sellerUserId, CancellationToken cancellationToken = default);
     Task<Device?> GetByIdAsync(string deviceId, CancellationToken cancellationToken = default);
 }

@@ -21,25 +21,29 @@ public sealed class SqlDeviceTestSessionRepository : IDeviceTestSessionRepositor
     {
         if (string.IsNullOrWhiteSpace(session.SessionId))
         {
-            session.SessionId = $"QCSESS_{Guid.NewGuid():N}";
+            var suffix = Guid.NewGuid().ToString("N")[..12];
+            session.SessionId = $"QC_{DateTime.UtcNow:yyyyMMddHHmmssfff}_{suffix}";
         }
 
         await using var connection = _connectionFactory.CreateConnection();
         await connection.OpenAsync(cancellationToken);
 
         await using var command = connection.CreateCommand();
-        command.CommandText = $"""
+        command.CommandText = SqlRepositoryHelpers.IndexedDmlSetOptions + $"""
             IF EXISTS (SELECT 1 FROM device_test_sessions WHERE id = @session_id)
             BEGIN
                 UPDATE device_test_sessions
                 SET
-                    request_id = @request_id,
-                    device_id = @device_id,
-                    switch_technology = @switch_technology,
-                    noise_requirement = @noise_requirement,
-                    total_keys = @total_keys,
                     status = @status
-                WHERE id = @session_id;
+                WHERE id = @session_id
+                  AND request_id = @request_id
+                  AND device_id = @device_id
+                  AND switch_technology = @switch_technology
+                  AND noise_requirement = @noise_requirement
+                  AND total_keys = @total_keys;
+
+                IF @@ROWCOUNT <> 1
+                    THROW 51410, 'QC session identity/configuration is immutable.', 1;
             END
             ELSE
             BEGIN
@@ -52,7 +56,7 @@ public sealed class SqlDeviceTestSessionRepository : IDeviceTestSessionRepositor
                     total_keys,
                     status
                 )
-                VALUES (
+                SELECT
                     @session_id,
                     @request_id,
                     @device_id,
@@ -60,7 +64,17 @@ public sealed class SqlDeviceTestSessionRepository : IDeviceTestSessionRepositor
                     @noise_requirement,
                     @total_keys,
                     @status
-                );
+                FROM build_requests AS request_row
+                INNER JOIN devices AS device_row
+                    ON device_row.id = @device_id
+                   AND device_row.seller_user_id = request_row.seller_user_id
+                WHERE request_row.id = @request_id
+                  AND request_row.status = 'In_progress'
+                  AND device_row.device_type = 'QC_STATION'
+                  AND device_row.is_active = 1;
+
+                IF @@ROWCOUNT <> 1
+                    THROW 51411, 'QC session requires an in-progress request and its seller active QC station.', 1;
             END;
 
             {BaseSelectSql}
@@ -89,6 +103,7 @@ public sealed class SqlDeviceTestSessionRepository : IDeviceTestSessionRepositor
             {BaseSelectSql}
             WHERE s.request_id = @request_id
             ORDER BY
+                CASE WHEN s.status = 'Running' THEN 0 ELSE 1 END,
                 summary.last_recorded_at DESC,
                 s.id DESC
             OFFSET 0 ROWS FETCH NEXT 1 ROWS ONLY;

@@ -287,7 +287,7 @@ public sealed class SqlBuildRepository : IBuildRepository
             insertCommand.AddParameter("@accessory_id", SqlDbType.VarChar, item.AccessoryId, 50);
             insertCommand.AddParameter("@quantity", SqlDbType.Int, item.Quantity);
             insertCommand.AddDecimalParameter("@unit_price_snapshot", item.UnitPriceSnapshot);
-            insertCommand.AddParameter("@notes", SqlDbType.VarChar, item.Notes, 500);
+            insertCommand.AddParameter("@notes", SqlDbType.NVarChar, item.Notes, 500);
 
             await insertCommand.ExecuteNonQueryAsync(cancellationToken);
         }
@@ -360,9 +360,9 @@ public sealed class SqlBuildRepository : IBuildRepository
                 );
                 """;
             insertCommand.AddParameter("@build_id", SqlDbType.VarChar, buildId, 50);
-            insertCommand.AddParameter("@mod_type", SqlDbType.VarChar, mod.ModType, 100);
-            insertCommand.AddParameter("@target_component", SqlDbType.VarChar, mod.TargetComponent, 100);
-            insertCommand.AddParameter("@notes", SqlDbType.VarChar, mod.Notes, 500);
+            insertCommand.AddParameter("@mod_type", SqlDbType.NVarChar, mod.ModType, 100);
+            insertCommand.AddParameter("@target_component", SqlDbType.NVarChar, mod.TargetComponent, 100);
+            insertCommand.AddParameter("@notes", SqlDbType.NVarChar, mod.Notes, 500);
 
             await insertCommand.ExecuteNonQueryAsync(cancellationToken);
         }
@@ -374,8 +374,8 @@ public sealed class SqlBuildRepository : IBuildRepository
         command.AddParameter("@build_id", SqlDbType.VarChar, build.BuildId, 50);
         command.AddParameter("@buyer_id", SqlDbType.Int, build.BuyerId);
         command.AddParameter("@kit_id", SqlDbType.VarChar, build.KitId, 50);
-        command.AddParameter("@name", SqlDbType.VarChar, build.Name, 255);
-        command.AddParameter("@notes", SqlDbType.VarChar, build.Notes, 500);
+        command.AddParameter("@name", SqlDbType.NVarChar, build.Name, 255);
+        command.AddParameter("@notes", SqlDbType.NVarChar, build.Notes, 500);
         command.AddParameter("@noise_requirement", SqlDbType.VarChar, build.NoiseRequirement.ToString(), 20);
         command.AddParameter("@status", SqlDbType.VarChar, build.Status.ToString(), 50);
         command.AddDecimalParameter("@total_cost_snapshot", build.TotalCostSnapshot);

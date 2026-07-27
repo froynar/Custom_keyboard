@@ -8,13 +8,14 @@ Du an hien tai la ung dung desktop WPF dung .NET va SQL Server database `CustomK
 
 - Refactor kit-based da hoan thanh loi MVP (Phase 0-10): build/request/seller-status/chat-DB/admin/audit + validation & logging (Phase 7) + MQTT realtime tuy chon (Phase 8) + test matrix & handover (Phase 9-10). Chat SignalR (Phase 8A) con lai, tuy chon.
 - ERD vat ly moi la source of truth: `Documents/Custom_Keyboard_ERD_Final.dbml`.
-- DB verification hien nam trong `Database/SqlServer/VerifyRefactor.sql`; migration giu du lieu chay PK-to-id truoc, sau do chay bo QC concise.
+- DB verification hien nam trong `Database/SqlServer/VerifyRefactor.sql`; migration giu du lieu chay PK-to-id, QC concise, roi build/device hardening.
 - DB test mac dinh: `CustomKeyboard_Refactor` tren `KHOADZS1VN\SQLEXPRESS`.
 
 Lenh kiem tra chinh:
 
 ```powershell
 dotnet build
+dotnet run --project BuildDeviceVerification\BuildDeviceVerification.csproj
 powershell -NoProfile -ExecutionPolicy Bypass -File Database\SqlServer\VerifyPkToId_Source.ps1
 ```
 
@@ -30,7 +31,7 @@ Quickstart:
 4. `dotnet build` -> `dotnet run`.
 5. Verify clean seed bang `Database/SqlServer/VerifyRefactor.sql`.
 
-Neu DB da co du lieu runtime, khong chay `CreateSchema_Refactor.sql`. Neu DB van dung PK cu (`user_id`, `build_id`, ... tren bang chu), chay bo PK-to-id truoc. Sau khi schema dat version `2026.07.15-pk-id`, backup + restore rehearsal, roi chay preflight/migration/postflight QC concise. Tat ca script migration yeu cau chon target ro rang bang `sqlcmd -d`.
+Neu DB da co du lieu runtime, khong chay `CreateSchema_Refactor.sql`. Neu DB van dung PK cu (`user_id`, `build_id`, ... tren bang chu), chay bo PK-to-id truoc. Sau khi schema dat version `2026.07.15-pk-id`, backup + restore rehearsal, roi chay preflight/migration/postflight QC concise va build/device hardening theo dung thu tu. Tat ca script migration yeu cau chon target ro rang bang `sqlcmd -d`.
 
 ```powershell
 sqlcmd -S "<server>" -d "<restored-clone-or-runtime-db>" -E -C -b -i Database\SqlServer\VerifyPkToId_Preflight.sql
@@ -39,6 +40,9 @@ sqlcmd -S "<server>" -d "<restored-clone-or-runtime-db>" -E -C -b -i Database\Sq
 sqlcmd -S "<server>" -d "<restored-clone-or-runtime-db>" -E -C -b -i Database\SqlServer\VerifyQcConcise_Preflight.sql
 sqlcmd -S "<server>" -d "<restored-clone-or-runtime-db>" -E -C -b -i Database\SqlServer\MigrateQcConcise_20260727.sql
 sqlcmd -S "<server>" -d "<restored-clone-or-runtime-db>" -E -C -b -i Database\SqlServer\VerifyQcConcise_Postflight.sql
+sqlcmd -S "<server>" -d "<restored-clone-or-runtime-db>" -E -C -b -i Database\SqlServer\VerifyBuildDeviceHardening_Preflight.sql
+sqlcmd -S "<server>" -d "<restored-clone-or-runtime-db>" -E -C -b -i Database\SqlServer\MigrateBuildDeviceHardening_20260727.sql
+sqlcmd -S "<server>" -d "<restored-clone-or-runtime-db>" -E -C -b -i Database\SqlServer\VerifyBuildDeviceHardening_Postflight.sql
 ```
 
 Tai khoan seed (mat khau **`Password123`**, login bang username hoac email):
@@ -123,6 +127,8 @@ WPF App
 ```
 
 Database la source of truth. Realtime MQTT (Phase 8) la lop bo sung tuy chon: luu DB truoc, publish sau, best-effort — khong co broker thi app van chay DB-only. Chat realtime SignalR (Phase 8A) chua trien khai.
+
+Device telemetry MQTT dung HMAC envelope. Neu publisher nam ngoai process app, dat cung secret qua bien moi truong `CUSTOM_KEYBOARD_DEVICE_TELEMETRY_SECRET`; message sai chu ky hoac topic/payload khong khop se bi tu choi.
 
 Neu seller offline, request van duoc luu trong database. Khi seller mo dashboard, app lay lai danh sach request tu SQL Server.
 

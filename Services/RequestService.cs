@@ -112,10 +112,12 @@ public sealed class RequestService : IRequestService
             Note = NormalizeNullable(note)
         };
 
-        // DB is the source of truth: save the request, then flag the build as Requested so the
-        // build list/state reflects it, then publish realtime as a best-effort bonus.
-        var saved = await _requestRepository.SaveAsync(request, cancellationToken);
-        await _buildRepository.SetStatusAsync(build.BuildId, BuildStatus.Requested, cancellationToken);
+        // Request creation and the owning build status are one unit. A failed write must never
+        // leave a Pending request paired with a non-Requested build (or the reverse).
+        var saved = await _requestRepository.SaveAndSetBuildStatusAsync(
+            request,
+            BuildStatus.Requested,
+            cancellationToken);
         await PublishSafelyAsync(() =>
             _realtimeNotifier.RequestCreatedAsync(saved.SellerUserId, saved.RequestId, cancellationToken));
         return saved;
@@ -158,6 +160,7 @@ public sealed class RequestService : IRequestService
             await EnsureQcAllowsCompletionAsync(request.RequestId, cancellationToken);
         }
 
+        var expectedStatus = request.Status;
         request.Status = status;
         if (status == RequestStatus.Accepted && request.AcceptedAt is null)
         {
@@ -169,7 +172,12 @@ public sealed class RequestService : IRequestService
             request.CompletedAt = DateTime.UtcNow;
         }
 
-        var saved = await _requestRepository.SaveAsync(request, cancellationToken);
+        var saved = await _requestRepository.TryUpdateStatusAsync(
+            request,
+            expectedStatus,
+            status == RequestStatus.Completed,
+            cancellationToken)
+            ?? throw new InvalidOperationException(Loc.Instance["Service_RequestChanged"]);
         await PublishSafelyAsync(() =>
             _realtimeNotifier.RequestStatusChangedAsync(saved.RequestId, saved.Status, cancellationToken));
         return saved;
