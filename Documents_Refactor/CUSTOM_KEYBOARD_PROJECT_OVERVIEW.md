@@ -256,7 +256,7 @@ Custom Keyboard Builder
 ```
 Custom_keyboard/
 ├─ Documents_Refactor/             # ⭐ Tài liệu CHÍNH THỨC (kit-based) — design + plan + phase docs
-│  ├─ Custom_Keyboard_ERD_Realistic_Kit_Shop_Proposal.dbml
+│  ├─ Custom_Keyboard_ERD_Realistic_Kit_Shop_Proposal.dbml  # legacy snapshot
 │  ├─ Custom_Keyboard_FHD_Refactor.md
 │  ├─ Custom_Keyboard_Use_Cases_Refactor.md
 │  ├─ Custom_Keyboard_DFD_Context_Level0_Refactor.md / _Level1_ / _Level2_
@@ -302,7 +302,7 @@ Custom_keyboard/
 | **Seller Inventory** | Quản lý stock riêng | **Không có** (request-based) |
 | **Switch Mods** | Trường riêng (lube_type, is_filmed) | **Build_mods table** (ghi chú) |
 | **Accessory** | Tách riêng `accessories` | Vẫn tồn tại nhưng qua `build_items` |
-| **ERD Complexity** | ~30+ relationships | **26 relationships** |
+| **ERD Complexity** | ~30+ relationships | **30 relationships** |
 | **Code Scope** | Quá lớn để bắt đầu | **Có thể quản lý** |
 
 ---
@@ -310,7 +310,7 @@ Custom_keyboard/
 ## 📚 Tài Liệu Refactor (Thứ Tự Đọc)
 
 1. ✅ **Custom_Keyboard_Project_Refactor_Summary.md** - Tóm tắt toàn bộ (đã đọc)
-2. ✅ **Custom_Keyboard_ERD_Realistic_Kit_Shop_Proposal.dbml** - Schema mới (đã đọc)
+2. ✅ **../Documents/Custom_Keyboard_ERD_Final.dbml** - Schema vật lý cuối cùng (21 bảng / 30 quan hệ)
 3. ✅ **Keyboard_Build_Validation_Logic.md** - Validation rules (đã đọc)
 4. ✅ **Custom_Keyboard_FHD_Refactor.md** - Functional hierarchy (đã đọc)
 5. ✅ **Custom_Keyboard_Use_Cases_Refactor.md** - Use cases chi tiết (đã đọc)

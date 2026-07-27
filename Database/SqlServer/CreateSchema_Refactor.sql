@@ -1,18 +1,18 @@
 -- Custom Keyboard Builder - Refactor schema (kit-based ERD)
--- Source of truth: Documents_Refactor/Custom_Keyboard_ERD_Realistic_Kit_Shop_Proposal.dbml
--- Scope: 21 tables / 33 relationships (incl. 3 device QC tables). No cases/pcbs/plates, no compatibility_rules,
+-- Source of truth: Documents/Custom_Keyboard_ERD_Final.dbml
+-- Scope: 21 tables / 30 relationships (incl. 3 device QC tables). No cases/pcbs/plates, no compatibility_rules,
 --        no seller_inventory, no legacy switch-mod columns (lube_type/is_filmed/spring_weight_g).
 -- Target: clean/disposable CustomKeyboard_Refactor database.
 -- WARNING: destructive clean-install script. Re-running it drops the 21 business tables
 -- and resets dbo.schema_migrations.
--- Do not run this on a database that must preserve runtime data; use MigratePkToId_20260715.sql instead.
+-- Do not run this on a database that must preserve runtime data; use the ordered migration scripts instead.
 -- Order: roles -> users -> seller_profiles -> seller_applications -> brands -> layouts -> keyboard_kits
 --        -> switches -> keycap_sets -> stabilizers -> accessories -> builds -> build_items -> build_mods
 --        -> build_requests -> devices -> device_test_sessions -> device_key_test_results
 --        -> audit_log -> chat_conversations -> chat_messages
 -- This script is idempotent: it drops the 21 tables (reverse FK order), resets schema
 -- migration history, and recreates the clean schema.
--- Clean installs and upgraded databases both record schema version 2026.07.15-pk-id.
+-- Clean installs and upgraded databases both record schema version 2026.07.27-qc-concise.
 
 IF DB_ID(N'CustomKeyboard_Refactor') IS NULL
 BEGIN
@@ -329,26 +329,15 @@ CREATE TABLE device_test_sessions (
     id                 VARCHAR(50) PRIMARY KEY,        -- vd QCSESS_{Guid:N}
     request_id         VARCHAR(50) NOT NULL,
     device_id          VARCHAR(50) NOT NULL,
-    seller_user_id     INT         NOT NULL,
     switch_technology  VARCHAR(50) NOT NULL,           -- Mechanical / HE (lay tu kit.pcbTechnology)
     noise_requirement  VARCHAR(20) NOT NULL DEFAULT 'Normal', -- Normal / Quiet / Silent (buyer expectation)
     total_keys         INT         NOT NULL,
-    tested_keys        INT         NOT NULL DEFAULT 0,
-    passed_keys        INT         NOT NULL DEFAULT 0,
-    warning_keys       INT         NOT NULL DEFAULT 0,
-    failed_keys        INT         NOT NULL DEFAULT 0,
-    average_latency_ms DECIMAL(8,2) NULL,
-    max_latency_ms     DECIMAL(8,2) NULL,
-    average_noise_db   DECIMAL(8,2) NULL,
-    max_noise_db       DECIMAL(8,2) NULL,
     status             VARCHAR(20) NOT NULL,           -- Running / Passed / Warning / Failed
-    started_at         DATETIME2   NOT NULL DEFAULT SYSUTCDATETIME(),
-    completed_at       DATETIME2   NULL,
     CONSTRAINT FK_dts_request FOREIGN KEY (request_id) REFERENCES build_requests(id),
     CONSTRAINT FK_dts_device  FOREIGN KEY (device_id)  REFERENCES devices(id),
-    CONSTRAINT FK_dts_seller  FOREIGN KEY (seller_user_id) REFERENCES users(id),
     CONSTRAINT CK_dts_noise_requirement CHECK (noise_requirement IN ('Normal','Quiet','Silent')),
-    CONSTRAINT CK_dts_status CHECK (status IN ('Running','Passed','Warning','Failed'))
+    CONSTRAINT CK_dts_status CHECK (status IN ('Running','Passed','Warning','Failed')),
+    CONSTRAINT CK_dts_total_keys CHECK (total_keys > 0)
 );
 GO
 
@@ -358,32 +347,22 @@ GO
 CREATE TABLE device_key_test_results (
     id                      BIGINT IDENTITY(1,1) PRIMARY KEY,
     session_id              VARCHAR(50) NOT NULL,
-    request_id              VARCHAR(50) NOT NULL,
-    device_id               VARCHAR(50) NOT NULL,
     key_code                VARCHAR(30) NOT NULL,
-    expected_key            VARCHAR(30) NOT NULL,
     received_key            VARCHAR(30) NULL,
     press_signal_detected   BIT         NOT NULL,
-    latency_ms              DECIMAL(8,2) NULL,
-    press_event_count       INT         NOT NULL,
-    bounce_count            INT         NULL,           -- null khi chua du chu ky press-release (vd StuckKey)
-    release_signal_detected BIT         NOT NULL,
-    hold_duration_ms        INT         NULL,
-    is_stuck                BIT         NOT NULL,
-    noise_db                DECIMAL(8,2) NULL,
-    switch_technology       VARCHAR(50) NOT NULL,       -- khop guide §6 JSON per-key (denormalize tu session)
+    latency                 DECIMAL(8,2) NULL,
+    press_count             INT         NOT NULL,
+    release_signal          BIT         NOT NULL,
+    hold_duration           INT         NULL,
+    noise                   DECIMAL(8,2) NULL,
     result                  VARCHAR(20) NOT NULL,       -- Pass / Warning / Fail
-    failure_type            VARCHAR(30) NULL,           -- NoSignal / WrongKey / Chatter / StuckKey / HighLatency / TooNoisy
-    failure_reason          NVARCHAR(255) NULL,
     recorded_at             DATETIME2   NOT NULL DEFAULT SYSUTCDATETIME(),
     CONSTRAINT FK_dktr_session FOREIGN KEY (session_id) REFERENCES device_test_sessions(id),
-    CONSTRAINT FK_dktr_request FOREIGN KEY (request_id) REFERENCES build_requests(id),
-    CONSTRAINT FK_dktr_device  FOREIGN KEY (device_id)  REFERENCES devices(id),
     CONSTRAINT CK_dktr_result CHECK (result IN ('Pass','Warning','Fail')),
-    CONSTRAINT CK_dktr_failure_type CHECK (
-        failure_type IS NULL
-        OR failure_type IN ('NoSignal','WrongKey','Chatter','StuckKey','HighLatency','TooNoisy')
-    )
+    CONSTRAINT CK_dktr_press_count CHECK (press_count >= 0),
+    CONSTRAINT CK_dktr_latency CHECK (latency IS NULL OR latency >= 0),
+    CONSTRAINT CK_dktr_hold_duration CHECK (hold_duration IS NULL OR hold_duration >= 0),
+    CONSTRAINT CK_dktr_noise CHECK (noise IS NULL OR noise >= 0)
 );
 GO
 
@@ -495,9 +474,7 @@ WHERE status = 'Pending';
 CREATE INDEX IX_devices_seller ON devices(seller_user_id);
 CREATE INDEX IX_dts_request ON device_test_sessions(request_id);
 CREATE INDEX IX_dts_device ON device_test_sessions(device_id);
-CREATE INDEX IX_dts_seller_status ON device_test_sessions(seller_user_id, status);
 CREATE INDEX IX_dktr_session ON device_key_test_results(session_id);
-CREATE INDEX IX_dktr_request ON device_key_test_results(request_id);
 CREATE UNIQUE INDEX UX_dktr_session_key_code ON device_key_test_results(session_id, key_code);
 GO
 
@@ -513,8 +490,8 @@ CREATE TABLE dbo.schema_migrations (
 
 INSERT INTO dbo.schema_migrations (version, description, applied_at, succeeded)
 VALUES (
-    '2026.07.15-pk-id',
-    'Clean schema with 21 business-table primary keys named id',
+    '2026.07.27-qc-concise',
+    'Concise normalized QC schema with 21 business tables and 30 foreign keys',
     SYSUTCDATETIME(),
     1
 );

@@ -2,10 +2,10 @@
 
 ## Target
 
-- ERD: `Documents_Refactor/Custom_Keyboard_ERD_Realistic_Kit_Shop_Proposal.dbml`
+- ERD: `Documents/Custom_Keyboard_ERD_Final.dbml`
 - Dataset launcher: `Documents_Refactor/SeedData_Refactor.sql`
 - Internal DML body: `Documents_Refactor/SeedData_Refactor.Body.sql` (included only after postflight passes)
-- Scope: seed data for the refactored ERD only, not the current runtime schema.
+- Scope: seed data for the final concise ERD and clean-install schema.
 
 ## Table Coverage
 
@@ -50,6 +50,7 @@ Result: every ERD table has seed coverage. No extra old table is used.
 | Seller request targets active, verified seller users | Pass |
 | Buyer-seller chat may link to a request; admin-seller chat does not require a request | Pass |
 | Chat conversation has exactly one of `buyer_id` or `admin_user_id` | Pass |
+| QC session/result rows use exactly the concise 7/12-column contract | Pass |
 
 ## Build Total Checks
 

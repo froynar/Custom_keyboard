@@ -55,7 +55,8 @@ function Get-DbmlTableBody {
     return $match.Groups['body'].Value
 }
 
-$expectedSchemaVersion = '2026.07.15-pk-id'
+$expectedSchemaVersion = '2026.07.27-qc-concise'
+$legacyPkSchemaVersion = '2026.07.15-pk-id'
 $expectedPrimaryKeys = [ordered]@{
     roles = 'role_id'
     users = 'user_id'
@@ -127,10 +128,7 @@ $expectedForeignKeys = @(
     'devices.seller_user_id->users.id',
     'device_test_sessions.request_id->build_requests.id',
     'device_test_sessions.device_id->devices.id',
-    'device_test_sessions.seller_user_id->users.id',
     'device_key_test_results.session_id->device_test_sessions.id',
-    'device_key_test_results.request_id->build_requests.id',
-    'device_key_test_results.device_id->devices.id',
     'audit_log.user_id->users.id',
     'chat_conversations.seller_user_id->users.id',
     'chat_conversations.buyer_id->users.id',
@@ -142,13 +140,16 @@ $expectedForeignKeys = @(
 
 Assert-True ($expectedPrimaryKeys.Count -eq 21) 'Internal source verifier mapping must contain 21 PK entries.'
 Assert-True ($expectedPrimaryKeyShapes.Count -eq 21) 'Internal source verifier shape mapping must contain 21 PK entries.'
-Assert-True ($expectedForeignKeys.Count -eq 33) 'Internal source verifier mapping must contain 33 FK entries.'
+Assert-True ($expectedForeignKeys.Count -eq 30) 'Internal source verifier mapping must contain 30 FK entries.'
 
 $schema = Read-Text 'Database\SqlServer\CreateSchema_Refactor.sql'
-$dbml = Read-Text 'Documents_Refactor\Custom_Keyboard_ERD_Realistic_Kit_Shop_Proposal.dbml'
+$dbml = Read-Text 'Documents\Custom_Keyboard_ERD_Final.dbml'
 $migration = Read-Text 'Database\SqlServer\MigratePkToId_20260715.sql'
 $preflight = Read-Text 'Database\SqlServer\VerifyPkToId_Preflight.sql'
 $postflight = Read-Text 'Database\SqlServer\VerifyPkToId_Postflight.sql'
+$qcMigration = Read-Text 'Database\SqlServer\MigrateQcConcise_20260727.sql'
+$qcPreflight = Read-Text 'Database\SqlServer\VerifyQcConcise_Preflight.sql'
+$qcPostflight = Read-Text 'Database\SqlServer\VerifyQcConcise_Postflight.sql'
 $cleanVerifier = Read-Text 'Database\SqlServer\VerifyRefactor.sql'
 $sellerApplicationsApply = Read-Text 'Database\SqlServer\ApplySellerApplications.sql'
 $mainSeed = Read-Text 'Documents_Refactor\SeedData_Refactor.sql'
@@ -206,8 +207,52 @@ foreach ($entry in $expectedPrimaryKeys.GetEnumerator()) {
         $actualSchemaForeignKeys += "$tableName.$($match.Groups['parent'].Value)->$($match.Groups['referenced'].Value).$($match.Groups['column'].Value)"
     }
 
-    foreach ($match in [regex]::Matches($dbmlBody, '(?im)^\s*(?<parent>[a-z_][a-z0-9_]*)\s+\S+\s+\[[^\]]*\bref:\s*>\s*(?<referenced>[a-z_][a-z0-9_]*)\.(?<column>[a-z_][a-z0-9_]*)[^\]]*\]')) {
+    foreach ($match in [regex]::Matches($dbmlBody, '(?im)^\s*(?<parent>[a-z_][a-z0-9_]*)\s+\S+\s+\[[^\]]*\bref:\s*[>-]\s*(?<referenced>[a-z_][a-z0-9_]*)\.(?<column>[a-z_][a-z0-9_]*)[^\]]*\]')) {
         $actualDbmlForeignKeys += "$tableName.$($match.Groups['parent'].Value)->$($match.Groups['referenced'].Value).$($match.Groups['column'].Value)"
+    }
+}
+
+$expectedQcColumns = [ordered]@{
+    device_test_sessions = @(
+        'id', 'request_id', 'device_id', 'switch_technology',
+        'noise_requirement', 'total_keys', 'status'
+    )
+    device_key_test_results = @(
+        'id', 'session_id', 'key_code', 'received_key',
+        'press_signal_detected', 'latency', 'press_count',
+        'release_signal', 'hold_duration', 'noise', 'result', 'recorded_at'
+    )
+}
+
+foreach ($qcEntry in $expectedQcColumns.GetEnumerator()) {
+    $tableName = [string]$qcEntry.Key
+    $expectedColumns = @($qcEntry.Value)
+    $sqlBody = Get-SqlTableBody $schema $tableName
+    $dbmlBody = Get-DbmlTableBody $dbml $tableName
+
+    $sqlColumns = @(
+        [regex]::Matches(
+            $sqlBody,
+            '(?im)^\s*(?<name>[a-z_][a-z0-9_]*)\s+(?:INT|BIGINT|VARCHAR|BIT|DECIMAL|DATETIME2)\b'
+        ) | ForEach-Object { $_.Groups['name'].Value.ToLowerInvariant() }
+    )
+    $dbmlColumns = @(
+        [regex]::Matches(
+            $dbmlBody,
+            '(?im)^\s*(?<name>[a-z_][a-z0-9_]*)\s+(?:int|bigint|varchar|boolean|decimal|datetime|NoiseRequirement|SwitchTechnology|TestSessionStatus|KeyTestResult)\b'
+        ) | ForEach-Object { $_.Groups['name'].Value.ToLowerInvariant() }
+    )
+
+    foreach ($columnSet in @(
+        [pscustomobject]@{ Name = "SQL $tableName"; Values = $sqlColumns },
+        [pscustomobject]@{ Name = "DBML $tableName"; Values = $dbmlColumns }
+    )) {
+        $missing = @($expectedColumns | Where-Object { $_ -notin $columnSet.Values })
+        $unexpected = @($columnSet.Values | Where-Object { $_ -notin $expectedColumns })
+        Assert-True ($columnSet.Values.Count -eq $expectedColumns.Count) `
+            "$($columnSet.Name) must contain exactly $($expectedColumns.Count) columns; found $($columnSet.Values.Count)."
+        Assert-True ($missing.Count -eq 0) "$($columnSet.Name) is missing column(s): $($missing -join ', ')"
+        Assert-True ($unexpected.Count -eq 0) "$($columnSet.Name) has unexpected column(s): $($unexpected -join ', ')"
     }
 }
 
@@ -221,18 +266,16 @@ foreach ($actualSet in @(
 )) {
     $missing = @($expectedForeignKeys | Where-Object { $_ -notin $actualSet.Values })
     $unexpected = @($actualSet.Values | Where-Object { $_ -notin $expectedForeignKeys })
-    Assert-True ($actualSet.Values.Count -eq 33) "$($actualSet.Name) must contain exactly 33 FK relationships; found $($actualSet.Values.Count)."
+    Assert-True ($actualSet.Values.Count -eq 30) "$($actualSet.Name) must contain exactly 30 FK relationships; found $($actualSet.Values.Count)."
     Assert-True ($missing.Count -eq 0) "$($actualSet.Name) is missing FK relationship(s): $($missing -join ', ')"
     Assert-True ($unexpected.Count -eq 0) "$($actualSet.Name) has unexpected FK relationship(s): $($unexpected -join ', ')"
 }
 
 foreach ($versionedText in @(
     [pscustomobject]@{ Name = 'CreateSchema_Refactor.sql'; Text = $schema },
-    [pscustomobject]@{ Name = 'MigratePkToId_20260715.sql'; Text = $migration },
-    [pscustomobject]@{ Name = 'VerifyPkToId_Preflight.sql'; Text = $preflight },
-    [pscustomobject]@{ Name = 'VerifyPkToId_Postflight.sql'; Text = $postflight },
+    [pscustomobject]@{ Name = 'MigrateQcConcise_20260727.sql'; Text = $qcMigration },
+    [pscustomobject]@{ Name = 'VerifyQcConcise_Postflight.sql'; Text = $qcPostflight },
     [pscustomobject]@{ Name = 'VerifyRefactor.sql'; Text = $cleanVerifier },
-    [pscustomobject]@{ Name = 'ApplySellerApplications.sql'; Text = $sellerApplicationsApply },
     [pscustomobject]@{ Name = 'SeedData_Refactor.sql'; Text = $mainSeed },
     [pscustomobject]@{ Name = 'SeedDemoAnalytics_Refactor.sql'; Text = $analyticsSeed },
     [pscustomobject]@{ Name = 'SqlServerHealthCheck.cs'; Text = $healthCheck }
@@ -241,18 +284,37 @@ foreach ($versionedText in @(
         "$($versionedText.Name) does not contain schema version $expectedSchemaVersion."
 }
 
+foreach ($legacyVersionedText in @(
+    [pscustomobject]@{ Name = 'MigratePkToId_20260715.sql'; Text = $migration },
+    [pscustomobject]@{ Name = 'VerifyPkToId_Preflight.sql'; Text = $preflight },
+    [pscustomobject]@{ Name = 'VerifyPkToId_Postflight.sql'; Text = $postflight },
+    [pscustomobject]@{ Name = 'ApplySellerApplications.sql'; Text = $sellerApplicationsApply },
+    [pscustomobject]@{ Name = 'VerifyQcConcise_Preflight.sql'; Text = $qcPreflight }
+)) {
+    Assert-True ($legacyVersionedText.Text.Contains($legacyPkSchemaVersion)) `
+        "$($legacyVersionedText.Name) does not contain prerequisite schema version $legacyPkSchemaVersion."
+}
+
 Assert-True ($healthCheck.Contains('ExpectedPrimaryKeyCount = 21')) 'Startup schema guard does not require 21 PKs.'
-Assert-True ($healthCheck.Contains('ExpectedForeignKeyCount = 33')) 'Startup schema guard does not require 33 FKs.'
+Assert-True ($healthCheck.Contains('ExpectedForeignKeyCount = 30')) 'Startup schema guard does not require 30 FKs.'
+Assert-True ($healthCheck.Contains('ExpectedQcColumnCount = 19')) 'Startup schema guard does not require the exact 7/12 QC column count.'
 Assert-True ($mainWindow.Contains('EnsureCompatibleSchemaAsync')) 'Application startup does not invoke the schema compatibility guard.'
 Assert-True (-not [regex]::IsMatch($migration, '(?mi)^\s*USE\s+')) 'Migration must require an explicitly selected target database.'
 Assert-True (-not [regex]::IsMatch($preflight, '(?mi)^\s*USE\s+')) 'Preflight must require an explicitly selected target database.'
 Assert-True (-not [regex]::IsMatch($postflight, '(?mi)^\s*USE\s+')) 'Postflight must require an explicitly selected target database.'
+Assert-True (-not [regex]::IsMatch($qcMigration, '(?mi)^\s*USE\s+')) 'QC migration must require an explicitly selected target database.'
+Assert-True (-not [regex]::IsMatch($qcPreflight, '(?mi)^\s*USE\s+')) 'QC preflight must require an explicitly selected target database.'
+Assert-True (-not [regex]::IsMatch($qcPostflight, '(?mi)^\s*USE\s+')) 'QC postflight must require an explicitly selected target database.'
 Assert-True ($migration.Contains('(version, description, applied_at, succeeded)')) `
     'Migration history insert must set applied_at explicitly.'
 Assert-True ($migration.Contains('SellerProfileAuditResolution')) `
     'Migration does not normalize legacy seller_profiles audit record IDs.'
 Assert-True ($postflight.Contains('seller_profiles audit record_id must use the integer profile PK')) `
     'Postflight does not enforce the seller_profiles audit record-id contract.'
+Assert-True ($qcPostflight.Contains('device_test_sessions does not match the exact 7-column concise contract')) `
+    'QC postflight does not enforce the concise session column contract.'
+Assert-True ($qcPostflight.Contains('device_key_test_results does not match the exact 12-column concise contract')) `
+    'QC postflight does not enforce the concise key-result column contract.'
 
 foreach ($guardedText in @(
     [pscustomobject]@{ Name = 'MigratePkToId_20260715.sql'; Text = $migration },
@@ -270,13 +332,13 @@ foreach ($guardedText in @(
 }
 
 Assert-True ($mainSeed.Contains(':ON ERROR EXIT')) 'Main seed launcher must stop before including DML after a guard failure.'
-Assert-True ($mainSeed.Contains(':r Database\SqlServer\VerifyPkToId_Postflight.sql')) `
+Assert-True ($mainSeed.Contains(':r Database\SqlServer\VerifyQcConcise_Postflight.sql')) `
     'Main seed launcher must run postflight before its DML body.'
 Assert-True ($mainSeed.Contains(':r Documents_Refactor\SeedData_Refactor.Body.sql')) `
     'Main seed launcher does not include its guarded DML body.'
 Assert-True ($mainSeedBody.Contains('BEGIN TRANSACTION;')) 'Main seed DML body is missing its transaction.'
 Assert-True ($analyticsSeed.Contains(':ON ERROR EXIT')) 'Analytics seed launcher must stop before including DML after a guard failure.'
-Assert-True ($analyticsSeed.Contains(':r Database\SqlServer\VerifyPkToId_Postflight.sql')) `
+Assert-True ($analyticsSeed.Contains(':r Database\SqlServer\VerifyQcConcise_Postflight.sql')) `
     'Analytics seed launcher must run postflight before its DML body.'
 Assert-True ($analyticsSeed.Contains(':r Database\SqlServer\SeedDemoAnalytics_Refactor.Body.sql')) `
     'Analytics seed launcher does not include its guarded DML body.'
@@ -332,4 +394,4 @@ $sellerRepository = Read-Text 'Repositories\SqlServer\SqlSellerRepository.cs'
 Assert-True ([regex]::IsMatch($sellerRepository, '(?is)private\s+const\s+string\s+BaseSelectSql\s*=.*?\bid\s+AS\s+seller_profile_id\b')) `
     'SqlSellerRepository.BaseSelectSql must alias id as seller_profile_id.'
 
-Write-Host 'PK-to-id source verification passed: 21 PKs, 33 FKs, 21 renames, full version/startup guards, and repository owner-PK scan.'
+Write-Host 'Schema source verification passed: 21 PKs, 30 FKs, 21 PK renames, concise QC guards, and repository owner-PK scan.'

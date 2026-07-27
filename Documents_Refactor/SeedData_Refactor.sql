@@ -1,8 +1,8 @@
 :ON ERROR EXIT
 -- Custom Keyboard Builder - guarded clean/demo seed launcher.
--- Requires schema version 2026.07.15-pk-id and the exact postflight contract.
+-- Requires schema version 2026.07.27-qc-concise and the exact postflight contract.
 -- Run from the repository root with sqlcmd -b. The DML body is included only
--- after VerifyPkToId_Postflight.sql succeeds.
+-- after VerifyQcConcise_Postflight.sql succeeds.
 
 SET NOCOUNT ON;
 SET XACT_ABORT ON;
@@ -14,6 +14,6 @@ BEGIN
 END;
 GO
 
-:r Database\SqlServer\VerifyPkToId_Postflight.sql
+:r Database\SqlServer\VerifyQcConcise_Postflight.sql
 GO
 :r Documents_Refactor\SeedData_Refactor.Body.sql

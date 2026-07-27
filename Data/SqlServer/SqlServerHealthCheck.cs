@@ -5,10 +5,11 @@ namespace Custom_keyboard.Data.SqlServer;
 
 public sealed class SqlServerHealthCheck
 {
-    public const string ExpectedSchemaVersion = "2026.07.15-pk-id";
+    public const string ExpectedSchemaVersion = "2026.07.27-qc-concise";
 
     private const int ExpectedPrimaryKeyCount = 21;
-    private const int ExpectedForeignKeyCount = 33;
+    private const int ExpectedForeignKeyCount = 30;
+    private const int ExpectedQcColumnCount = 19;
 
     private readonly ISqlConnectionFactory _connectionFactory;
 
@@ -83,11 +84,32 @@ public sealed class SqlServerHealthCheck
             issues.Add($"{foreignKeyState.UnexpectedRelationshipCount} unexpected foreign-key relationship(s) are present");
         }
 
+        var qcColumnState = await ReadQcColumnStateAsync(connection, cancellationToken);
+        if (qcColumnState.ColumnCount != ExpectedQcColumnCount)
+        {
+            issues.Add($"{qcColumnState.ColumnCount}/{ExpectedQcColumnCount} concise QC columns are present");
+        }
+
+        if (qcColumnState.MissingColumnCount > 0)
+        {
+            issues.Add($"{qcColumnState.MissingColumnCount} required concise QC column(s) are missing");
+        }
+
+        if (qcColumnState.UnexpectedColumnCount > 0)
+        {
+            issues.Add($"{qcColumnState.UnexpectedColumnCount} legacy or unexpected QC column(s) are present");
+        }
+
+        if (qcColumnState.WrongShapeCount > 0)
+        {
+            issues.Add($"{qcColumnState.WrongShapeCount} concise QC column(s) have an unexpected type or nullability");
+        }
+
         if (issues.Count > 0)
         {
             throw new InvalidOperationException(
                 "Database schema is not compatible with this application build. "
-                + "Run the PK-to-id migration and postflight verification first. Details: "
+                + "Run the ordered database migrations and postflight verification first. Details: "
                 + string.Join("; ", issues)
                 + ".");
         }
@@ -333,10 +355,7 @@ public sealed class SqlServerHealthCheck
                     (N'devices', N'seller_user_id', N'users'),
                     (N'device_test_sessions', N'request_id', N'build_requests'),
                     (N'device_test_sessions', N'device_id', N'devices'),
-                    (N'device_test_sessions', N'seller_user_id', N'users'),
                     (N'device_key_test_results', N'session_id', N'device_test_sessions'),
-                    (N'device_key_test_results', N'request_id', N'build_requests'),
-                    (N'device_key_test_results', N'device_id', N'devices'),
                     (N'audit_log', N'user_id', N'users'),
                     (N'chat_conversations', N'seller_user_id', N'users'),
                     (N'chat_conversations', N'buyer_id', N'users'),
@@ -428,6 +447,113 @@ public sealed class SqlServerHealthCheck
             reader.GetInt32(4));
     }
 
+    private static async Task<QcColumnState> ReadQcColumnStateAsync(
+        SqlConnection connection,
+        CancellationToken cancellationToken)
+    {
+        await using var command = connection.CreateCommand();
+        command.CommandText = """
+            WITH expected AS (
+                SELECT *
+                FROM (VALUES
+                    (N'device_test_sessions', N'id', N'varchar', 50, NULL, NULL, 0, 0),
+                    (N'device_test_sessions', N'request_id', N'varchar', 50, NULL, NULL, 0, 0),
+                    (N'device_test_sessions', N'device_id', N'varchar', 50, NULL, NULL, 0, 0),
+                    (N'device_test_sessions', N'switch_technology', N'varchar', 50, NULL, NULL, 0, 0),
+                    (N'device_test_sessions', N'noise_requirement', N'varchar', 20, NULL, NULL, 0, 0),
+                    (N'device_test_sessions', N'total_keys', N'int', 4, NULL, NULL, 0, 0),
+                    (N'device_test_sessions', N'status', N'varchar', 20, NULL, NULL, 0, 0),
+                    (N'device_key_test_results', N'id', N'bigint', 8, NULL, NULL, 0, 1),
+                    (N'device_key_test_results', N'session_id', N'varchar', 50, NULL, NULL, 0, 0),
+                    (N'device_key_test_results', N'key_code', N'varchar', 30, NULL, NULL, 0, 0),
+                    (N'device_key_test_results', N'received_key', N'varchar', 30, NULL, NULL, 1, 0),
+                    (N'device_key_test_results', N'press_signal_detected', N'bit', 1, NULL, NULL, 0, 0),
+                    (N'device_key_test_results', N'latency', N'decimal', 5, 8, 2, 1, 0),
+                    (N'device_key_test_results', N'press_count', N'int', 4, NULL, NULL, 0, 0),
+                    (N'device_key_test_results', N'release_signal', N'bit', 1, NULL, NULL, 0, 0),
+                    (N'device_key_test_results', N'hold_duration', N'int', 4, NULL, NULL, 1, 0),
+                    (N'device_key_test_results', N'noise', N'decimal', 5, 8, 2, 1, 0),
+                    (N'device_key_test_results', N'result', N'varchar', 20, NULL, NULL, 0, 0),
+                    (N'device_key_test_results', N'recorded_at', N'datetime2', 8, NULL, 7, 0, 0)
+                ) AS values_list(
+                    table_name,
+                    column_name,
+                    type_name,
+                    max_length,
+                    expected_precision,
+                    expected_scale,
+                    is_nullable,
+                    is_identity
+                )
+            ),
+            actual AS (
+                SELECT
+                    table_info.name AS table_name,
+                    column_info.name AS column_name,
+                    type_info.name AS type_name,
+                    column_info.max_length,
+                    column_info.precision,
+                    column_info.scale,
+                    CONVERT(int, column_info.is_nullable) AS is_nullable,
+                    CONVERT(int, COLUMNPROPERTY(column_info.object_id, column_info.name, 'IsIdentity')) AS is_identity
+                FROM sys.tables AS table_info
+                INNER JOIN sys.columns AS column_info
+                    ON column_info.object_id = table_info.object_id
+                INNER JOIN sys.types AS type_info
+                    ON type_info.user_type_id = column_info.user_type_id
+                WHERE table_info.schema_id = SCHEMA_ID(N'dbo')
+                  AND table_info.name IN (N'device_test_sessions', N'device_key_test_results')
+            )
+            SELECT
+                (SELECT COUNT(*) FROM actual) AS column_count,
+                (
+                    SELECT COUNT(*)
+                    FROM expected
+                    WHERE NOT EXISTS (
+                        SELECT 1
+                        FROM actual
+                        WHERE actual.table_name = expected.table_name
+                          AND actual.column_name = expected.column_name
+                    )
+                ) AS missing_column_count,
+                (
+                    SELECT COUNT(*)
+                    FROM actual
+                    WHERE NOT EXISTS (
+                        SELECT 1
+                        FROM expected
+                        WHERE expected.table_name = actual.table_name
+                          AND expected.column_name = actual.column_name
+                    )
+                ) AS unexpected_column_count,
+                (
+                    SELECT COUNT(*)
+                    FROM expected
+                    INNER JOIN actual
+                        ON actual.table_name = expected.table_name
+                       AND actual.column_name = expected.column_name
+                    WHERE actual.type_name <> expected.type_name
+                       OR actual.max_length <> expected.max_length
+                       OR (expected.expected_precision IS NOT NULL AND actual.precision <> expected.expected_precision)
+                       OR (expected.expected_scale IS NOT NULL AND actual.scale <> expected.expected_scale)
+                       OR actual.is_nullable <> expected.is_nullable
+                       OR actual.is_identity <> expected.is_identity
+                ) AS wrong_shape_count;
+            """;
+
+        await using var reader = await command.ExecuteReaderAsync(cancellationToken);
+        if (!await reader.ReadAsync(cancellationToken))
+        {
+            return new QcColumnState(0, ExpectedQcColumnCount, 0, 0);
+        }
+
+        return new QcColumnState(
+            reader.GetInt32(0),
+            reader.GetInt32(1),
+            reader.GetInt32(2),
+            reader.GetInt32(3));
+    }
+
     private sealed record PrimaryKeyState(
         int MissingTableCount,
         int IdPrimaryKeyCount,
@@ -440,4 +566,10 @@ public sealed class SqlServerHealthCheck
         int NonIdTargetCount,
         int MissingRelationshipCount,
         int UnexpectedRelationshipCount);
+
+    private sealed record QcColumnState(
+        int ColumnCount,
+        int MissingColumnCount,
+        int UnexpectedColumnCount,
+        int WrongShapeCount);
 }

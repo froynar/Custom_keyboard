@@ -63,6 +63,7 @@ namespace Custom_keyboard
             var deviceKeyResultRepository = new SqlDeviceKeyTestResultRepository(connectionFactory);
             var deviceService = new DeviceService(
                 deviceRepository,
+                requestRepository,
                 deviceSessionRepository,
                 deviceKeyResultRepository);
 

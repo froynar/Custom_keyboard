@@ -15,7 +15,9 @@ public sealed class SqlDeviceTestSessionRepository : IDeviceTestSessionRepositor
         _connectionFactory = connectionFactory;
     }
 
-    public async Task<DeviceTestSession> SaveAsync(DeviceTestSession session, CancellationToken cancellationToken = default)
+    public async Task<DeviceTestSession> SaveAsync(
+        DeviceTestSession session,
+        CancellationToken cancellationToken = default)
     {
         if (string.IsNullOrWhiteSpace(session.SessionId))
         {
@@ -26,27 +28,17 @@ public sealed class SqlDeviceTestSessionRepository : IDeviceTestSessionRepositor
         await connection.OpenAsync(cancellationToken);
 
         await using var command = connection.CreateCommand();
-        command.CommandText = """
+        command.CommandText = $"""
             IF EXISTS (SELECT 1 FROM device_test_sessions WHERE id = @session_id)
             BEGIN
                 UPDATE device_test_sessions
                 SET
                     request_id = @request_id,
                     device_id = @device_id,
-                    seller_user_id = @seller_user_id,
                     switch_technology = @switch_technology,
                     noise_requirement = @noise_requirement,
                     total_keys = @total_keys,
-                    tested_keys = @tested_keys,
-                    passed_keys = @passed_keys,
-                    warning_keys = @warning_keys,
-                    failed_keys = @failed_keys,
-                    average_latency_ms = @average_latency_ms,
-                    max_latency_ms = @max_latency_ms,
-                    average_noise_db = @average_noise_db,
-                    max_noise_db = @max_noise_db,
-                    status = @status,
-                    completed_at = @completed_at
+                    status = @status
                 WHERE id = @session_id;
             END
             ELSE
@@ -55,65 +47,24 @@ public sealed class SqlDeviceTestSessionRepository : IDeviceTestSessionRepositor
                     id,
                     request_id,
                     device_id,
-                    seller_user_id,
                     switch_technology,
                     noise_requirement,
                     total_keys,
-                    tested_keys,
-                    passed_keys,
-                    warning_keys,
-                    failed_keys,
-                    average_latency_ms,
-                    max_latency_ms,
-                    average_noise_db,
-                    max_noise_db,
-                    status,
-                    started_at,
-                    completed_at
+                    status
                 )
                 VALUES (
                     @session_id,
                     @request_id,
                     @device_id,
-                    @seller_user_id,
                     @switch_technology,
                     @noise_requirement,
                     @total_keys,
-                    @tested_keys,
-                    @passed_keys,
-                    @warning_keys,
-                    @failed_keys,
-                    @average_latency_ms,
-                    @max_latency_ms,
-                    @average_noise_db,
-                    @max_noise_db,
-                    @status,
-                    COALESCE(@started_at, SYSUTCDATETIME()),
-                    @completed_at
+                    @status
                 );
             END;
 
-            SELECT
-                id AS session_id,
-                request_id,
-                device_id,
-                seller_user_id,
-                switch_technology,
-                noise_requirement,
-                total_keys,
-                tested_keys,
-                passed_keys,
-                warning_keys,
-                failed_keys,
-                average_latency_ms,
-                max_latency_ms,
-                average_noise_db,
-                max_noise_db,
-                status,
-                started_at,
-                completed_at
-            FROM device_test_sessions
-            WHERE id = @session_id;
+            {BaseSelectSql}
+            WHERE s.id = @session_id;
             """;
         AddSessionParameters(command, session);
 
@@ -126,7 +77,9 @@ public sealed class SqlDeviceTestSessionRepository : IDeviceTestSessionRepositor
         throw new InvalidOperationException("Could not save device test session.");
     }
 
-    public async Task<DeviceTestSession?> GetLatestByRequestAsync(string requestId, CancellationToken cancellationToken = default)
+    public async Task<DeviceTestSession?> GetLatestByRequestAsync(
+        string requestId,
+        CancellationToken cancellationToken = default)
     {
         await using var connection = _connectionFactory.CreateConnection();
         await connection.OpenAsync(cancellationToken);
@@ -134,8 +87,10 @@ public sealed class SqlDeviceTestSessionRepository : IDeviceTestSessionRepositor
         await using var command = connection.CreateCommand();
         command.CommandText = $"""
             {BaseSelectSql}
-            WHERE request_id = @request_id
-            ORDER BY started_at DESC, id DESC
+            WHERE s.request_id = @request_id
+            ORDER BY
+                summary.last_recorded_at DESC,
+                s.id DESC
             OFFSET 0 ROWS FETCH NEXT 1 ROWS ONLY;
             """;
         command.AddParameter("@request_id", SqlDbType.VarChar, requestId, 50);
@@ -144,13 +99,15 @@ public sealed class SqlDeviceTestSessionRepository : IDeviceTestSessionRepositor
         return await reader.ReadAsync(cancellationToken) ? MapSession(reader) : null;
     }
 
-    public async Task<DeviceTestSession?> GetByIdAsync(string sessionId, CancellationToken cancellationToken = default)
+    public async Task<DeviceTestSession?> GetByIdAsync(
+        string sessionId,
+        CancellationToken cancellationToken = default)
     {
         await using var connection = _connectionFactory.CreateConnection();
         await connection.OpenAsync(cancellationToken);
 
         await using var command = connection.CreateCommand();
-        command.CommandText = $"{BaseSelectSql} WHERE id = @session_id;";
+        command.CommandText = $"{BaseSelectSql} WHERE s.id = @session_id;";
         command.AddParameter("@session_id", SqlDbType.VarChar, sessionId, 50);
 
         await using var reader = await command.ExecuteReaderAsync(cancellationToken);
@@ -159,25 +116,36 @@ public sealed class SqlDeviceTestSessionRepository : IDeviceTestSessionRepositor
 
     private const string BaseSelectSql = """
         SELECT
-            id AS session_id,
-            request_id,
-            device_id,
-            seller_user_id,
-            switch_technology,
-            noise_requirement,
-            total_keys,
-            tested_keys,
-            passed_keys,
-            warning_keys,
-            failed_keys,
-            average_latency_ms,
-            max_latency_ms,
-            average_noise_db,
-            max_noise_db,
-            status,
-            started_at,
-            completed_at
-        FROM device_test_sessions
+            s.id AS session_id,
+            s.request_id,
+            s.device_id,
+            s.switch_technology,
+            s.noise_requirement,
+            s.total_keys,
+            s.status,
+            summary.tested_keys,
+            summary.passed_keys,
+            summary.warning_keys,
+            summary.failed_keys,
+            summary.average_latency_ms,
+            summary.max_latency_ms,
+            summary.average_noise_db,
+            summary.max_noise_db
+        FROM device_test_sessions AS s
+        OUTER APPLY (
+            SELECT
+                COUNT(*) AS tested_keys,
+                COALESCE(SUM(CASE WHEN r.result = 'Pass' THEN 1 ELSE 0 END), 0) AS passed_keys,
+                COALESCE(SUM(CASE WHEN r.result = 'Warning' THEN 1 ELSE 0 END), 0) AS warning_keys,
+                COALESCE(SUM(CASE WHEN r.result = 'Fail' THEN 1 ELSE 0 END), 0) AS failed_keys,
+                CAST(AVG(CAST(r.latency AS decimal(18,4))) AS decimal(8,2)) AS average_latency_ms,
+                MAX(r.latency) AS max_latency_ms,
+                CAST(AVG(CAST(r.noise AS decimal(18,4))) AS decimal(8,2)) AS average_noise_db,
+                MAX(r.noise) AS max_noise_db,
+                MAX(r.recorded_at) AS last_recorded_at
+            FROM device_key_test_results AS r
+            WHERE r.session_id = s.id
+        ) AS summary
         """;
 
     private static void AddSessionParameters(SqlCommand command, DeviceTestSession session)
@@ -185,21 +153,10 @@ public sealed class SqlDeviceTestSessionRepository : IDeviceTestSessionRepositor
         command.AddParameter("@session_id", SqlDbType.VarChar, session.SessionId, 50);
         command.AddParameter("@request_id", SqlDbType.VarChar, session.RequestId, 50);
         command.AddParameter("@device_id", SqlDbType.VarChar, session.DeviceId, 50);
-        command.AddParameter("@seller_user_id", SqlDbType.Int, session.SellerUserId);
         command.AddParameter("@switch_technology", SqlDbType.VarChar, session.SwitchTechnology, 50);
         command.AddParameter("@noise_requirement", SqlDbType.VarChar, session.NoiseRequirement.ToString(), 20);
         command.AddParameter("@total_keys", SqlDbType.Int, session.TotalKeys);
-        command.AddParameter("@tested_keys", SqlDbType.Int, session.TestedKeys);
-        command.AddParameter("@passed_keys", SqlDbType.Int, session.PassedKeys);
-        command.AddParameter("@warning_keys", SqlDbType.Int, session.WarningKeys);
-        command.AddParameter("@failed_keys", SqlDbType.Int, session.FailedKeys);
-        command.AddNullableDecimalParameter("@average_latency_ms", session.AverageLatencyMs);
-        command.AddNullableDecimalParameter("@max_latency_ms", session.MaxLatencyMs);
-        command.AddNullableDecimalParameter("@average_noise_db", session.AverageNoiseDb);
-        command.AddNullableDecimalParameter("@max_noise_db", session.MaxNoiseDb);
         command.AddParameter("@status", SqlDbType.VarChar, session.Status.ToString(), 20);
-        command.AddParameter("@started_at", SqlDbType.DateTime2, session.StartedAt == default ? null : session.StartedAt);
-        command.AddParameter("@completed_at", SqlDbType.DateTime2, session.CompletedAt);
     }
 
     private static DeviceTestSession MapSession(SqlDataReader reader)
@@ -209,10 +166,10 @@ public sealed class SqlDeviceTestSessionRepository : IDeviceTestSessionRepositor
             SessionId = reader.GetStringValue("session_id"),
             RequestId = reader.GetStringValue("request_id"),
             DeviceId = reader.GetStringValue("device_id"),
-            SellerUserId = reader.GetIntValue("seller_user_id"),
             SwitchTechnology = reader.GetStringValue("switch_technology"),
             NoiseRequirement = reader.GetEnumValue<NoiseRequirement>("noise_requirement"),
             TotalKeys = reader.GetIntValue("total_keys"),
+            Status = reader.GetEnumValue<TestSessionStatus>("status"),
             TestedKeys = reader.GetIntValue("tested_keys"),
             PassedKeys = reader.GetIntValue("passed_keys"),
             WarningKeys = reader.GetIntValue("warning_keys"),
@@ -220,10 +177,7 @@ public sealed class SqlDeviceTestSessionRepository : IDeviceTestSessionRepositor
             AverageLatencyMs = reader.GetNullableDecimalValue("average_latency_ms"),
             MaxLatencyMs = reader.GetNullableDecimalValue("max_latency_ms"),
             AverageNoiseDb = reader.GetNullableDecimalValue("average_noise_db"),
-            MaxNoiseDb = reader.GetNullableDecimalValue("max_noise_db"),
-            Status = reader.GetEnumValue<TestSessionStatus>("status"),
-            StartedAt = reader.GetDateTimeValue("started_at"),
-            CompletedAt = reader.GetNullableDateTimeValue("completed_at")
+            MaxNoiseDb = reader.GetNullableDecimalValue("max_noise_db")
         };
     }
 }

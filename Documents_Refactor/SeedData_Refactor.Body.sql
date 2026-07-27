@@ -412,110 +412,56 @@ WHEN NOT MATCHED THEN
     VALUES (source.device_id, source.seller_user_id, source.device_name, source.device_type, source.is_active, source.last_seen_at, source.created_at);
 
 MERGE device_test_sessions AS target
-USING (
-    SELECT
-        'QCSESS_REF_QK65' AS session_id,
-        'REQ_REF_QK65_COMPLETED' AS request_id,
-        'DEV_REF_QC_01' AS device_id,
-        seller.id AS seller_user_id,
-        'Mechanical' AS switch_technology,
-        'Normal' AS noise_requirement,
-        3 AS total_keys,
-        3 AS tested_keys,
-        2 AS passed_keys,
-        1 AS warning_keys,
-        0 AS failed_keys,
-        CAST(5.57 AS decimal(8,2)) AS average_latency_ms,
-        CAST(12.50 AS decimal(8,2)) AS max_latency_ms,
-        CAST(44.83 AS decimal(8,2)) AS average_noise_db,
-        CAST(48.00 AS decimal(8,2)) AS max_noise_db,
-        'Warning' AS status,
-        CAST('2026-06-06T14:30:00' AS datetime2) AS started_at,
-        CAST('2026-06-06T14:33:00' AS datetime2) AS completed_at
-    FROM users AS seller
-    WHERE seller.username = 'seller_keyboardlab'
-) AS source
+USING (VALUES
+    ('QCSESS_REF_QK65', 'REQ_REF_QK65_COMPLETED', 'DEV_REF_QC_01', 'Mechanical', 'Normal', 3, 'Warning')
+) AS source (session_id, request_id, device_id, switch_technology, noise_requirement, total_keys, status)
 ON target.id = source.session_id
 WHEN MATCHED THEN
     UPDATE SET
         request_id = source.request_id,
         device_id = source.device_id,
-        seller_user_id = source.seller_user_id,
         switch_technology = source.switch_technology,
         noise_requirement = source.noise_requirement,
         total_keys = source.total_keys,
-        tested_keys = source.tested_keys,
-        passed_keys = source.passed_keys,
-        warning_keys = source.warning_keys,
-        failed_keys = source.failed_keys,
-        average_latency_ms = source.average_latency_ms,
-        max_latency_ms = source.max_latency_ms,
-        average_noise_db = source.average_noise_db,
-        max_noise_db = source.max_noise_db,
-        status = source.status,
-        started_at = source.started_at,
-        completed_at = source.completed_at
+        status = source.status
 WHEN NOT MATCHED THEN
-    INSERT (
-        id, request_id, device_id, seller_user_id, switch_technology, noise_requirement,
-        total_keys, tested_keys, passed_keys, warning_keys, failed_keys,
-        average_latency_ms, max_latency_ms, average_noise_db, max_noise_db,
-        status, started_at, completed_at
-    )
+    INSERT (id, request_id, device_id, switch_technology, noise_requirement, total_keys, status)
     VALUES (
-        source.session_id, source.request_id, source.device_id, source.seller_user_id,
-        source.switch_technology, source.noise_requirement,
-        source.total_keys, source.tested_keys, source.passed_keys, source.warning_keys, source.failed_keys,
-        source.average_latency_ms, source.max_latency_ms, source.average_noise_db, source.max_noise_db,
-        source.status, source.started_at, source.completed_at
+        source.session_id, source.request_id, source.device_id, source.switch_technology,
+        source.noise_requirement, source.total_keys, source.status
     );
 
 MERGE device_key_test_results AS target
 USING (VALUES
-    ('QCSESS_REF_QK65', 'REQ_REF_QK65_COMPLETED', 'DEV_REF_QC_01', 'KeyA', 'A', 'A', 1, 2.10, 1, 0, 1, 75, 0, 42.50, 'Mechanical', 'Pass', NULL, NULL, CAST('2026-06-06T14:31:00' AS datetime2)),
-    ('QCSESS_REF_QK65', 'REQ_REF_QK65_COMPLETED', 'DEV_REF_QC_01', 'KeyB', 'B', 'B', 1, 12.50, 1, 0, 1, 82, 0, 48.00, 'Mechanical', 'Warning', 'HighLatency', N'Latency exceeded the warning threshold.', CAST('2026-06-06T14:31:30' AS datetime2)),
-    ('QCSESS_REF_QK65', 'REQ_REF_QK65_COMPLETED', 'DEV_REF_QC_01', 'KeyC', 'C', 'C', 1, 2.10, 1, 0, 1, 78, 0, 44.00, 'Mechanical', 'Pass', NULL, NULL, CAST('2026-06-06T14:32:00' AS datetime2))
+    ('QCSESS_REF_QK65', 'KeyA', 'A', 1, 2.10, 1, 1, 75, 42.50, 'Pass', CAST('2026-06-06T14:31:00' AS datetime2)),
+    ('QCSESS_REF_QK65', 'KeyB', 'B', 1, 12.50, 1, 1, 82, 48.00, 'Warning', CAST('2026-06-06T14:31:30' AS datetime2)),
+    ('QCSESS_REF_QK65', 'KeyC', 'C', 1, 2.10, 1, 1, 78, 44.00, 'Pass', CAST('2026-06-06T14:32:00' AS datetime2))
 ) AS source (
-    session_id, request_id, device_id, key_code, expected_key, received_key,
-    press_signal_detected, latency_ms, press_event_count, bounce_count,
-    release_signal_detected, hold_duration_ms, is_stuck, noise_db,
-    switch_technology, result, failure_type, failure_reason, recorded_at
+    session_id, key_code, received_key, press_signal_detected, latency,
+    press_count, release_signal, hold_duration, noise, result, recorded_at
 )
 ON target.session_id = source.session_id
 AND target.key_code = source.key_code
 WHEN MATCHED THEN
     UPDATE SET
-        request_id = source.request_id,
-        device_id = source.device_id,
-        expected_key = source.expected_key,
         received_key = source.received_key,
         press_signal_detected = source.press_signal_detected,
-        latency_ms = source.latency_ms,
-        press_event_count = source.press_event_count,
-        bounce_count = source.bounce_count,
-        release_signal_detected = source.release_signal_detected,
-        hold_duration_ms = source.hold_duration_ms,
-        is_stuck = source.is_stuck,
-        noise_db = source.noise_db,
-        switch_technology = source.switch_technology,
+        latency = source.latency,
+        press_count = source.press_count,
+        release_signal = source.release_signal,
+        hold_duration = source.hold_duration,
+        noise = source.noise,
         result = source.result,
-        failure_type = source.failure_type,
-        failure_reason = source.failure_reason,
         recorded_at = source.recorded_at
 WHEN NOT MATCHED THEN
     INSERT (
-        session_id, request_id, device_id, key_code, expected_key, received_key,
-        press_signal_detected, latency_ms, press_event_count, bounce_count,
-        release_signal_detected, hold_duration_ms, is_stuck, noise_db,
-        switch_technology, result, failure_type, failure_reason, recorded_at
+        session_id, key_code, received_key, press_signal_detected, latency,
+        press_count, release_signal, hold_duration, noise, result, recorded_at
     )
     VALUES (
-        source.session_id, source.request_id, source.device_id, source.key_code,
-        source.expected_key, source.received_key, source.press_signal_detected,
-        source.latency_ms, source.press_event_count, source.bounce_count,
-        source.release_signal_detected, source.hold_duration_ms, source.is_stuck,
-        source.noise_db, source.switch_technology, source.result,
-        source.failure_type, source.failure_reason, source.recorded_at
+        source.session_id, source.key_code, source.received_key, source.press_signal_detected,
+        source.latency, source.press_count, source.release_signal, source.hold_duration,
+        source.noise, source.result, source.recorded_at
     );
 
 DELETE existing

@@ -13,15 +13,18 @@ public sealed class DeviceService : IDeviceService
     private const string QcStationName = "Keyboard QC Station";
 
     private readonly IDeviceRepository _deviceRepository;
+    private readonly IRequestRepository _requestRepository;
     private readonly IDeviceTestSessionRepository _sessionRepository;
     private readonly IDeviceKeyTestResultRepository _keyResultRepository;
 
     public DeviceService(
         IDeviceRepository deviceRepository,
+        IRequestRepository requestRepository,
         IDeviceTestSessionRepository sessionRepository,
         IDeviceKeyTestResultRepository keyResultRepository)
     {
         _deviceRepository = deviceRepository;
+        _requestRepository = requestRepository;
         _sessionRepository = sessionRepository;
         _keyResultRepository = keyResultRepository;
     }
@@ -76,16 +79,28 @@ public sealed class DeviceService : IDeviceService
             throw new InvalidOperationException("A QC session must cover at least one key.");
         }
 
+        var request = await _requestRepository.GetByIdAsync(requestId, cancellationToken)
+            ?? throw new InvalidOperationException($"Build request '{requestId}' was not found.");
+        if (request.SellerUserId != sellerUserId)
+        {
+            throw new InvalidOperationException("The QC request does not belong to the selected seller.");
+        }
+
+        var device = await _deviceRepository.GetByIdAsync(deviceId, cancellationToken)
+            ?? throw new InvalidOperationException($"QC device '{deviceId}' was not found.");
+        if (device.SellerUserId != sellerUserId)
+        {
+            throw new InvalidOperationException("The QC device does not belong to the request seller.");
+        }
+
         var session = new DeviceTestSession
         {
             RequestId = requestId,
             DeviceId = deviceId,
-            SellerUserId = sellerUserId,
             SwitchTechnology = string.IsNullOrWhiteSpace(switchTechnology) ? DefaultSwitchTechnology : switchTechnology,
             NoiseRequirement = noiseRequirement,
             TotalKeys = totalKeys,
-            Status = TestSessionStatus.Running,
-            StartedAt = DateTime.UtcNow
+            Status = TestSessionStatus.Running
         };
 
         // INSERT the Running row first (generates the session id) so per-key FK session_id always holds.
@@ -121,26 +136,23 @@ public sealed class DeviceService : IDeviceService
         var result = new DeviceKeyTestResult
         {
             SessionId = session.SessionId,
-            RequestId = session.RequestId,        // copy from session => FK + denormalization aligned
-            DeviceId = session.DeviceId,          // copy from session
             KeyCode = telemetry.KeyCode,
-            ExpectedKey = telemetry.ExpectedKey,
             ReceivedKey = telemetry.ReceivedKey,
             PressSignalDetected = telemetry.PressSignalDetected,
-            LatencyMs = telemetry.LatencyMs,
-            PressEventCount = telemetry.PressEventCount,
-            BounceCount = telemetry.BounceCount,
-            ReleaseSignalDetected = telemetry.ReleaseSignalDetected,
-            HoldDurationMs = telemetry.HoldDurationMs,
-            IsStuck = telemetry.IsStuck,
-            NoiseDb = telemetry.NoiseDb,
-            SwitchTechnology = session.SwitchTechnology,
+            Latency = telemetry.LatencyMs,
+            PressCount = telemetry.PressEventCount,
+            ReleaseSignal = telemetry.ReleaseSignalDetected,
+            HoldDuration = telemetry.HoldDurationMs,
+            Noise = telemetry.NoiseDb,
             Result = evaluation.Result,
             FailureType = evaluation.FailureType,
             FailureReason = evaluation.Reason
         };
 
-        return await _keyResultRepository.InsertAsync(result, cancellationToken);
+        var saved = await _keyResultRepository.InsertAsync(result, cancellationToken);
+        saved.FailureType = evaluation.FailureType;
+        saved.FailureReason = evaluation.Reason;
+        return saved;
     }
 
     public async Task<DeviceTestSession> CompleteSessionAsync(string sessionId, CancellationToken cancellationToken = default)
@@ -163,16 +175,16 @@ public sealed class DeviceService : IDeviceService
         session.WarningKeys = keyResults.Count(result => result.Result == KeyTestResult.Warning);
         session.FailedKeys = keyResults.Count(result => result.Result == KeyTestResult.Fail);
 
-        var latencies = keyResults.Where(result => result.LatencyMs.HasValue)
-            .Select(result => result.LatencyMs!.Value)
+        var latencies = keyResults.Where(result => result.Latency.HasValue)
+            .Select(result => result.Latency!.Value)
             .ToList();
         session.AverageLatencyMs = latencies.Count > 0
             ? Math.Round(latencies.Average(), 2, MidpointRounding.AwayFromZero)
             : null;
         session.MaxLatencyMs = latencies.Count > 0 ? latencies.Max() : null;
 
-        var noises = keyResults.Where(result => result.NoiseDb.HasValue)
-            .Select(result => result.NoiseDb!.Value)
+        var noises = keyResults.Where(result => result.Noise.HasValue)
+            .Select(result => result.Noise!.Value)
             .ToList();
         session.AverageNoiseDb = noises.Count > 0
             ? Math.Round(noises.Average(), 2, MidpointRounding.AwayFromZero)
@@ -185,14 +197,47 @@ public sealed class DeviceService : IDeviceService
             : session.WarningKeys > 0
                 ? TestSessionStatus.Warning
                 : TestSessionStatus.Passed;
-        session.CompletedAt = DateTime.UtcNow;
-
         return await _sessionRepository.SaveAsync(session, cancellationToken);
     }
 
     public Task<DeviceTestSession?> GetLatestSessionByRequestAsync(string requestId, CancellationToken cancellationToken = default)
         => _sessionRepository.GetLatestByRequestAsync(requestId, cancellationToken);
 
-    public Task<IReadOnlyList<DeviceKeyTestResult>> GetKeyResultsAsync(string sessionId, CancellationToken cancellationToken = default)
-        => _keyResultRepository.GetBySessionAsync(sessionId, cancellationToken);
+    public async Task<IReadOnlyList<DeviceKeyTestResult>> GetKeyResultsAsync(
+        string sessionId,
+        CancellationToken cancellationToken = default)
+    {
+        var session = await _sessionRepository.GetByIdAsync(sessionId, cancellationToken)
+            ?? throw new InvalidOperationException($"QC session '{sessionId}' was not found.");
+        var results = await _keyResultRepository.GetBySessionAsync(sessionId, cancellationToken);
+        var thresholds = new QcThresholds(session.SwitchTechnology, session.NoiseRequirement);
+
+        foreach (var result in results)
+        {
+            var telemetry = new KeyTelemetry
+            {
+                SessionId = session.SessionId,
+                RequestId = session.RequestId,
+                DeviceId = session.DeviceId,
+                KeyCode = result.KeyCode,
+                ExpectedKey = result.KeyCode,
+                ReceivedKey = result.ReceivedKey,
+                PressSignalDetected = result.PressSignalDetected,
+                LatencyMs = result.Latency,
+                PressEventCount = result.PressCount,
+                BounceCount = result.ReleaseSignal ? Math.Max(0, result.PressCount - 1) : null,
+                ReleaseSignalDetected = result.ReleaseSignal,
+                HoldDurationMs = result.HoldDuration,
+                IsStuck = result.PressSignalDetected && !result.ReleaseSignal,
+                NoiseDb = result.Noise,
+                SwitchTechnology = session.SwitchTechnology
+            };
+
+            var evaluation = DeviceQcRules.Evaluate(telemetry, thresholds);
+            result.FailureType = evaluation.FailureType;
+            result.FailureReason = evaluation.Reason;
+        }
+
+        return results;
+    }
 }

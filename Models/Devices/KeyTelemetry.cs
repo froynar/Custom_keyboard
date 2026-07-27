@@ -19,5 +19,5 @@ public sealed class KeyTelemetry
     public int? HoldDurationMs { get; set; }
     public bool IsStuck { get; set; }
     public decimal? NoiseDb { get; set; }
-    public string SwitchTechnology { get; set; } = string.Empty;   // always set by simulator; feeds NOT NULL per-key column
+    public string SwitchTechnology { get; set; } = string.Empty;   // simulator context; persisted once on the owning session
 }

@@ -7,9 +7,8 @@ Du an hien tai la ung dung desktop WPF dung .NET va SQL Server database `CustomK
 ## Trang Thai Refactor Hien Tai
 
 - Refactor kit-based da hoan thanh loi MVP (Phase 0-10): build/request/seller-status/chat-DB/admin/audit + validation & logging (Phase 7) + MQTT realtime tuy chon (Phase 8) + test matrix & handover (Phase 9-10). Chat SignalR (Phase 8A) con lai, tuy chon.
-- ERD refactor moi la source of truth: `Documents_Refactor/`.
-- Tai lieu cu (`Documents/`) va template/SQL legacy da go khoi repo; tra cuu qua lich su git neu can.
-- DB verification hien nam trong `Database/SqlServer/VerifyRefactor.sql` cho clean seed va bo script `VerifyPkToId_*` cho migration giu du lieu.
+- ERD vat ly moi la source of truth: `Documents/Custom_Keyboard_ERD_Final.dbml`.
+- DB verification hien nam trong `Database/SqlServer/VerifyRefactor.sql`; migration giu du lieu chay PK-to-id truoc, sau do chay bo QC concise.
 - DB test mac dinh: `CustomKeyboard_Refactor` tren `KHOADZS1VN\SQLEXPRESS`.
 
 Lenh kiem tra chinh:
@@ -31,12 +30,15 @@ Quickstart:
 4. `dotnet build` -> `dotnet run`.
 5. Verify clean seed bang `Database/SqlServer/VerifyRefactor.sql`.
 
-Neu DB da co du lieu runtime va van dung PK cu (`user_id`, `build_id`, ... tren bang chu), khong chay `CreateSchema_Refactor.sql`. Quy trinh dung la backup + restore rehearsal, chay `Database/SqlServer/VerifyPkToId_Preflight.sql`, chay `Database/SqlServer/MigratePkToId_20260715.sql`, roi chay `Database/SqlServer/VerifyPkToId_Postflight.sql`. Ba script nay khong tu `USE` database; bat buoc chon target ro rang bang `sqlcmd -d`, nhờ vay cung mot artifact co the rehearsal tren DB clone.
+Neu DB da co du lieu runtime, khong chay `CreateSchema_Refactor.sql`. Neu DB van dung PK cu (`user_id`, `build_id`, ... tren bang chu), chay bo PK-to-id truoc. Sau khi schema dat version `2026.07.15-pk-id`, backup + restore rehearsal, roi chay preflight/migration/postflight QC concise. Tat ca script migration yeu cau chon target ro rang bang `sqlcmd -d`.
 
 ```powershell
 sqlcmd -S "<server>" -d "<restored-clone-or-runtime-db>" -E -C -b -i Database\SqlServer\VerifyPkToId_Preflight.sql
 sqlcmd -S "<server>" -d "<restored-clone-or-runtime-db>" -E -C -b -i Database\SqlServer\MigratePkToId_20260715.sql
 sqlcmd -S "<server>" -d "<restored-clone-or-runtime-db>" -E -C -b -i Database\SqlServer\VerifyPkToId_Postflight.sql
+sqlcmd -S "<server>" -d "<restored-clone-or-runtime-db>" -E -C -b -i Database\SqlServer\VerifyQcConcise_Preflight.sql
+sqlcmd -S "<server>" -d "<restored-clone-or-runtime-db>" -E -C -b -i Database\SqlServer\MigrateQcConcise_20260727.sql
+sqlcmd -S "<server>" -d "<restored-clone-or-runtime-db>" -E -C -b -i Database\SqlServer\VerifyQcConcise_Postflight.sql
 ```
 
 Tai khoan seed (mat khau **`Password123`**, login bang username hoac email):
@@ -393,9 +395,9 @@ sqlcmd -S "<server>" -E -C -b -d "CustomKeyboard_Refactor" -i Database\SqlServer
 
 Clean-seed verification bao gom:
 
-- Source gate doi chieu 21 PK, 33 FK, 21 lenh rename, schema version/startup guard va cac owner-PK pattern nguy hiem trong repository.
-- DB invariant checks tu `VerifyRefactor.sql`: schema version, 21 PK `id`, dung chinh xac 33 FK enabled/trusted, total snapshot, switch quantity, exactly-one-FK, seller verified, conversation XOR, FK orphan, QC fixture, requested build/request, chat sender participant, password hash format.
-- Migration giu du lieu dung bo `VerifyPkToId_Preflight.sql` / `MigratePkToId_20260715.sql` / `VerifyPkToId_Postflight.sql`, khong dung row count clean seed lam baseline runtime.
+- Source gate doi chieu 21 PK, 30 FK, chinh xac 7 cot session/12 cot key result, schema version/startup guard va cac owner-PK pattern nguy hiem trong repository.
+- DB invariant checks tu `VerifyRefactor.sql`: schema version, 21 PK `id`, dung chinh xac 30 FK enabled/trusted, total snapshot, switch quantity, exactly-one-FK, seller verified, conversation XOR, FK orphan, QC fixture, requested build/request, chat sender participant, password hash format.
+- Migration giu du lieu chay theo thu tu: bo PK-to-id (`VerifyPkToId_Preflight.sql` / `MigratePkToId_20260715.sql` / `VerifyPkToId_Postflight.sql`), sau do bo QC concise (`VerifyQcConcise_Preflight.sql` / `MigrateQcConcise_20260727.sql` / `VerifyQcConcise_Postflight.sql`).
 
 Khi chay migration tren DB co du lieu, luu output preflight/postflight va smoke test thu cong cac luong Buyer/Seller/Admin nhu trong bao cao audit PK-to-id.
 

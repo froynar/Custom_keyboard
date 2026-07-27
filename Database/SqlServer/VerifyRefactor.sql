@@ -2,7 +2,7 @@
 -- Source: Custom_Keyboard_Project_Refactor_Summary.md section 14.
 -- Run AFTER CreateSchema_Refactor.sql + SeedData_Refactor.sql on the test DB.
 -- This is the clean-seed fixture verifier. For preserving an existing runtime
--- database, use VerifyPkToId_Preflight.sql and VerifyPkToId_Postflight.sql.
+-- database, run both ordered migration preflight/postflight pairs documented in README.md.
 -- Every CHECK query below must return 0 error rows. Row counts are clean-seed
 -- expectations, not a runtime-data migration baseline.
 
@@ -12,13 +12,13 @@ GO
 SET NOCOUNT ON;
 GO
 
-DECLARE @ExpectedSchemaVersion varchar(64) = '2026.07.15-pk-id';
+DECLARE @ExpectedSchemaVersion varchar(64) = '2026.07.27-qc-concise';
 
 DECLARE @SchemaMigrationsObjectId int = OBJECT_ID(N'dbo.schema_migrations', N'U');
 
 IF @SchemaMigrationsObjectId IS NULL
 BEGIN
-    THROW 51000, 'VerifyRefactor.sql requires clean schema version 2026.07.15-pk-id.', 1;
+    THROW 51000, 'VerifyRefactor.sql requires clean schema version 2026.07.27-qc-concise.', 1;
 END;
 
 IF (
@@ -72,7 +72,7 @@ EXEC sys.sp_executesql
 
 IF @SchemaVersionFound = 0
 BEGIN
-    THROW 51000, 'VerifyRefactor.sql requires clean schema version 2026.07.15-pk-id.', 1;
+    THROW 51000, 'VerifyRefactor.sql requires clean schema version 2026.07.27-qc-concise.', 1;
 END;
 
 DECLARE @ExpectedPrimaryKey TABLE (
@@ -183,10 +183,7 @@ VALUES
     (N'devices', N'seller_user_id', N'users'),
     (N'device_test_sessions', N'request_id', N'build_requests'),
     (N'device_test_sessions', N'device_id', N'devices'),
-    (N'device_test_sessions', N'seller_user_id', N'users'),
     (N'device_key_test_results', N'session_id', N'device_test_sessions'),
-    (N'device_key_test_results', N'request_id', N'build_requests'),
-    (N'device_key_test_results', N'device_id', N'devices'),
     (N'audit_log', N'user_id', N'users'),
     (N'chat_conversations', N'seller_user_id', N'users'),
     (N'chat_conversations', N'buyer_id', N'users'),
@@ -232,8 +229,8 @@ INNER JOIN sys.columns AS referenced_column
    AND referenced_column.column_id = fkc.referenced_column_id
 WHERE parent_table.name IN (SELECT table_name FROM @ExpectedPrimaryKey);
 
-IF (SELECT COUNT(*) FROM @ExpectedForeignKey) <> 33
-   OR (SELECT COUNT(*) FROM @ActualForeignKey) <> 33
+IF (SELECT COUNT(*) FROM @ExpectedForeignKey) <> 30
+   OR (SELECT COUNT(*) FROM @ActualForeignKey) <> 30
    OR EXISTS (
         SELECT parent_table_name, parent_column_name, N'dbo', referenced_table_name, N'id'
         FROM @ExpectedForeignKey
@@ -249,7 +246,7 @@ IF (SELECT COUNT(*) FROM @ExpectedForeignKey) <> 33
         FROM @ExpectedForeignKey
    )
 BEGIN
-    THROW 51002, 'VerifyRefactor.sql requires the exact 33-FK id-target contract.', 1;
+    THROW 51002, 'VerifyRefactor.sql requires the exact 30-FK id-target contract.', 1;
 END;
 
 IF EXISTS (
@@ -434,14 +431,8 @@ UNION ALL SELECT 'device_test_sessions.request_id', COUNT(*)
     FROM device_test_sessions dts LEFT JOIN build_requests br ON br.id = dts.request_id WHERE br.id IS NULL
 UNION ALL SELECT 'device_test_sessions.device_id', COUNT(*)
     FROM device_test_sessions dts LEFT JOIN devices d ON d.id = dts.device_id WHERE d.id IS NULL
-UNION ALL SELECT 'device_test_sessions.seller_user_id', COUNT(*)
-    FROM device_test_sessions dts LEFT JOIN users u ON u.id = dts.seller_user_id WHERE u.id IS NULL
 UNION ALL SELECT 'device_key_test_results.session_id', COUNT(*)
     FROM device_key_test_results dktr LEFT JOIN device_test_sessions dts ON dts.id = dktr.session_id WHERE dts.id IS NULL
-UNION ALL SELECT 'device_key_test_results.request_id', COUNT(*)
-    FROM device_key_test_results dktr LEFT JOIN build_requests br ON br.id = dktr.request_id WHERE br.id IS NULL
-UNION ALL SELECT 'device_key_test_results.device_id', COUNT(*)
-    FROM device_key_test_results dktr LEFT JOIN devices d ON d.id = dktr.device_id WHERE d.id IS NULL
 UNION ALL SELECT 'audit_log.user_id', COUNT(*)
     FROM audit_log al LEFT JOIN users u ON u.id = al.user_id WHERE u.id IS NULL
 UNION ALL SELECT 'chat_conversations.seller_user_id', COUNT(*)
@@ -492,35 +483,34 @@ HAVING COUNT(*) > 1
 
 UNION ALL
 
-SELECT 'summary_count_mismatch', dts.id, NULL
+SELECT 'session_status_mismatch', dts.id, NULL
 FROM device_test_sessions dts
 OUTER APPLY (
     SELECT
         COUNT(*) AS tested_keys,
-        SUM(CASE WHEN dktr.result = 'Pass' THEN 1 ELSE 0 END) AS passed_keys,
-        SUM(CASE WHEN dktr.result = 'Warning' THEN 1 ELSE 0 END) AS warning_keys,
-        SUM(CASE WHEN dktr.result = 'Fail' THEN 1 ELSE 0 END) AS failed_keys
+        COALESCE(SUM(CASE WHEN dktr.result = 'Warning' THEN 1 ELSE 0 END), 0) AS warning_keys,
+        COALESCE(SUM(CASE WHEN dktr.result = 'Fail' THEN 1 ELSE 0 END), 0) AS failed_keys
     FROM device_key_test_results dktr
     WHERE dktr.session_id = dts.id
 ) actual
-WHERE dts.status <> 'Running'
-  AND (
-        dts.tested_keys <> actual.tested_keys
-     OR dts.passed_keys <> ISNULL(actual.passed_keys, 0)
-     OR dts.warning_keys <> ISNULL(actual.warning_keys, 0)
-     OR dts.failed_keys <> ISNULL(actual.failed_keys, 0)
-  )
+WHERE actual.tested_keys > dts.total_keys
+   OR (actual.tested_keys < dts.total_keys AND dts.status <> 'Running')
+   OR (
+        actual.tested_keys >= dts.total_keys
+        AND dts.status <> CASE
+            WHEN actual.failed_keys > 0 THEN 'Failed'
+            WHEN actual.warning_keys > 0 THEN 'Warning'
+            ELSE 'Passed'
+        END
+   )
 
 UNION ALL
 
-SELECT 'stale_empty_running_session', dts.id, NULL
+SELECT 'seller_context_mismatch', dts.id, NULL
 FROM device_test_sessions dts
-WHERE dts.status = 'Running'
-  AND dts.started_at < DATEADD(minute, -5, SYSUTCDATETIME())
-  AND NOT EXISTS (
-      SELECT 1
-      FROM device_key_test_results dktr
-      WHERE dktr.session_id = dts.id);
+INNER JOIN build_requests br ON br.id = dts.request_id
+INNER JOIN devices d ON d.id = dts.device_id
+WHERE br.seller_user_id <> d.seller_user_id;
 GO
 
 PRINT '================================================================';

@@ -1,9 +1,9 @@
-// LEGACY SNAPSHOT - superseded by Documents/Custom_Keyboard_ERD_Final.dbml.
-// Custom Keyboard Builder - ERD refactor proposal, compact version
-// Muc tieu: buyer chon keyboard kit, sau do mix switch/keycap/stabilizer/accessory.
-// Giu ERD gon de bat dau refactor tung buoc, tranh qua nhieu lien ket.
-// Link count: 33.
-// Logical enums below are implemented in SQL Server as CHECK-constrained VARCHAR columns.
+// Custom Keyboard Builder - final concise ERD
+// FINAL DESIGN: 21 tables / 30 foreign keys.
+//
+// The QC layer intentionally keeps only the two compact physical tables shown
+// in the project diagram. Session timestamps, summary views, duplicated context,
+// detailed fault diagnostics, and derived aggregate columns are omitted.
 
 Enum UserRole {
   Buyer
@@ -65,15 +65,6 @@ Enum KeyTestResult {
   Fail
 }
 
-Enum KeyFailureType {
-  NoSignal
-  WrongKey
-  Chatter
-  StuckKey
-  HighLatency
-  TooNoisy
-}
-
 Table roles {
   id int [pk, increment]
   role_name UserRole [unique, not null]
@@ -92,7 +83,7 @@ Table users {
 
 Table seller_profiles {
   id int [pk, increment]
-  user_id int [not null, unique, ref: > users.id]
+  user_id int [not null, unique, ref: - users.id]
   shop_name varchar(255) [not null]
   phone varchar(30) [not null]
   address varchar(500) [not null]
@@ -113,7 +104,7 @@ Table seller_applications {
   reviewed_at datetime
   reviewed_by int [ref: > users.id]
 
-  Note: 'Buyer requests an upgrade to Seller. Admin approves (-> set users.role to Seller + create seller_profiles) or rejects. At most one Pending application per buyer (filtered unique index UX_seller_applications_pending_buyer).'
+  Note: 'Buyer requests an upgrade to Seller. Admin approves (sets users.role to Seller and creates seller_profiles) or rejects. At most one Pending application per buyer.'
 }
 
 Table brands {
@@ -125,7 +116,7 @@ Table brands {
 Table layouts {
   id varchar(50) [pk]
   layout_name varchar(100) [not null]
-  form_factor varchar(100) [not null] // 60, 65, 75, TKL, 100, Alice...
+  form_factor varchar(100) [not null]
   key_count int [not null]
 }
 
@@ -135,9 +126,9 @@ Table keyboard_kits {
   layout_id varchar(50) [not null, ref: > layouts.id]
   kit_name varchar(255) [not null]
   pcb_technology SwitchTechnology [not null]
-  switch_mount varchar(100) [not null] // MX 3-pin, MX 5-pin, HE, Topre, Optical
+  switch_mount varchar(100) [not null]
   required_switch_quantity int [not null]
-  included_parts varchar(500) // case, PCB, plate, foam, cable...
+  included_parts varchar(500)
   price_usd decimal(10,2) [not null]
   is_available boolean [not null]
 }
@@ -147,10 +138,10 @@ Table switches {
   brand_id int [not null, ref: > brands.id]
   switch_name varchar(255) [not null]
   switch_technology SwitchTechnology [not null]
-  mount_type varchar(100) [not null] // MX 3-pin, MX 5-pin, HE, Topre, Optical
+  mount_type varchar(100) [not null]
   switch_type varchar(100)
   actuation_force_g int
-  price_usd decimal(10,2) [not null] // unit price per switch
+  price_usd decimal(10,2) [not null]
   is_available boolean [not null]
 }
 
@@ -158,7 +149,7 @@ Table keycap_sets {
   id varchar(50) [pk]
   brand_id int [not null, ref: > brands.id]
   keycap_name varchar(255) [not null]
-  supported_form_factor varchar(255) [not null] // 60/65/75/TKL/100/universal notes
+  supported_form_factor varchar(255) [not null]
   profile varchar(100)
   material varchar(100)
   price_usd decimal(10,2) [not null]
@@ -169,16 +160,16 @@ Table stabilizers {
   id varchar(50) [pk]
   brand_id int [not null, ref: > brands.id]
   stab_name varchar(255) [not null]
-  supported_layouts varchar(255) [not null] // 60/65/75/TKL/100 or universal
+  supported_layouts varchar(255) [not null]
   price_usd decimal(10,2) [not null]
   is_available boolean [not null]
 }
 
 Table accessories {
   id varchar(50) [pk]
-  accessory_type varchar(100) [not null] // Lube, Spring, Film, Foam, Cable, Tool
+  accessory_type varchar(100) [not null]
   accessory_name varchar(255) [not null]
-  target_component varchar(100) // Switch, Stabilizer, Kit, General
+  target_component varchar(100)
   price_usd decimal(10,2) [not null]
   is_available boolean [not null]
 }
@@ -207,14 +198,14 @@ Table build_items {
   unit_price_snapshot decimal(10,2) [not null]
   notes varchar(500)
 
-  Note: 'Exactly one product FK must be set. Kit is stored on builds.kit_id. Switch item quantity must satisfy keyboard_kits.required_switch_quantity.'
+  Note: 'Exactly one product FK must be set. Kit is stored on builds.kit_id.'
 }
 
 Table build_mods {
   id int [pk, increment]
   build_id varchar(50) [not null, ref: > builds.id]
-  mod_type varchar(100) [not null] // Lube, Film, Spring_swap, Tape_mod, Foam_mod
-  target_component varchar(100) [not null] // Switch, Stabilizer, Kit, Build
+  mod_type varchar(100) [not null]
+  target_component varchar(100) [not null]
   notes varchar(500)
 }
 
@@ -240,59 +231,40 @@ Table devices {
   last_seen_at datetime
   created_at datetime [not null]
 
-  Note: 'Device rows are created on demand for the seller QC station. This phase uses simulated telemetry, not embedded hardware.'
+  Note: 'Seller-owned QC device or station. Current implementation creates a simulated QC_STATION on demand.'
 }
 
 Table device_test_sessions {
   id varchar(50) [pk]
   request_id varchar(50) [not null, ref: > build_requests.id]
   device_id varchar(50) [not null, ref: > devices.id]
-  seller_user_id int [not null, ref: > users.id]
   switch_technology SwitchTechnology [not null]
   noise_requirement NoiseRequirement [not null]
   total_keys int [not null]
-  tested_keys int [not null]
-  passed_keys int [not null]
-  warning_keys int [not null]
-  failed_keys int [not null]
-  average_latency_ms decimal(8,2)
-  max_latency_ms decimal(8,2)
-  average_noise_db decimal(8,2)
-  max_noise_db decimal(8,2)
   status TestSessionStatus [not null]
-  started_at datetime [not null]
-  completed_at datetime
 
-  Note: 'One QC session belongs to one build request and one seller QC device. Completion is allowed only when tested_keys reaches total_keys.'
+  Note: 'Compact QC session. Seller context is resolved through request_id and device_id.'
 }
 
 Table device_key_test_results {
   id bigint [pk, increment]
   session_id varchar(50) [not null, ref: > device_test_sessions.id]
-  request_id varchar(50) [not null, ref: > build_requests.id]
-  device_id varchar(50) [not null, ref: > devices.id]
   key_code varchar(30) [not null]
-  expected_key varchar(30) [not null]
   received_key varchar(30)
   press_signal_detected boolean [not null]
-  latency_ms decimal(8,2)
-  press_event_count int [not null]
-  bounce_count int
-  release_signal_detected boolean [not null]
-  hold_duration_ms int
-  is_stuck boolean [not null]
-  noise_db decimal(8,2)
-  switch_technology SwitchTechnology [not null]
+  latency decimal(8,2)
+  press_count int [not null]
+  release_signal boolean [not null]
+  hold_duration int
+  noise decimal(8,2)
   result KeyTestResult [not null]
-  failure_type KeyFailureType
-  failure_reason varchar(255)
   recorded_at datetime [not null]
 
   indexes {
     (session_id, key_code) [unique, name: 'UX_dktr_session_key_code']
   }
 
-  Note: 'request_id and device_id are denormalized from the session for faster per-request QC lookup. Chatter/double click uses press_event_count and bounce_count after a completed press-release cycle; StuckKey uses release_signal_detected=false and bounce_count should remain null.'
+  Note: 'Compact per-key telemetry and final QC verdict. Request, device, and switch technology are resolved through session_id.'
 }
 
 Table audit_log {
