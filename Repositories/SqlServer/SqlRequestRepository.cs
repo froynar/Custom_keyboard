@@ -21,7 +21,7 @@ public sealed class SqlRequestRepository : IRequestRepository
         await connection.OpenAsync(cancellationToken);
 
         await using var command = connection.CreateCommand();
-        command.CommandText = $"{BaseSelectSql} WHERE br.request_id = @request_id;";
+        command.CommandText = $"{BaseSelectSql} WHERE br.id = @request_id;";
         command.AddParameter("@request_id", SqlDbType.VarChar, requestId, 50);
 
         await using var reader = await command.ExecuteReaderAsync(cancellationToken);
@@ -34,9 +34,9 @@ public sealed class SqlRequestRepository : IRequestRepository
         return QueryAsync(
             $"""
             {BaseSelectSql}
-            INNER JOIN builds AS b ON b.build_id = br.build_id
+            INNER JOIN builds AS b ON b.id = br.build_id
             WHERE b.buyer_id = @buyer_id
-            ORDER BY br.requested_at DESC, br.request_id;
+            ORDER BY br.requested_at DESC, br.id;
             """,
             command => command.AddParameter("@buyer_id", SqlDbType.Int, buyerId),
             cancellationToken);
@@ -45,7 +45,7 @@ public sealed class SqlRequestRepository : IRequestRepository
     public Task<IReadOnlyList<BuildRequest>> GetBySellerAsync(int sellerUserId, CancellationToken cancellationToken = default)
     {
         return QueryAsync(
-            $"{BaseSelectSql} WHERE br.seller_user_id = @seller_user_id ORDER BY br.requested_at DESC, br.request_id;",
+            $"{BaseSelectSql} WHERE br.seller_user_id = @seller_user_id ORDER BY br.requested_at DESC, br.id;",
             command => command.AddParameter("@seller_user_id", SqlDbType.Int, sellerUserId),
             cancellationToken);
     }
@@ -72,7 +72,7 @@ public sealed class SqlRequestRepository : IRequestRepository
 
         await using var command = connection.CreateCommand();
         command.CommandText = """
-            IF EXISTS (SELECT 1 FROM build_requests WHERE request_id = @request_id)
+            IF EXISTS (SELECT 1 FROM build_requests WHERE id = @request_id)
             BEGIN
                 UPDATE build_requests
                 SET
@@ -84,12 +84,12 @@ public sealed class SqlRequestRepository : IRequestRepository
                     accepted_at = @accepted_at,
                     completed_at = @completed_at,
                     updated_at = SYSUTCDATETIME()
-                WHERE request_id = @request_id;
+                WHERE id = @request_id;
             END
             ELSE
             BEGIN
                 INSERT INTO build_requests (
-                    request_id,
+                    id,
                     build_id,
                     seller_user_id,
                     request_payload_json,
@@ -113,7 +113,7 @@ public sealed class SqlRequestRepository : IRequestRepository
             END;
 
             SELECT
-                br.request_id,
+                br.id AS request_id,
                 br.build_id,
                 br.seller_user_id,
                 br.request_payload_json,
@@ -124,7 +124,7 @@ public sealed class SqlRequestRepository : IRequestRepository
                 br.completed_at,
                 br.updated_at
             FROM build_requests AS br
-            WHERE br.request_id = @request_id;
+            WHERE br.id = @request_id;
             """;
         AddRequestParameters(command, request);
 
@@ -139,7 +139,7 @@ public sealed class SqlRequestRepository : IRequestRepository
 
     private const string BaseSelectSql = """
         SELECT
-            br.request_id,
+            br.id AS request_id,
             br.build_id,
             br.seller_user_id,
             br.request_payload_json,

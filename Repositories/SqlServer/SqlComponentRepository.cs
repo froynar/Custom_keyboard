@@ -20,7 +20,7 @@ public sealed class SqlComponentRepository : IComponentRepository
     {
         return QueryAsync(
             """
-            SELECT brand_id, brand_name, country
+            SELECT id AS brand_id, brand_name, country
             FROM brands
             ORDER BY brand_name;
             """,
@@ -32,9 +32,9 @@ public sealed class SqlComponentRepository : IComponentRepository
     {
         return QuerySingleAsync(
             """
-            SELECT brand_id, brand_name, country
+            SELECT id AS brand_id, brand_name, country
             FROM brands
-            WHERE brand_id = @brand_id;
+            WHERE id = @brand_id;
             """,
             MapBrand,
             command => command.AddParameter("@brand_id", SqlDbType.Int, brandId),
@@ -48,12 +48,12 @@ public sealed class SqlComponentRepository : IComponentRepository
 
         await using var command = connection.CreateCommand();
         command.CommandText = """
-            IF @brand_id > 0 AND EXISTS (SELECT 1 FROM brands WHERE brand_id = @brand_id)
+            IF @brand_id > 0 AND EXISTS (SELECT 1 FROM brands WHERE id = @brand_id)
             BEGIN
                 UPDATE brands
                 SET brand_name = @brand_name,
                     country = @country
-                WHERE brand_id = @brand_id;
+                WHERE id = @brand_id;
             END
             ELSE
             BEGIN
@@ -63,9 +63,9 @@ public sealed class SqlComponentRepository : IComponentRepository
                 SET @brand_id = CAST(SCOPE_IDENTITY() AS INT);
             END;
 
-            SELECT brand_id, brand_name, country
+            SELECT id AS brand_id, brand_name, country
             FROM brands
-            WHERE brand_id = @brand_id;
+            WHERE id = @brand_id;
             """;
         var idParameter = command.AddParameter("@brand_id", SqlDbType.Int, brand.BrandId);
         idParameter.Direction = ParameterDirection.InputOutput;
@@ -111,7 +111,7 @@ public sealed class SqlComponentRepository : IComponentRepository
         await using var command = connection.CreateCommand();
         command.CommandText = """
             DELETE FROM brands
-            WHERE brand_id = @brand_id;
+            WHERE id = @brand_id;
             """;
         command.AddParameter("@brand_id", SqlDbType.Int, brandId);
 
@@ -123,7 +123,7 @@ public sealed class SqlComponentRepository : IComponentRepository
     {
         return QueryAsync(
             """
-            SELECT layout_id, layout_name, form_factor, key_count
+            SELECT id AS layout_id, layout_name, form_factor, key_count
             FROM layouts
             ORDER BY key_count, layout_name;
             """,
@@ -135,9 +135,9 @@ public sealed class SqlComponentRepository : IComponentRepository
     {
         return QuerySingleAsync(
             """
-            SELECT layout_id, layout_name, form_factor, key_count
+            SELECT id AS layout_id, layout_name, form_factor, key_count
             FROM layouts
-            WHERE layout_id = @layout_id;
+            WHERE id = @layout_id;
             """,
             MapLayout,
             command => command.AddParameter("@layout_id", SqlDbType.VarChar, layoutId, 50),
@@ -151,23 +151,23 @@ public sealed class SqlComponentRepository : IComponentRepository
 
         await using var command = connection.CreateCommand();
         command.CommandText = """
-            IF EXISTS (SELECT 1 FROM layouts WHERE layout_id = @layout_id)
+            IF EXISTS (SELECT 1 FROM layouts WHERE id = @layout_id)
             BEGIN
                 UPDATE layouts
                 SET layout_name = @layout_name,
                     form_factor = @form_factor,
                     key_count = @key_count
-                WHERE layout_id = @layout_id;
+                WHERE id = @layout_id;
             END
             ELSE
             BEGIN
-                INSERT INTO layouts (layout_id, layout_name, form_factor, key_count)
+                INSERT INTO layouts (id, layout_name, form_factor, key_count)
                 VALUES (@layout_id, @layout_name, @form_factor, @key_count);
             END;
 
-            SELECT layout_id, layout_name, form_factor, key_count
+            SELECT id AS layout_id, layout_name, form_factor, key_count
             FROM layouts
-            WHERE layout_id = @layout_id;
+            WHERE id = @layout_id;
             """;
         command.AddParameter("@layout_id", SqlDbType.VarChar, layout.LayoutId.Trim(), 50);
         command.AddParameter("@layout_name", SqlDbType.VarChar, layout.LayoutName.Trim(), 100);
@@ -195,7 +195,7 @@ public sealed class SqlComponentRepository : IComponentRepository
     public Task<KeyboardKit?> GetKitByIdAsync(string kitId, CancellationToken cancellationToken = default)
     {
         return QuerySingleAsync(
-            $"{KitSelectSql} WHERE kit_id = @kit_id;",
+            $"{KitSelectSql} WHERE id = @kit_id;",
             MapKit,
             command => command.AddParameter("@kit_id", SqlDbType.VarChar, kitId, 50),
             cancellationToken);
@@ -213,7 +213,7 @@ public sealed class SqlComponentRepository : IComponentRepository
     public Task<KeyboardSwitch?> GetSwitchByIdAsync(string switchId, CancellationToken cancellationToken = default)
     {
         return QuerySingleAsync(
-            $"{SwitchSelectSql} WHERE switch_id = @switch_id;",
+            $"{SwitchSelectSql} WHERE id = @switch_id;",
             MapSwitch,
             command => command.AddParameter("@switch_id", SqlDbType.VarChar, switchId, 50),
             cancellationToken);
@@ -231,7 +231,7 @@ public sealed class SqlComponentRepository : IComponentRepository
     public Task<KeycapSet?> GetKeycapSetByIdAsync(string keycapId, CancellationToken cancellationToken = default)
     {
         return QuerySingleAsync(
-            $"{KeycapSelectSql} WHERE keycap_id = @keycap_id;",
+            $"{KeycapSelectSql} WHERE id = @keycap_id;",
             MapKeycapSet,
             command => command.AddParameter("@keycap_id", SqlDbType.VarChar, keycapId, 50),
             cancellationToken);
@@ -249,7 +249,7 @@ public sealed class SqlComponentRepository : IComponentRepository
     public Task<Stabilizer?> GetStabilizerByIdAsync(string stabilizerId, CancellationToken cancellationToken = default)
     {
         return QuerySingleAsync(
-            $"{StabilizerSelectSql} WHERE stab_id = @stab_id;",
+            $"{StabilizerSelectSql} WHERE id = @stab_id;",
             MapStabilizer,
             command => command.AddParameter("@stab_id", SqlDbType.VarChar, stabilizerId, 50),
             cancellationToken);
@@ -267,7 +267,7 @@ public sealed class SqlComponentRepository : IComponentRepository
     public Task<Accessory?> GetAccessoryByIdAsync(string accessoryId, CancellationToken cancellationToken = default)
     {
         return QuerySingleAsync(
-            $"{AccessorySelectSql} WHERE accessory_id = @accessory_id;",
+            $"{AccessorySelectSql} WHERE id = @accessory_id;",
             MapAccessory,
             command => command.AddParameter("@accessory_id", SqlDbType.VarChar, accessoryId, 50),
             cancellationToken);
@@ -401,34 +401,34 @@ public sealed class SqlComponentRepository : IComponentRepository
     // ------------------------------------------------------------- Catalog SQL
     private const string KitSelectSql = """
         SELECT
-            kit_id, brand_id, layout_id, kit_name, pcb_technology, switch_mount,
+            id AS kit_id, brand_id, layout_id, kit_name, pcb_technology, switch_mount,
             required_switch_quantity, included_parts, price_usd, is_available
         FROM keyboard_kits
         """;
 
     private const string SwitchSelectSql = """
         SELECT
-            switch_id, brand_id, switch_name, switch_technology, mount_type,
+            id AS switch_id, brand_id, switch_name, switch_technology, mount_type,
             switch_type, actuation_force_g, price_usd, is_available
         FROM switches
         """;
 
     private const string KeycapSelectSql = """
         SELECT
-            keycap_id, brand_id, keycap_name, supported_form_factor,
+            id AS keycap_id, brand_id, keycap_name, supported_form_factor,
             profile, material, price_usd, is_available
         FROM keycap_sets
         """;
 
     private const string StabilizerSelectSql = """
         SELECT
-            stab_id, brand_id, stab_name, supported_layouts, price_usd, is_available
+            id AS stab_id, brand_id, stab_name, supported_layouts, price_usd, is_available
         FROM stabilizers
         """;
 
     private const string AccessorySelectSql = """
         SELECT
-            accessory_id, accessory_type, accessory_name, target_component, price_usd, is_available
+            id AS accessory_id, accessory_type, accessory_name, target_component, price_usd, is_available
         FROM accessories
         """;
 
@@ -436,11 +436,11 @@ public sealed class SqlComponentRepository : IComponentRepository
     {
         return componentType switch
         {
-            AdminComponentType.Kit => ("keyboard_kits", "kit_id"),
-            AdminComponentType.Switch => ("switches", "switch_id"),
-            AdminComponentType.KeycapSet => ("keycap_sets", "keycap_id"),
-            AdminComponentType.Stabilizer => ("stabilizers", "stab_id"),
-            AdminComponentType.Accessory => ("accessories", "accessory_id"),
+            AdminComponentType.Kit => ("keyboard_kits", "id"),
+            AdminComponentType.Switch => ("switches", "id"),
+            AdminComponentType.KeycapSet => ("keycap_sets", "id"),
+            AdminComponentType.Stabilizer => ("stabilizers", "id"),
+            AdminComponentType.Accessory => ("accessories", "id"),
             _ => throw new ArgumentOutOfRangeException(nameof(componentType), componentType, null)
         };
     }
@@ -452,7 +452,7 @@ public sealed class SqlComponentRepository : IComponentRepository
         {
             AdminComponentType.Kit => """
                 SELECT
-                    keyboard_kits.kit_id AS component_id,
+                    keyboard_kits.id AS component_id,
                     keyboard_kits.kit_name AS name,
                     keyboard_kits.brand_id,
                     keyboard_kits.price_usd,
@@ -476,7 +476,7 @@ public sealed class SqlComponentRepository : IComponentRepository
                 """,
             AdminComponentType.Switch => """
                 SELECT
-                    switches.switch_id AS component_id,
+                    switches.id AS component_id,
                     switches.switch_name AS name,
                     switches.brand_id,
                     switches.price_usd,
@@ -500,7 +500,7 @@ public sealed class SqlComponentRepository : IComponentRepository
                 """,
             AdminComponentType.KeycapSet => """
                 SELECT
-                    keycap_sets.keycap_id AS component_id,
+                    keycap_sets.id AS component_id,
                     keycap_sets.keycap_name AS name,
                     keycap_sets.brand_id,
                     keycap_sets.price_usd,
@@ -524,7 +524,7 @@ public sealed class SqlComponentRepository : IComponentRepository
                 """,
             AdminComponentType.Stabilizer => """
                 SELECT
-                    stabilizers.stab_id AS component_id,
+                    stabilizers.id AS component_id,
                     stabilizers.stab_name AS name,
                     stabilizers.brand_id,
                     stabilizers.price_usd,
@@ -548,7 +548,7 @@ public sealed class SqlComponentRepository : IComponentRepository
                 """,
             AdminComponentType.Accessory => """
                 SELECT
-                    accessories.accessory_id AS component_id,
+                    accessories.id AS component_id,
                     accessories.accessory_name AS name,
                     CAST(0 AS int) AS brand_id,
                     accessories.price_usd,
@@ -579,7 +579,7 @@ public sealed class SqlComponentRepository : IComponentRepository
         return componentType switch
         {
             AdminComponentType.Kit => """
-                IF EXISTS (SELECT 1 FROM keyboard_kits WHERE kit_id = @component_id)
+                IF EXISTS (SELECT 1 FROM keyboard_kits WHERE id = @component_id)
                 BEGIN
                     UPDATE keyboard_kits
                     SET brand_id = @brand_id,
@@ -591,16 +591,16 @@ public sealed class SqlComponentRepository : IComponentRepository
                         included_parts = @included_parts,
                         price_usd = @price_usd,
                         is_available = @is_available
-                    WHERE kit_id = @component_id;
+                    WHERE id = @component_id;
                 END
                 ELSE
                 BEGIN
-                    INSERT INTO keyboard_kits (kit_id, brand_id, layout_id, kit_name, pcb_technology, switch_mount, required_switch_quantity, included_parts, price_usd, is_available)
+                    INSERT INTO keyboard_kits (id, brand_id, layout_id, kit_name, pcb_technology, switch_mount, required_switch_quantity, included_parts, price_usd, is_available)
                     VALUES (@component_id, @brand_id, @layout_id, @name, @pcb_technology, @switch_mount, @required_switch_quantity, @included_parts, @price_usd, @is_available);
                 END;
                 """,
             AdminComponentType.Switch => """
-                IF EXISTS (SELECT 1 FROM switches WHERE switch_id = @component_id)
+                IF EXISTS (SELECT 1 FROM switches WHERE id = @component_id)
                 BEGIN
                     UPDATE switches
                     SET brand_id = @brand_id,
@@ -611,16 +611,16 @@ public sealed class SqlComponentRepository : IComponentRepository
                         actuation_force_g = @actuation_force_g,
                         price_usd = @price_usd,
                         is_available = @is_available
-                    WHERE switch_id = @component_id;
+                    WHERE id = @component_id;
                 END
                 ELSE
                 BEGIN
-                    INSERT INTO switches (switch_id, brand_id, switch_name, switch_technology, mount_type, switch_type, actuation_force_g, price_usd, is_available)
+                    INSERT INTO switches (id, brand_id, switch_name, switch_technology, mount_type, switch_type, actuation_force_g, price_usd, is_available)
                     VALUES (@component_id, @brand_id, @name, @switch_technology, @mount_type, @switch_type, @actuation_force_g, @price_usd, @is_available);
                 END;
                 """,
             AdminComponentType.KeycapSet => """
-                IF EXISTS (SELECT 1 FROM keycap_sets WHERE keycap_id = @component_id)
+                IF EXISTS (SELECT 1 FROM keycap_sets WHERE id = @component_id)
                 BEGIN
                     UPDATE keycap_sets
                     SET brand_id = @brand_id,
@@ -630,16 +630,16 @@ public sealed class SqlComponentRepository : IComponentRepository
                         material = @material,
                         price_usd = @price_usd,
                         is_available = @is_available
-                    WHERE keycap_id = @component_id;
+                    WHERE id = @component_id;
                 END
                 ELSE
                 BEGIN
-                    INSERT INTO keycap_sets (keycap_id, brand_id, keycap_name, supported_form_factor, profile, material, price_usd, is_available)
+                    INSERT INTO keycap_sets (id, brand_id, keycap_name, supported_form_factor, profile, material, price_usd, is_available)
                     VALUES (@component_id, @brand_id, @name, @supported_form_factor, @profile, @material, @price_usd, @is_available);
                 END;
                 """,
             AdminComponentType.Stabilizer => """
-                IF EXISTS (SELECT 1 FROM stabilizers WHERE stab_id = @component_id)
+                IF EXISTS (SELECT 1 FROM stabilizers WHERE id = @component_id)
                 BEGIN
                     UPDATE stabilizers
                     SET brand_id = @brand_id,
@@ -647,16 +647,16 @@ public sealed class SqlComponentRepository : IComponentRepository
                         supported_layouts = @supported_layouts,
                         price_usd = @price_usd,
                         is_available = @is_available
-                    WHERE stab_id = @component_id;
+                    WHERE id = @component_id;
                 END
                 ELSE
                 BEGIN
-                    INSERT INTO stabilizers (stab_id, brand_id, stab_name, supported_layouts, price_usd, is_available)
+                    INSERT INTO stabilizers (id, brand_id, stab_name, supported_layouts, price_usd, is_available)
                     VALUES (@component_id, @brand_id, @name, @supported_layouts, @price_usd, @is_available);
                 END;
                 """,
             AdminComponentType.Accessory => """
-                IF EXISTS (SELECT 1 FROM accessories WHERE accessory_id = @component_id)
+                IF EXISTS (SELECT 1 FROM accessories WHERE id = @component_id)
                 BEGIN
                     UPDATE accessories
                     SET accessory_type = @accessory_type,
@@ -664,11 +664,11 @@ public sealed class SqlComponentRepository : IComponentRepository
                         target_component = @target_component,
                         price_usd = @price_usd,
                         is_available = @is_available
-                    WHERE accessory_id = @component_id;
+                    WHERE id = @component_id;
                 END
                 ELSE
                 BEGIN
-                    INSERT INTO accessories (accessory_id, accessory_type, accessory_name, target_component, price_usd, is_available)
+                    INSERT INTO accessories (id, accessory_type, accessory_name, target_component, price_usd, is_available)
                     VALUES (@component_id, @accessory_type, @name, @target_component, @price_usd, @is_available);
                 END;
                 """,

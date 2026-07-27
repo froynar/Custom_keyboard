@@ -27,7 +27,7 @@ public sealed class SqlDeviceRepository : IDeviceRepository
 
         await using var command = connection.CreateCommand();
         command.CommandText = """
-            IF EXISTS (SELECT 1 FROM devices WHERE device_id = @device_id)
+            IF EXISTS (SELECT 1 FROM devices WHERE id = @device_id)
             BEGIN
                 UPDATE devices
                 SET
@@ -36,12 +36,12 @@ public sealed class SqlDeviceRepository : IDeviceRepository
                     device_type = @device_type,
                     is_active = @is_active,
                     last_seen_at = @last_seen_at
-                WHERE device_id = @device_id;
+                WHERE id = @device_id;
             END
             ELSE
             BEGIN
                 INSERT INTO devices (
-                    device_id,
+                    id,
                     seller_user_id,
                     device_name,
                     device_type,
@@ -61,7 +61,7 @@ public sealed class SqlDeviceRepository : IDeviceRepository
             END;
 
             SELECT
-                device_id,
+                id AS device_id,
                 seller_user_id,
                 device_name,
                 device_type,
@@ -69,7 +69,7 @@ public sealed class SqlDeviceRepository : IDeviceRepository
                 last_seen_at,
                 created_at
             FROM devices
-            WHERE device_id = @device_id;
+            WHERE id = @device_id;
             """;
         AddDeviceParameters(command, device);
 
@@ -90,7 +90,7 @@ public sealed class SqlDeviceRepository : IDeviceRepository
         await connection.OpenAsync(cancellationToken);
 
         await using var command = connection.CreateCommand();
-        command.CommandText = $"{BaseSelectSql} WHERE seller_user_id = @seller_user_id ORDER BY created_at, device_id;";
+        command.CommandText = $"{BaseSelectSql} WHERE seller_user_id = @seller_user_id ORDER BY created_at, id;";
         command.AddParameter("@seller_user_id", SqlDbType.Int, sellerUserId);
 
         await using var reader = await command.ExecuteReaderAsync(cancellationToken);
@@ -108,7 +108,7 @@ public sealed class SqlDeviceRepository : IDeviceRepository
         await connection.OpenAsync(cancellationToken);
 
         await using var command = connection.CreateCommand();
-        command.CommandText = $"{BaseSelectSql} WHERE device_id = @device_id;";
+        command.CommandText = $"{BaseSelectSql} WHERE id = @device_id;";
         command.AddParameter("@device_id", SqlDbType.VarChar, deviceId, 50);
 
         await using var reader = await command.ExecuteReaderAsync(cancellationToken);
@@ -117,7 +117,7 @@ public sealed class SqlDeviceRepository : IDeviceRepository
 
     private const string BaseSelectSql = """
         SELECT
-            device_id,
+            id AS device_id,
             seller_user_id,
             device_name,
             device_type,

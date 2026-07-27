@@ -29,7 +29,7 @@ public sealed class SqlSellerApplicationRepository : ISellerApplicationRepositor
             INSERT INTO seller_applications (buyer_user_id, shop_name, phone, address, note, status, created_at)
             VALUES (@buyer_user_id, @shop_name, @phone, @address, @note, @status, SYSUTCDATETIME());
 
-            {BaseSelectSql} WHERE application_id = SCOPE_IDENTITY();
+            {BaseSelectSql} WHERE id = SCOPE_IDENTITY();
             """;
         command.AddParameter("@buyer_user_id", SqlDbType.Int, application.BuyerUserId);
         command.AddParameter("@shop_name", SqlDbType.VarChar, application.ShopName, 255);
@@ -60,7 +60,7 @@ public sealed class SqlSellerApplicationRepository : ISellerApplicationRepositor
         await connection.OpenAsync(cancellationToken);
 
         await using var command = connection.CreateCommand();
-        command.CommandText = $"{BaseSelectSql} WHERE application_id = @application_id;";
+        command.CommandText = $"{BaseSelectSql} WHERE id = @application_id;";
         command.AddParameter("@application_id", SqlDbType.Int, applicationId);
 
         await using var reader = await command.ExecuteReaderAsync(cancellationToken);
@@ -76,7 +76,7 @@ public sealed class SqlSellerApplicationRepository : ISellerApplicationRepositor
         command.CommandText = $"""
             {BaseSelectSql}
             WHERE buyer_user_id = @buyer_user_id
-            ORDER BY created_at DESC, application_id DESC
+            ORDER BY created_at DESC, id DESC
             OFFSET 0 ROWS FETCH NEXT 1 ROWS ONLY;
             """;
         command.AddParameter("@buyer_user_id", SqlDbType.Int, buyerUserId);
@@ -112,7 +112,7 @@ public sealed class SqlSellerApplicationRepository : ISellerApplicationRepositor
         await using var command = connection.CreateCommand();
         command.CommandText = """
             SELECT
-                sa.application_id,
+                sa.id AS application_id,
                 sa.buyer_user_id,
                 u.username,
                 u.email,
@@ -125,8 +125,8 @@ public sealed class SqlSellerApplicationRepository : ISellerApplicationRepositor
                 sa.created_at,
                 sa.reviewed_at
             FROM seller_applications AS sa
-            INNER JOIN users AS u ON u.user_id = sa.buyer_user_id
-            ORDER BY CASE WHEN sa.status = 'Pending' THEN 0 ELSE 1 END, sa.created_at DESC, sa.application_id DESC;
+            INNER JOIN users AS u ON u.id = sa.buyer_user_id
+            ORDER BY CASE WHEN sa.status = 'Pending' THEN 0 ELSE 1 END, sa.created_at DESC, sa.id DESC;
             """;
 
         await using var reader = await command.ExecuteReaderAsync(cancellationToken);
@@ -179,7 +179,7 @@ public sealed class SqlSellerApplicationRepository : ISellerApplicationRepositor
                 review_note = @review_note,
                 reviewed_by = @reviewed_by,
                 reviewed_at = SYSUTCDATETIME()
-            WHERE application_id = @application_id
+            WHERE id = @application_id
               AND status = 'Pending';
             """;
         command.AddParameter("@application_id", SqlDbType.Int, applicationId);
@@ -216,7 +216,7 @@ public sealed class SqlSellerApplicationRepository : ISellerApplicationRepositor
                 IF NOT EXISTS (
                     SELECT 1
                     FROM seller_applications WITH (UPDLOCK, HOLDLOCK)
-                    WHERE application_id = @application_id
+                    WHERE id = @application_id
                       AND status = 'Pending'
                 )
                 BEGIN
@@ -225,8 +225,8 @@ public sealed class SqlSellerApplicationRepository : ISellerApplicationRepositor
                 ELSE IF NOT EXISTS (
                     SELECT 1
                     FROM users AS u WITH (UPDLOCK, HOLDLOCK)
-                    INNER JOIN roles AS r ON r.role_id = u.role_id
-                    WHERE u.user_id = @buyer_user_id
+                    INNER JOIN roles AS r ON r.id = u.role_id
+                    WHERE u.id = @buyer_user_id
                       AND u.is_active = 1
                       AND r.role_name = 'Buyer'
                 )
@@ -236,10 +236,10 @@ public sealed class SqlSellerApplicationRepository : ISellerApplicationRepositor
                 ELSE
                 BEGIN
                     UPDATE u
-                    SET role_id = seller_role.role_id
+                    SET role_id = seller_role.id
                     FROM users AS u
                     CROSS JOIN roles AS seller_role
-                    WHERE u.user_id = @buyer_user_id
+                    WHERE u.id = @buyer_user_id
                       AND seller_role.role_name = 'Seller';
 
                     IF EXISTS (SELECT 1 FROM seller_profiles WHERE user_id = @buyer_user_id)
@@ -263,7 +263,7 @@ public sealed class SqlSellerApplicationRepository : ISellerApplicationRepositor
                         review_note = @review_note,
                         reviewed_by = @reviewed_by,
                         reviewed_at = SYSUTCDATETIME()
-                    WHERE application_id = @application_id
+                    WHERE id = @application_id
                       AND status = 'Pending';
 
                     IF @@ROWCOUNT <> 1
@@ -325,7 +325,7 @@ public sealed class SqlSellerApplicationRepository : ISellerApplicationRepositor
                     reviewed_by = @reviewed_by,
                     reviewed_at = SYSUTCDATETIME()
                 FROM seller_applications AS sa WITH (UPDLOCK, HOLDLOCK)
-                WHERE sa.application_id = @application_id
+                WHERE sa.id = @application_id
                   AND sa.status = 'Pending';
 
                 IF @@ROWCOUNT <> 1
@@ -359,7 +359,7 @@ public sealed class SqlSellerApplicationRepository : ISellerApplicationRepositor
 
     private const string BaseSelectSql = """
         SELECT
-            application_id,
+            id AS application_id,
             buyer_user_id,
             shop_name,
             phone,

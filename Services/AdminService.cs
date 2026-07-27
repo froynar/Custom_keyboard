@@ -153,7 +153,7 @@ public sealed class AdminService : IAdminService
         await AddAuditAsync(
             adminUserId,
             "seller_profiles",
-            saved.UserId.ToString(),
+            saved.SellerProfileId.ToString(),
             oldProfile is null ? "SellerProfileCreate" : "SellerProfileUpdate",
             oldProfile,
             saved,
@@ -190,7 +190,7 @@ public sealed class AdminService : IAdminService
         await AddAuditAsync(
             adminUserId,
             "seller_profiles",
-            sellerUserId.ToString(),
+            newProfile.SellerProfileId.ToString(),
             isVerified ? "SellerVerify" : "SellerUnverify",
             oldProfile,
             newProfile,

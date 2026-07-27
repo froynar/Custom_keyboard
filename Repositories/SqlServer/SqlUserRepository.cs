@@ -25,7 +25,7 @@ public sealed class SqlUserRepository : IUserRepository
         await using var command = connection.CreateCommand();
         command.CommandText = """
             SELECT
-                u.user_id,
+                u.id AS user_id,
                 u.role_id,
                 r.role_name,
                 u.username,
@@ -34,8 +34,8 @@ public sealed class SqlUserRepository : IUserRepository
                 u.password_hash,
                 u.is_active
             FROM users AS u
-            INNER JOIN roles AS r ON r.role_id = u.role_id
-            ORDER BY u.user_id;
+            INNER JOIN roles AS r ON r.id = u.role_id
+            ORDER BY u.id;
             """;
 
         await using var reader = await command.ExecuteReaderAsync(cancellationToken);
@@ -79,7 +79,7 @@ public sealed class SqlUserRepository : IUserRepository
         await using var command = connection.CreateCommand();
         command.CommandText = """
             SELECT
-                u.user_id,
+                u.id AS user_id,
                 u.role_id,
                 r.role_name,
                 u.username,
@@ -88,8 +88,8 @@ public sealed class SqlUserRepository : IUserRepository
                 u.password_hash,
                 u.is_active
             FROM users AS u
-            INNER JOIN roles AS r ON r.role_id = u.role_id
-            WHERE u.user_id = @user_id;
+            INNER JOIN roles AS r ON r.id = u.role_id
+            WHERE u.id = @user_id;
             """;
         command.AddParameter("@user_id", SqlDbType.Int, userId);
 
@@ -119,7 +119,7 @@ public sealed class SqlUserRepository : IUserRepository
         await using var command = connection.CreateCommand();
         command.CommandText = $"""
             SELECT
-                u.user_id,
+                u.id AS user_id,
                 u.role_id,
                 r.role_name,
                 u.username,
@@ -128,7 +128,7 @@ public sealed class SqlUserRepository : IUserRepository
                 u.password_hash,
                 u.is_active
             FROM users AS u
-            INNER JOIN roles AS r ON r.role_id = u.role_id
+            INNER JOIN roles AS r ON r.id = u.role_id
             WHERE {predicateSql};
             """;
         command.AddParameter("@value", SqlDbType.VarChar, value, parameterSize);
@@ -147,7 +147,7 @@ public sealed class SqlUserRepository : IUserRepository
             DECLARE @resolved_role_id INT =
                 CASE
                     WHEN @role_id > 0 THEN @role_id
-                    ELSE (SELECT role_id FROM roles WHERE role_name = @role_name)
+                    ELSE (SELECT id FROM roles WHERE role_name = @role_name)
                 END;
 
             INSERT INTO users (role_id, username, email, phone, password_hash, is_active)
@@ -156,7 +156,7 @@ public sealed class SqlUserRepository : IUserRepository
             DECLARE @new_user_id INT = CAST(SCOPE_IDENTITY() AS INT);
 
             SELECT
-                u.user_id,
+                u.id AS user_id,
                 u.role_id,
                 r.role_name,
                 u.username,
@@ -165,8 +165,8 @@ public sealed class SqlUserRepository : IUserRepository
                 u.password_hash,
                 u.is_active
             FROM users AS u
-            INNER JOIN roles AS r ON r.role_id = u.role_id
-            WHERE u.user_id = @new_user_id;
+            INNER JOIN roles AS r ON r.id = u.role_id
+            WHERE u.id = @new_user_id;
             """;
         AddUserParameters(command, user);
 
@@ -191,14 +191,14 @@ public sealed class SqlUserRepository : IUserRepository
                 role_id =
                     CASE
                         WHEN @role_id > 0 THEN @role_id
-                        ELSE (SELECT role_id FROM roles WHERE role_name = @role_name)
+                        ELSE (SELECT id FROM roles WHERE role_name = @role_name)
                     END,
                 username = @username,
                 email = @email,
                 phone = @phone,
                 password_hash = @password_hash,
                 is_active = @is_active
-            WHERE user_id = @user_id;
+            WHERE id = @user_id;
             """;
         command.AddParameter("@user_id", SqlDbType.Int, user.UserId);
         AddUserParameters(command, user);
@@ -215,7 +215,7 @@ public sealed class SqlUserRepository : IUserRepository
         command.CommandText = """
             UPDATE users
             SET is_active = @is_active
-            WHERE user_id = @user_id;
+            WHERE id = @user_id;
             """;
         command.AddParameter("@user_id", SqlDbType.Int, userId);
         command.AddParameter("@is_active", SqlDbType.Bit, isActive);
@@ -231,8 +231,8 @@ public sealed class SqlUserRepository : IUserRepository
         await using var command = connection.CreateCommand();
         command.CommandText = """
             UPDATE users
-            SET role_id = (SELECT role_id FROM roles WHERE role_name = @role_name)
-            WHERE user_id = @user_id;
+            SET role_id = (SELECT id FROM roles WHERE role_name = @role_name)
+            WHERE id = @user_id;
             """;
         command.AddParameter("@user_id", SqlDbType.Int, userId);
         command.AddParameter("@role_name", SqlDbType.VarChar, role.ToString(), 50);

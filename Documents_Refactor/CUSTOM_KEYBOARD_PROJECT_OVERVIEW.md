@@ -79,20 +79,20 @@ Gọn gàng, thực tế, chuẩn bị refactor:
 #### 🔐 Account Management (3 bảng)
 | Bảng | Trường Chính | Mục Đích |
 |------|-------------|---------|
-| `roles` | role_id, role_name | Định nghĩa Buyer, Seller, Admin |
-| `users` | user_id, username, email, phone, password_hash, is_active, role_id | Tài khoản người dùng |
-| `seller_profiles` | seller_profile_id, user_id, shop_name, is_verified, verified_at | Hồ sơ seller & trạng thái xác minh |
+| `roles` | id, role_name | Định nghĩa Buyer, Seller, Admin |
+| `users` | id, username, email, phone, password_hash, is_active, role_id | Tài khoản người dùng |
+| `seller_profiles` | id, user_id, shop_name, is_verified, verified_at | Hồ sơ seller & trạng thái xác minh |
 
 #### 🛒 Catalog (7 bảng)
 | Bảng | Chính | Mục Đích |
 |------|-------|---------|
-| `brands` | brand_id, brand_name | Hãng sản xuất |
-| `layouts` | layout_id, form_factor (60/65/75/TKL/100) | Layout & form factor |
-| `keyboard_kits` | kit_id, layout_id, required_switch_quantity | Kit nền tảng (case + PCB + plate + phụ kiện) |
-| `switches` | switch_id, switch_technology (Mechanical/HE), mount_type | Switch theo công nghệ |
-| `keycap_sets` | keycap_id, supported_form_factor | Bộ keycap theo form factor |
-| `stabilizers` | stab_id, supported_layouts | Gói stabilizer cơ bản |
-| `accessories` | accessory_id, accessory_type (Lube/Film/Cable/Foam/Tool) | Phụ kiện bổ sung |
+| `brands` | id, brand_name | Hãng sản xuất |
+| `layouts` | id, form_factor (60/65/75/TKL/100) | Layout & form factor |
+| `keyboard_kits` | id, layout_id, required_switch_quantity | Kit nền tảng (case + PCB + plate + phụ kiện) |
+| `switches` | id, switch_technology (Mechanical/HE), mount_type | Switch theo công nghệ |
+| `keycap_sets` | id, supported_form_factor | Bộ keycap theo form factor |
+| `stabilizers` | id, supported_layouts | Gói stabilizer cơ bản |
+| `accessories` | id, accessory_type (Lube/Film/Cable/Foam/Tool) | Phụ kiện bổ sung |
 
 #### 🎨 Build (3 bảng)
 | Bảng | Mục Đích |

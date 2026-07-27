@@ -27,7 +27,7 @@ public sealed class SqlDeviceTestSessionRepository : IDeviceTestSessionRepositor
 
         await using var command = connection.CreateCommand();
         command.CommandText = """
-            IF EXISTS (SELECT 1 FROM device_test_sessions WHERE session_id = @session_id)
+            IF EXISTS (SELECT 1 FROM device_test_sessions WHERE id = @session_id)
             BEGIN
                 UPDATE device_test_sessions
                 SET
@@ -47,12 +47,12 @@ public sealed class SqlDeviceTestSessionRepository : IDeviceTestSessionRepositor
                     max_noise_db = @max_noise_db,
                     status = @status,
                     completed_at = @completed_at
-                WHERE session_id = @session_id;
+                WHERE id = @session_id;
             END
             ELSE
             BEGIN
                 INSERT INTO device_test_sessions (
-                    session_id,
+                    id,
                     request_id,
                     device_id,
                     seller_user_id,
@@ -94,7 +94,7 @@ public sealed class SqlDeviceTestSessionRepository : IDeviceTestSessionRepositor
             END;
 
             SELECT
-                session_id,
+                id AS session_id,
                 request_id,
                 device_id,
                 seller_user_id,
@@ -113,7 +113,7 @@ public sealed class SqlDeviceTestSessionRepository : IDeviceTestSessionRepositor
                 started_at,
                 completed_at
             FROM device_test_sessions
-            WHERE session_id = @session_id;
+            WHERE id = @session_id;
             """;
         AddSessionParameters(command, session);
 
@@ -135,7 +135,7 @@ public sealed class SqlDeviceTestSessionRepository : IDeviceTestSessionRepositor
         command.CommandText = $"""
             {BaseSelectSql}
             WHERE request_id = @request_id
-            ORDER BY started_at DESC, session_id DESC
+            ORDER BY started_at DESC, id DESC
             OFFSET 0 ROWS FETCH NEXT 1 ROWS ONLY;
             """;
         command.AddParameter("@request_id", SqlDbType.VarChar, requestId, 50);
@@ -150,7 +150,7 @@ public sealed class SqlDeviceTestSessionRepository : IDeviceTestSessionRepositor
         await connection.OpenAsync(cancellationToken);
 
         await using var command = connection.CreateCommand();
-        command.CommandText = $"{BaseSelectSql} WHERE session_id = @session_id;";
+        command.CommandText = $"{BaseSelectSql} WHERE id = @session_id;";
         command.AddParameter("@session_id", SqlDbType.VarChar, sessionId, 50);
 
         await using var reader = await command.ExecuteReaderAsync(cancellationToken);
@@ -159,7 +159,7 @@ public sealed class SqlDeviceTestSessionRepository : IDeviceTestSessionRepositor
 
     private const string BaseSelectSql = """
         SELECT
-            session_id,
+            id AS session_id,
             request_id,
             device_id,
             seller_user_id,

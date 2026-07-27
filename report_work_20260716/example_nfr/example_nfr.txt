@@ -1,0 +1,1891 @@
+6/6/26, 4:18 PM                    Báo cáo Bài Tập Lớn Kỹ Thuật Phần Mềm Ứng Dụng: Hệ Thống Quản Lý CSDL Trồng Trọt
+
+
+
+
+                                    ĐẠI HỌC BÁCH KHOA HÀ NỘI
+                                       TRƯỜNG ĐIỆN – ĐIỆN TỬ
+                                                    *****
+                                              *****
+
+
+
+
+                              BÁO CÁO BÀI TẬP LỚN
+                         KỸ THUẬT PHẦN MỀM ỨNG DỤNG
+                         ĐỀ TÀI: HỆ THỐNG QUẢN LÝ CSDL TRỒNG TRỌT
+
+                               • Giảng viên hướng dẫn: Ths. Vũ Song Tùng
+                               • Mã lớp: 154860
+                               • Nhóm: 3ae
+                               • Thành viên:
+                                 o Đỗ Trọng Giáp – 20223945
+                                 o Nguyễn Công Hiếu – 20223704
+                                 o Hoàng Trung Tiến – 20223818
+
+
+                                            Hà Nội, tháng 2/2025
+
+
+
+
+https://getthispdf.com                                                                                                1/44
+6/6/26, 4:18 PM                                       Báo cáo Bài Tập Lớn Kỹ Thuật Phần Mềm Ứng Dụng: Hệ Thống Quản Lý CSDL Trồng Trọt
+
+
+
+
+                   MỤC LỤC
+                   CHƯƠNG 1: TỔNG QUAN VỀ CHƯƠNG TRÌNH QUẢN LÝ CSDL TRỒNG TRỌT ...... 6
+                   1.1. Yêu cầu về dữ liệu ................................................................................................................. 6
+                   1.2. Yêu cầu về chức năng ........................................................................................................... 7
+                   1.3. Yêu cầu phi chức năng ......................................................................................................... 8
+                   1.4. Giới thiệu công cụ phần mềm sử dụng ................................................................................ 8
+                   1.4.1. Visual Studio C# .................................................................................................................. 8
+                   1.4.2. WPF (Windows Presentation Foundation) ........................................................................... 9
+                   1.4.3. Microsoft SQL Server .......................................................................................................... 9
+                   1.4.4. Mô hình MVC ...................................................................................................................... 9
+                   CHƯƠNG 2: PHÂN TÍCH THIẾT KẾ HỆ THỐNG .............................................................. 10
+                   2.1. FHD ..................................................................................................................................... 10
+                   2.2. DFD ..................................................................................................................................... 11
+                   2.2.1. DFD mức ngữ cảnh .............................................................................................................. 11
+                   2.2.2. DFD mức đỉnh ...................................................................................................................... 12
+                   2.2.3. DFD dưới mức đỉnh ............................................................................................................. 14
+                   2.3. Sơ đồ ERD ........................................................................................................................... 20
+                   2.3.1. Tổng quan về sơ đồ ERD .................................................................................................... 20
+                   2.3.2. Các sơ đồ ERD .................................................................................................................... 22
+                   CHƯƠNG 3: TRIỂN KHAI HỆ THỐNG................................................................................. 25
+                   3.1. Từ điển dữ liệu..................................................................................................................... 25
+                   3.2. SQL Sever ............................................................................................................................ 32
+                   3.3. Giao diện ứng dụng............................................................................................................. 41
+                   CHƯƠNG 4: KẾT LUẬN ........................................................................................................... 44
+
+
+
+
+https://getthispdf.com                                                                                                                                                 2/44
+6/6/26, 4:18 PM                                      Báo cáo Bài Tập Lớn Kỹ Thuật Phần Mềm Ứng Dụng: Hệ Thống Quản Lý CSDL Trồng Trọt
+
+
+
+
+                  DANH MỤC HÌNH ẢNH
+                  Hình 1: Sơ đồ phân rã chức năng ................................................................................................ 11
+                  Hình 2: Sơ đồ phân luồng mức ngữ cảnh.................................................................................... 12
+                  Hình 3: Sơ đồ phân luồng mức đỉnh ........................................................................................... 13
+                  Hình 4: Sơ đồ phân luồng mức dưới đỉnh, chức năng quản lý đơn vị hành chính ..................... 14
+                  Hình 5: Sơ đồ phân luồng mức dưới đỉnh, chức năng quản lý người dùng ................................ 15
+                  Hình 7: Sơ đồ phân luồng mức dưới đỉnh, chức năng quản lý tài khoản ................................... 17
+                  Hình 8: Sơ đồ luồng dữ liệu dưới mức đỉnh chức năng quản lý thuốc bảo vệ thực vật ............. 18
+                  Hình 9: Sơ đồ luồng dữ liệu dưới mức đỉnh chức năng quản lý phân bón ................................. 19
+                  Hình 10: Sơ đồ luồng dữ liệu dưới mức đỉnh chức năng quản lý sản xuất trồng trọt ................. 20
+                  Hình 11: Sơ đồ thực thể ERD hệ thống ...................................................................................... 22
+                  Hình 12: Sơ đồ vật lý thiết kế thực thể hệ thống ........................................................................ 23
+                  Hình 13: Sơ đồ thực thẻ ERD trồng trọt ..................................................................................... 23
+                  Hình 14: Sơ đồ thực thể ERD trồng trọt ..................................................................................... 24
+                  Hình 15: Giao diện đăng nhập hệ thống ..................................................................................... 41
+                  Hình 16: Giao diện menu của ứng dụng ..................................................................................... 41
+                  Hình 17: Giao diện bảng và các thao tác tìm kiếm, thêm mới .................................................... 42
+                  Hình 18: Thao tác sửa, xóa với các thông tin trong bảng ........................................................... 42
+                  Hình 19: Quản lý hành chính ...................................................................................................... 43
+                  Hình 20: Quản lý người dùng ..................................................................................................... 43
+
+
+
+
+https://getthispdf.com                                                                                                                                    3/44
+6/6/26, 4:18 PM                                        Báo cáo Bài Tập Lớn Kỹ Thuật Phần Mềm Ứng Dụng: Hệ Thống Quản Lý CSDL Trồng Trọt
+
+
+
+
+                  DANH MỤC BẢNG BIỂU
+                  Bảng 1 - Yêu cầu về dữ liệu.......................................................................................................... 6
+                  Bảng 2 - Bảng hồ sơ .................................................................................................................... 25
+                  Bảng 3 – Bảng quyền .................................................................................................................. 25
+                  Bảng 4 – Bảng tài khoản ............................................................................................................. 25
+                  Bảng 5 – Bảng hành chính .......................................................................................................... 26
+                  Bảng 6 – Bảng tên hành chính .................................................................................................... 26
+                  Bảng 8 – Bảng vùng trồng .......................................................................................................... 26
+                  Bảng 9 – Bảng giống cây lưu hành ............................................................................................. 26
+                  Bảng 10 – Bảng giống cây trồng chính ....................................................................................... 27
+                  Bảng 11 – Bảng giống cây đầu dòng .......................................................................................... 27
+                  Bảng 12 - Bảng phân bón ............................................................................................................ 28
+                  Bảng 13 – Bảng thuốc bảo vệ thực vật ....................................................................................... 28
+                  Bảng 14 – Bảng phân loại ........................................................................................................... 28
+                  Bảng 15 – Bảng cơ sở sản xuất phân bón ................................................................................... 29
+                  Bảng 16 – Bảng cơ sở bán phân bón........................................................................................... 29
+                  Bảng 17 – Bảng cơ sở sản xuất thuốc bảo vệ thực vật ............................................................... 29
+                  Bảng 18 – Bảng cơ sở bán thuốc bảo vệ thực vật ....................................................................... 30
+                  Bảng 19 – Bảng loại cơ sở VietGap ............................................................................................ 30
+                  Bảng 20 – Bảng sinh vật gây hại ................................................................................................ 31
+                  Bảng 21 – Bảng cập nhật sinh vật gây hại .................................................................................. 31
+                  Bảng 22 – Bảng tuổi sâu ............................................................................................................. 31
+
+
+
+
+https://getthispdf.com                                                                                                                                          4/44
+6/6/26, 4:18 PM                        Báo cáo Bài Tập Lớn Kỹ Thuật Phần Mềm Ứng Dụng: Hệ Thống Quản Lý CSDL Trồng Trọt
+
+
+
+
+                         LỜI MỞ ĐẦU
+                       Ngành trồng trọt đóng vai trò quan trọng trong nền kinh tế và đời sống con
+                   người, cung cấp lương thực và thực phẩm chủ yếu, đồng thời thúc đẩy sự phát
+                   triển của các ngành công nghiệp chế biến và xuất khẩu. Tuy nhiên, trong bối
+                   cảnh hiện đại hóa và biến đổi khí hậu, việc quản lý thông tin về giống cây trồng,
+                   năng suất, vùng trồng và các yếu tố liên quan trở nên ngày càng phức tạp.
+                       Sự phát triển của công nghệ thông tin và hệ thống cơ sở dữ liệu mở ra cơ hội
+                   tối ưu hóa quy trình quản lý trong ngành trồng trọt. Một hệ thống quản lý cơ sở
+                   dữ liệu (CSDL) hiệu quả không chỉ giúp lưu trữ thông tin chính xác mà còn hỗ
+                   trợ ra quyết định dựa trên dữ liệu, từ đó nâng cao hiệu suất và chất lượng sản
+                   xuất.
+                       Bài tập lớn này nhằm thiết kế và triển khai một hệ thống quản lý CSDL cho
+                   ngành trồng trọt, tập trung vào các khía cạnh chính: quản lý thông tin giống cây
+                   trồng, bao gồm giống chính, giống mới và giống đặc thù của từng vùng; lưu trữ
+                   và truy xuất thông tin về năng suất, điều kiện trồng trọt và tiêu chuẩn sản xuất;
+                   hỗ trợ tìm kiếm và phân tích dữ liệu nhanh chóng, chính xác. Mục tiêu là phân
+                   tích và thiết kế hệ thống CSDL phù hợp với nhu cầu thực tế, xây dựng cơ sở dữ
+                   liệu với các truy vấn mẫu để minh họa khả năng quản lý và truy xuất thông tin,
+                   đồng thời đề xuất giao diện người dùng đơn giản, thân thiện, hỗ trợ các chức
+                   năng quản lý và tìm kiếm hiệu quả.
+                       Hy vọng rằng hệ thống này sẽ góp phần vào việc hiện đại hóa công tác quản
+                   lý trong ngành trồng trọt, nâng cao năng suất và đảm bảo tính bền vững trong
+                   phát triển nông nghiệp.
+
+
+
+
+https://getthispdf.com                                                                                                    5/44
+6/6/26, 4:18 PM                             Báo cáo Bài Tập Lớn Kỹ Thuật Phần Mềm Ứng Dụng: Hệ Thống Quản Lý CSDL Trồng Trọt
+
+
+
+
+                   CHƯƠNG 1: TỔNG QUAN VỀ CHƯƠNG TRÌNH QUẢN LÝ
+                     CSDL TRỒNG TRỌT
+                       Chương này đăt vấn đề cần giải quyết khi đề xuất hệ thống quản lý và phân
+                   tích các chức năng cần thiết để giải quyết vấn đề đăt ra. Đồng thời mô tả sơ lược
+                   các công cụ hô trợ của bên thứ ba được sử dụng trong đề tài.
+                         1.1.        Yêu cầu về dữ liệu
+                                                     Bảng 1 - Yêu cầu về dữ liệu
+
+                                     Tên dữ liệu                                   Mô tả
+
+                         Hồ sơ                           Lưu hồ sơ người dùng hoặc tổ chức
+
+                         Quyền                           Danh mục quyền trong hệ thống
+
+                         Tài khoản                       Thông tin tài khoản, mật khẩu đăng nhập
+
+                         Hành chính                      Phân loại cấp hành chính chung
+
+                         Tên hành chính                  Danh mục các tên gọi địa phương cho cấp
+                                                         hành chính
+
+                         Đơn vị                          Lưu danh sách các đơn vị cụ thể
+
+                         Giống cây trồng chính           Danh sách và thông tin giống cây trồng chính
+
+                         Giống cây trồng lưu hành tại    Danh sách và thông tin giống cây trồng được
+                         Việt Nam                        cấp phép tại Việt Nam
+
+                         Cây/vườn cây đầu dòng           Dữ liệu về cây/vườn cây dùng làm nguồn
+                                                         giống
+                         Thuốc bảo vệ thực vật           Danh mục và thông tin chi tiết về thuốc bảo
+                                                         vệ thực vật
+
+                         Tố chức sản xuất thuốc bảo      Danh sách và thông tin tố chức/ cá nhân sản
+                         vệ thực vật                     xuất thuốc bảo vệ thực vật
+
+                         Cơ sở buôn bán thuốc bảo vệ Danh sách và thông tin cơ sở buôn bán thuốc
+                         thực vật                    bảo vệ thực vật
+
+                         Bản đồ thuốc bảo vệ thực vật Phân bố địa lý cơ sở sản xuất, buôn bán thuốc
+                                                      bảo vệ thực vật
+
+
+
+
+https://getthispdf.com                                                                                                         6/44
+6/6/26, 4:18 PM                             Báo cáo Bài Tập Lớn Kỹ Thuật Phần Mềm Ứng Dụng: Hệ Thống Quản Lý CSDL Trồng Trọt
+
+
+
+
+                         Phân bón                        Danh mục và thông tin chi tiết về phân bón
+
+                         Tổ chức sản xuất phân bón       Danh sách và thông tin tổ chức / cá nhân sản
+                                                         xuất phân bón
+                         Cơ sở buôn bán phân bón         Danh sách và thông tin cơ sở buôn bán phân
+                                                         bón
+                         Bản đồ phân bón                 Phân bố địa lý các cơ sở sản xuất, buôn bán
+                                                         phân bón
+                         Cơ sở VietGap                   Danh sách và thông tin cơ sở đạt chuẩn
+                                                         VietGap
+                         Vùng trồng                      Danh sách và thông tin chi tiết về vùng trồng
+                         Sinh vật gây hại                Danh mục và thông tin về sinh vật gây hại
+
+                         Tình hình sinh vật gây hại      Cập nhật tình hình, khảo sát, cảnh báo sinh
+                                                         vật gây hại
+                         Bản đồ sinh vật gây hại         Phân bố địa lý và thông tin sinh vật gây hại
+
+
+
+                         1.2.       Yêu cầu về chức năng
+                             • Hồ sơ: Thêm, sửa, xóa, tìm kiếm, xem chi tiết hồ sơ
+                             • Quyền: Thêm, sửa, xóa, tìm kiếm, phân quyền và quản lý vai trò
+                             • Tài khoản: Thêm, sửa, xóa, tìm kiếm, đăng nhập, đăng xuất, quên mật
+                               khẩu, lịch sử truy cập
+                             • Cấp hành chính: Thêm, sửa, xóa, tìm kiếm, quản lý cấu trúc phân cấp
+                             • Tên hành chính: Thêm, sửa, xóa, tìm kiếm
+                             • Đơn vị: Thêm, sửa, xóa, tìm kiếm, xem chi tiết, quản lý phân cấp hành
+                               chính
+                             • Giống cây trồng: Thêm, sửa, xóa, tìm kiếm giống cây trồng chính và
+                               lưu hành.
+                             • Cây/vườn đầu dòng: Lưu trữ và tìm kiếm thông tin.
+                             • Thuốc bảo vệ thực vật: Quản lý danh mục, cơ sở sản xuất, buôn bán,
+                               hiển thị bản đồ.
+
+
+
+
+https://getthispdf.com                                                                                                         7/44
+6/6/26, 4:18 PM                           Báo cáo Bài Tập Lớn Kỹ Thuật Phần Mềm Ứng Dụng: Hệ Thống Quản Lý CSDL Trồng Trọt
+
+
+
+
+                            • Phân bón: Quản lý danh mục, cơ sở sản xuất, buôn bán, hiển thị bản
+                              đồ.
+                            • Cơ sở VietGap và vùng trồng: Quản lý danh sách, thông tin cơ sở và
+                              vùng trồng.
+                            • Sinh vật gây hai: Cập nhật, cảnh báo, hiển thị bản đồ phân bố.
+                         1.3.     Yêu cầu phi chức năng
+                            • Hiệu suất: Hệ thống phải hỗ trợ xử lý truy vấn < 3 giây; hỗ trợ > 100
+                              người dùng; hoạt động nhanh chóng, mượt mà
+                            • Mở rộng: Dễ dàng thêm mới các danh mục dữ liệu khi có yêu cầu. Khả
+                              năng tích hợp hệ thống GIS(bản đồ) để hiện thị dữ liệu phân số.
+                            • Bảo mật: Chỉ người dùng mới có quyền thêm, sửa dữ liệu. Dữ liệu
+                              phải được mã hóa và sao lưu định kỳ (hàng ngày/ hàng tuần). Bảo vệ
+                              chống truy nhập trái phép bằng cơ chế xác thực hai yếu tố.
+                            • Khả năng sử dụng: Giao diện thân thiện, hỗ trợ cả tiếng Việt và tiếng
+                              Anh. Cung cấp hướng dẫn sử dụng rõ ràng từng chức năng.
+                            • Tích hợp: Khả năng tích hợp kết nối hệ thống hiện có hoặc GIS.
+                              Sẵn sàng: Hoạt động liên tục với tỷ lệ 99,99%.
+                            • Báo cáo: Tự động báo cáo định kỳ( hàng ngày, hàng tuần) cho từng
+                              danh mục. Hỗ trợ xuất báo cáo dưới dạng PDF, Excel.
+                            • Tính toàn vẹn dữ liệu: Phát hiện và cảnh báo các dữ liệu không hợp lệ.
+
+
+                         1.4.     Giới thiệu công cụ phần mềm sử dụng
+                   1.4.1. Visual Studio C#
+                      Visual Studio là một môi trường phát triển tích hợp (IDE) được phát triển bởi
+                   Microsoft. Nó cung cấp cho nhà phát triển một công cụ toàn diện để phát triển
+                   phần mềm cho nhiều nền tảng khác nhau, bao gồm Windows, MacOS, Linux,
+                   iOS, Android và nhiều hệ điều hành khác.
+                      Visual Studio hô trợ nhiều ngôn ngữ lập trình như C#, C++, Visual Basic,
+                   JavaScript, TypeScript và nhiều ngôn ngữ khác. Nó cũng cung cấp cho người
+                   dùng một số công cụ và tính năng hữu ích như IntelliSense, bộ dò lôi, kiểm tra
+                   mã nguồn, quản lý mã nguồn, thiết kế giao diện, đồ họa, và các công cụ kiểm
+                   thử và phân tích mã nguồn.
+
+
+
+
+https://getthispdf.com                                                                                                       8/44
+6/6/26, 4:18 PM                        Báo cáo Bài Tập Lớn Kỹ Thuật Phần Mềm Ứng Dụng: Hệ Thống Quản Lý CSDL Trồng Trọt
+
+
+
+
+                      Visual Studio là một công cụ quan trọng trong việc phát triển phần mềm và
+                   được sử dụng rộng rãi trong các công ty phát triển phần mềm, doanh nghiệp và
+                   cộng đồng lập trình viên trên toàn thế giới.
+                   1.4.2. WPF (Windows Presentation Foundation)
+                       WPF (Windows Presentation Foundation) là một công nghệ của Microsoft
+                   được sử dụng để phát triển các ứng dụng Windows đồ họa, bao gồm cả ứng
+                   dụng desktop và ứng dụng trên nền tảng web (Web applications). WPF cung cấp
+                   một bộ công cụ mạnh mẽ cho việc thiết kế giao diện người dùng, bao gồm các
+                   tính năng như đường viền, nền, hiệu ứng chuyển động, hình ảnh và video, và hô
+                   trợ việc tạo các điều khiển người dùng tùy chỉnh. WPF được phát triển trên nền
+                   tảng .NET Framework của Microsoft, cho phép các lập trình viên sử dụng nhiều
+                   ngôn ngữ lập trình khác nhau như C# và VB.NET để phát triển ứng dụng.
+
+
+                   1.4.3. Microsoft SQL Server
+                       Microsoft SQL Server là một hệ quản trị cơ sở dữ liệu quan hệ được phát
+                   triển bởi Microsoft. Nó cung cấp cho người dùng một hệ thống quản lý cơ sở dữ
+                   liệu mạnh mẽ để lưu trữ, truy xuất và quản lý dữ liệu của một tổ chức.
+                      Microsoft SQL Server hô trợ nhiều ngôn ngữ lập trình như T-SQL, C++, C#,
+                   Java và nhiều ngôn ngữ khác. Nó cũng cung cấp cho người dùng các tính năng
+                   quản lý cơ sở dữ liệu như sao lưu dữ liệu, phục hồi, quản lý người dùng, bảo
+                   mật, kiểm soát phiên, xử lý dữ liệu, và các tính năng liên quan đến hiệu suất.
+                      Microsoft SQL Server được sử dụng rộng rãi trong các doanh nghiệp, tổ chức
+                   và cộng đồng lập trình viên trên toàn thế giới để lưu trữ và quản lý dữ liệu. Nó
+                   cũng được sử dụng để phát triển các ứng dụng web và desktop phức tạp, cùng
+                   với các hệ thống quản lý quan hệ khác như Oracle và MySQL.
+                   1.4.4. Mô hình MVC
+                      Mô hình MVC (Model-View-Controller) là một kiến trúc phần mềm phổ
+                   biến trong phát triển ứng dụng web, giúp tổ chức mã nguồn và dễ dàng quản lý
+                   sự phát triển của ứng dụng. MVC chia ứng dụng thành ba thành phần chính:
+                              •      Model: Chứa dữ liệu và các logic liên quan đến dữ liệu đó.
+                            Đây là nơi xử lý các tác vụ như truy xuất, cập nhật và quản lý dữ liệu.
+                               •    View: Chịu trách nhiệm trình bày dữ liệu từ Model cho
+                            người dùng hoặc xử lý các tương tác từ người dùng như click chuột,
+
+
+
+
+https://getthispdf.com                                                                                                    9/44
+6/6/26, 4:18 PM                              Báo cáo Bài Tập Lớn Kỹ Thuật Phần Mềm Ứng Dụng: Hệ Thống Quản Lý CSDL Trồng Trọt
+
+
+
+
+                                nhập liệu.
+                                   •     Controller: Là cầu nối giữa Model và View. Controller nhận
+                                yêu cầu từ người dùng, thao tác với Model để cập nhật dữ liệu, rồi cập
+                                nhật View để phản ánh sự thay đổi.
+                         Mô hình MVC mang lại một số lợi ích quan trọng:
+                                   •      Cải thiện tổ chức mã nguồn: MVC chia mã thành các phần
+                                riêng biệt, giúp dễ dàng hiểu và bảo trì code.
+                                   •     Tăng khả năng mở rộng: Các tính năng mới có thể dễ dàng
+                                thêm vào hoặc xóa bỏ mà không ảnh hưởng đến các thành phần khác
+                                của ứng dụng.
+                                   •     Tăng khả năng tái sử dụng: Các thành phần như Model và
+                                View có thể tái sử dụng trong các phần khác của ứng dụng mà không
+                                gặp phải sự phụ thuộc quá lớn vào các phần còn lại.
+                     Nhờ những ưu điểm này, MVC giúp các nhà phát triển tạo ra các ứng dụng
+                   web dễ dàng mở rộng, bảo trì và phát triển trong tương lai.
+
+
+                   CHƯƠNG 2: PHÂN TÍCH THIẾT KẾ HỆ THỐNG
+                         Chương này phân tích hệ thống qua bằng cách vẽ các sơ đồ FHD, DFD, ERD.
+                         2.1.      FHD
+
+
+
+
+https://getthispdf.com                                                                                                          10/44
+6/6/26, 4:18 PM                           Báo cáo Bài Tập Lớn Kỹ Thuật Phần Mềm Ứng Dụng: Hệ Thống Quản Lý CSDL Trồng Trọt
+
+
+
+
+                                                Hình 1: Sơ đồ phân rã chức năng
+
+                       FHD là viết tắt của Functional Hierarchy Diagram (Sơ đồ phân cấp chức
+                   năng), một công cụ thường được sử dụng trong các lĩnh vực quản lý dự án, phân
+                   tích hệ thống, và thiết kế phần mềm. FHD thể hiện cách các chức năng của một
+                   hệ thống hoặc tổ chức được tổ chức và phân cấp, từ các chức năng cấp cao đến
+                   các chức năng cụ thể hơn.
+                   2.1.1 Các thành phần của FHD
+                         • Nút chức năng (Functional Nodes):
+                                   o     Đại diện cho các chức năng hoặc hoạt động cụ thể trong hệ
+                                thống, được minh họa bằng các hình dạng như hộp hoặc vòng tròn.
+                                   o      Mỗi nút được gắn nhãn với mô tả ngắn gọn về chức năng mà
+                                nó biểu thị.
+                         • Cấp bậc phân cấp (Hierarchical Levels):
+                                   o     Sơ đồ được tổ chức theo cấu trúc từ trên xuống, với các chức
+                                năng cấp cao nằm ở trên và các chức năng cấp thấp hơn nằm ở dưới.
+                                   o     Mỗi cấp thể hiện một mức độ trừu tượng, từ các chức năng
+                                tổng quát đến chi tiết.
+                         • Đường kết nối (Connecting Lines):
+                                   o    Các đường hoặc mũi tên được sử dụng để kết nối các nút
+                                chức năng.
+                                   o     Biểu thị mối quan hệ và sự phụ thuộc giữa các chức năng,
+                                đồng thời làm rõ cách tổ chức phân cấp trong hệ thống.
+
+
+                         2.2.      DFD
+                            2.2.1. DFD mức ngữ cảnh
+                      DFD mức ngữ cảnh (Context Level DFD) là biểu đồ dòng dữ liệu cấp cao
+                   nhất, mô tả hệ thống như một tiến trình duy nhất cùng các tương tác với tác nhân
+                   bên ngoài. Biểu đồ tập trung vào cách dữ liệu di chuyển vào và ra khỏi hệ thống
+                   mà không đi sâu vào chi tiết bên trong.
+                      Cấu trúc của DFD mức ngữ cảnh bao gồm: tiến trình chính (đại diện cho
+                   toàn bộ hệ thống), tác nhân bên ngoài (như người dùng hoặc hệ thống khác), và
+                   luồng dữ liệu (mũi tên mô tả thông tin trao đổi giữa hệ thống và các tác nhân).
+
+
+
+
+https://getthispdf.com                                                                                                       11/44
+6/6/26, 4:18 PM                        Báo cáo Bài Tập Lớn Kỹ Thuật Phần Mềm Ứng Dụng: Hệ Thống Quản Lý CSDL Trồng Trọt
+
+
+
+
+                       Ví dụ, trong hệ thống quản lý bán hàng, tiến trình chính là "Hệ thống quản lý
+                   bán hàng", tác nhân bên ngoài là "Khách hàng", "Nhà cung cấp". Các luồng dữ
+                   liệu gồm "Đơn hàng từ khách hàng" hoặc "Thông tin sản phẩm cho nhà cung
+                   cấp".
+                      DFD mức ngữ cảnh giúp hình dung tổng thể cách hệ thống tương tác với môi
+                   trường xung quanh.
+
+
+
+
+                                          Hình 2: Sơ đồ phân luồng mức ngữ cảnh
+                         2.2.2. DFD mức đỉnh
+                       DFD mức đỉnh (Level 0) là sơ đồ luồng dữ liệu cấp cao nhất, cung cấp cái
+                   nhìn tổng quan về toàn bộ hệ thống dưới dạng một tiến trình duy nhất, gọi là tiến
+                   trình đỉnh. Sơ đồ này tập trung vào việc mô tả các luồng dữ liệu chính và các
+                   tương tác giữa hệ thống với các tác nhân bên ngoài (External Entities), như
+                   người dùng, tổ chức hoặc hệ thống khác.
+                       Các thành phần cơ bản bao gồm tiến trình tổng thể, luồng dữ liệu, tác nhân
+                   bên ngoài và, nếu cần, các kho dữ liệu lớn. DFD mức đỉnh không đi sâu vào chi
+                   tiết, mà chỉ tập trung vào sự tổng quát, giúp xác định phạm vi hệ thống và các
+                   luồng thông tin quan trọng.
+                      Mục đích chính của DFD mức đỉnh là cung cấp cái nhìn bao quát, làm cơ sở
+                   để phân tích và phát triển các mức chi tiết hơn. Khi thiết kế, cần đảm bảo sự rõ
+                   ràng, dễ hiểu, và định danh chính xác các luồng dữ liệu cũng như tác nhân liên
+                   quan để tránh nhầm lẫn trong quá trình phân tích hệ thống.
+
+
+
+
+https://getthispdf.com                                                                                                    12/44
+6/6/26, 4:18 PM                           Báo cáo Bài Tập Lớn Kỹ Thuật Phần Mềm Ứng Dụng: Hệ Thống Quản Lý CSDL Trồng Trọt
+
+
+
+
+                                              Hình 3: Sơ đồ phân luồng mức đỉnh
+                         Chú thích:
+                         2, 4, 5: Thông tin yêu cầu
+                         1, 3, 6: Thông tin phản hồi
+                         7, 9, 11, 14: Thông tin yêu cầu
+                         8, 10, 12, 13: Thông tin phản hồi
+                         15, 28: Thông tin sản xuất trồng trọt
+                         16, 27: Thông tin phản hồi
+                         17, 23: Thông tin về phân bón
+                         18, 24: Thông tin phản hồi
+                         20, 26: Thông tin thuốc bảo vệ thực vật
+                         19, 25: Thông tin phản hồi
+
+
+
+
+https://getthispdf.com                                                                                                       13/44
+6/6/26, 4:18 PM                           Báo cáo Bài Tập Lớn Kỹ Thuật Phần Mềm Ứng Dụng: Hệ Thống Quản Lý CSDL Trồng Trọt
+
+
+
+
+                         22, 30: Thông tin về quản lý cây trồng
+                         21, 29: Thông tin phản hồi
+
+
+                            2.2.3. DFD dưới mức đỉnh
+                      DFD dưới mức đỉnh là phiên bản chi tiết hơn của sơ đồ luồng dữ liệu (Data
+                   Flow Diagram - DFD) mức đỉnh, được sử dụng để mô tả cụ thể các tiến trình và
+                   luồng dữ liệu trong hệ thống. Ở mức này, mỗi tiến trình tổng quát trong DFD
+                   mức đỉnh được phân rã thành các tiến trình con, làm rõ cách xử lý và luồng
+                   thông tin giữa các thành phần trong hệ thống.
+                      Cấu trúc phân cấp của DFD được duy trì, bao gồm DFD mức 1 (Level 1)
+                   phân rã trực tiếp từ mức đỉnh và có thể tiếp tục chia nhỏ hơn ở mức 2 (Level 2)
+                   nếu cần thiết. Các thành phần cơ bản như tiến trình (Process), luồng dữ liệu
+                   (Data Flow), kho dữ liệu (Data Store), và tác nhân bên ngoài (External Entity)
+                   vẫn được giữ nguyên nhưng được thể hiện chi tiết hơn.
+                       Mục đích chính của DFD dưới mức đỉnh là chi tiết hóa hệ thống để hỗ trợ
+                   thiết kế phần mềm, đảm bảo các chức năng và luồng dữ liệu được phân tích đầy
+                   đủ và hợp lý. Khi thiết kế, cần đảm bảo tính nhất quán giữa các mức DFD và chỉ
+                   phân rã đến mức cần thiết để tránh sự phức tạp không cần thiết.
+
+
+
+
+                          Hình 4: Sơ đồ phân luồng mức dưới đỉnh, chức năng quản lý đơn vị hành chính
+                         Chú thích:
+
+
+
+
+https://getthispdf.com                                                                                                       14/44
+6/6/26, 4:18 PM                                Báo cáo Bài Tập Lớn Kỹ Thuật Phần Mềm Ứng Dụng: Hệ Thống Quản Lý CSDL Trồng Trọt
+
+
+
+
+                         1, 6: Thông tin danh mục
+                         2, 5: Thông tin ID
+                         4, 7: Các thông tin
+                         3, 8: Thông tin tên
+
+
+
+
+                              Hình 5: Sơ đồ phân luồng mức dưới đỉnh, chức năng quản lý người dùng
+                         Chú thích:
+                         2, 3: Thông tin thông báo
+                         4: Thông tin quyền
+                         1: Thông tin ID
+                         5: Thông tin kết quả
+                         6: Thông tin
+
+
+
+
+https://getthispdf.com                                                                                                            15/44
+6/6/26, 4:18 PM                               Báo cáo Bài Tập Lớn Kỹ Thuật Phần Mềm Ứng Dụng: Hệ Thống Quản Lý CSDL Trồng Trọt
+
+
+
+
+                   Hình 6: Sơ đồ phân luồng mức dưới đỉnh, chức năng quản lý tài khoản
+                         Chú thích:
+                         1: Tên đăng nhập, mật khẩu
+                         2, 3, 9: Thông báo
+                         4: Email các nhận
+                         5, 7: Thông tin yêu cầu
+                         6, 8: Thông tin phản hồi
+
+
+
+
+https://getthispdf.com                                                                                                           16/44
+6/6/26, 4:18 PM                            Báo cáo Bài Tập Lớn Kỹ Thuật Phần Mềm Ứng Dụng: Hệ Thống Quản Lý CSDL Trồng Trọt
+
+
+
+
+                               Hình 7: Sơ đồ phân luồng mức dưới đỉnh, chức năng quản lý tài khoản
+                         Chú thích:
+                         1, 3, 5, 8, 10, 12: Thông tin cây trồng
+                         2, 4, 6, 7, 9, 12: Thông tin phản hồi
+
+
+
+
+https://getthispdf.com                                                                                                        17/44
+6/6/26, 4:18 PM                             Báo cáo Bài Tập Lớn Kỹ Thuật Phần Mềm Ứng Dụng: Hệ Thống Quản Lý CSDL Trồng Trọt
+
+
+
+
+                     Hình 8: Sơ đồ luồng dữ liệu dưới mức đỉnh chức năng quản lý thuốc bảo vệ thực vật
+                         Chú thích:
+                         1, 3, 5, 8, 10, 12, 14: Thông tin thuốc bảo vệ thực vật
+                         2, 4, 6, 7, 9, 11, 12: Thông tin phản hồi
+
+
+
+
+https://getthispdf.com                                                                                                         18/44
+6/6/26, 4:18 PM                             Báo cáo Bài Tập Lớn Kỹ Thuật Phần Mềm Ứng Dụng: Hệ Thống Quản Lý CSDL Trồng Trọt
+
+
+
+
+                               Hình 9: Sơ đồ luồng dữ liệu dưới mức đỉnh chức năng quản lý phân bón
+                         Chú thích:
+                         1, 3, 5, 8, 10, 12, 14: Thông tin phân bón
+                         2, 4, 6, 7, 9, 11, 13: Thông tin phản hồi
+
+
+
+
+https://getthispdf.com                                                                                                         19/44
+6/6/26, 4:18 PM                             Báo cáo Bài Tập Lớn Kỹ Thuật Phần Mềm Ứng Dụng: Hệ Thống Quản Lý CSDL Trồng Trọt
+
+
+
+
+                         Hình 10: Sơ đồ luồng dữ liệu dưới mức đỉnh chức năng quản lý sản xuất trồng trọt
+                         Chú thích:
+                         1, 3, 5, 8, 10, 12: Thông tin sản xuất trồng trọt
+                         2, 4, 6, 7, 9, 11: Thông tin phản hồi
+
+
+                         2.3.      Sơ đồ ERD
+                            2.3.1. Tổng quan về sơ đồ ERD
+                      Mô hình ERD (Entity-Relationship Diagram) là một công cụ quan trọng
+                   trong lĩnh vực thiết kế cơ sở dữ liệu. Nó cung cấp một biểu diễn trực quan về
+                   các thực thể (entities), mối quan hệ (relationships) và các thuộc tính (attributes)
+                   trong hệ thống.
+                         Các thành phần cơ bản của mô hình ERD
+                            • Thực thể (Entity):
+                                o Thực thể đại diện cho một đối tượng hay khái niệm trong thế giới
+                                  thực, chẳng hạn như "Sinh viên", "Khách hàng" hoặc "Sản phẩm".
+
+
+
+
+https://getthispdf.com                                                                                                         20/44
+6/6/26, 4:18 PM                         Báo cáo Bài Tập Lớn Kỹ Thuật Phần Mềm Ứng Dụng: Hệ Thống Quản Lý CSDL Trồng Trọt
+
+
+
+
+                              o Ký hiệu: Hình chữ nhật.
+                              o Phân loại: Thực thể mạnh (Strong Entity) có khóa chính để phân
+                                biệt các bản ghi, trong khi thực thể yếu (Weak Entity) phụ thuộc
+                                vào thực thể khác để tồn tại.
+                           • Thuộc tính (Attribute):
+                              o Thuộc tính biểu diễn thông tin hoặc đặc điểm của thực thể hoặc mối
+                                quan hệ.
+                              o Ký hiệu: Hình elip.
+                              o Phân loại:
+                                 ✓ Thuộc tính đơn giản (Simple Attribute): Đỉ chứa một giá trị.
+                                 ✓ Thuộc tính phức hợp (Composite Attribute): Có thể chia thành
+                                   các thành phần nhỏ (ví dụ: "Họ" và "Tên").
+                                 ✓ Thuộc tính đa trị (Multivalued Attribute): Chứa nhiều giá trị (địa
+                                   chỉ email, số điện thoại).
+                                 ✓ Thuộc tính khóa (Key Attribute): Đống vai trò là khóa chính.
+                           • Mối quan hệ (Relationship):
+                              o Mối quan hệ diễn tả mối liên hệ giữa các thực thể trong hệ thống.
+                              o Ký hiệu: Hình thoi.
+                              o Phân loại:
+                                 ✓ Mối quan hệ 1-1 (One-to-One): Mỗi thực thể A chỉ kết nối với
+                                   một thực thể B.
+                                 ✓ Mối quan hệ 1-N (One-to-Many): Mỗi thực thể A có thể kết nối
+                                   với nhiều thực thể B.
+                                 ✓ Mối quan hệ N-M (Many-to-Many): Nhiều thực thể A có thể kết
+                                   nối với nhiều thực thể B.
+
+
+                         Các khái niệm nâng cao
+                           • Cardinality (Bố lượng):
+                              o Xác định số lượng thực thể tham gia trong mối quan hệ.
+                              o Ký hiệu: 1, N, hoặc M.
+
+
+
+
+https://getthispdf.com                                                                                                     21/44
+6/6/26, 4:18 PM                          Báo cáo Bài Tập Lớn Kỹ Thuật Phần Mềm Ứng Dụng: Hệ Thống Quản Lý CSDL Trồng Trọt
+
+
+
+
+                            • Participation (Sự tham gia):
+                              o Toàn phần (Total Participation): Một thực thể bắt buộc tham gia
+                                mối quan hệ.
+                              o Một phần (Partial Participation): Một thực thể có thể không tham
+                                gia mối quan hệ.
+                           • Chuyên biệt hóa và tổng quát hóa (Specialization & Generalization):
+                              o Tổng quát hóa: Gộp nhiều thực thể con lại thành thực thể cha.
+                              o Chuyên biệt hóa: Phân chia thực thể cha thành các thực thể con.
+                           • Thực thể yếu (Weak Entity):
+                              o Thực thể yếu không có khóa chính, phụ thuộc vào mối quan hệ định
+                                danh (được ký hiệu bằng hình thoi kép).
+
+
+                           2.3.2. Các sơ đồ ERD
+                         Sơ đồ thực thể ERD hệ thống
+
+
+
+
+                                           Hình 11: Sơ đồ thực thể ERD hệ thống
+
+
+
+
+https://getthispdf.com                                                                                                      22/44
+6/6/26, 4:18 PM                         Báo cáo Bài Tập Lớn Kỹ Thuật Phần Mềm Ứng Dụng: Hệ Thống Quản Lý CSDL Trồng Trọt
+
+
+
+
+                           Sơ đồ vật lý thiết kế thực thể ERD hệ thống
+
+
+
+
+                                      Hình 12: Sơ đồ vật lý thiết kế thực thể hệ thống
+
+
+
+                         Sơ đồ thực thể ERD trồng trọt
+
+
+
+
+                                         Hình 13: Sơ đồ thực thẻ ERD trồng trọt
+
+
+
+
+https://getthispdf.com                                                                                                     23/44
+6/6/26, 4:18 PM                           Báo cáo Bài Tập Lớn Kỹ Thuật Phần Mềm Ứng Dụng: Hệ Thống Quản Lý CSDL Trồng Trọt
+
+
+
+
+                         Sơ đồ vật lý thiết kế ERD trồng trọt
+
+
+
+
+                                           Hình 14: Sơ đồ thực thể ERD trồng trọt
+
+
+
+
+https://getthispdf.com                                                                                                       24/44
+6/6/26, 4:18 PM                              Báo cáo Bài Tập Lớn Kỹ Thuật Phần Mềm Ứng Dụng: Hệ Thống Quản Lý CSDL Trồng Trọt
+
+
+
+
+                   CHƯƠNG 3: TRIỂN KHAI HỆ THỐNG
+                      Chương này sẽ đi vào phân tích rõ thuộc tính của các bảng ở chương 2 và đi vào
+                   xây dựng cơ ở dữ liệu trên SQL
+
+                         3.1.          Từ điển dữ liệu
+                                                           Bảng 2 - Bảng hồ sơ
+
+                           Tên thuộc tính     Kiểu dữ liệu      Giá trị mẫu               Mô tả
+
+                                  Id               int               1           Mã định danh cho từng hồ
+                                                                                           sơ
+
+                                  Ten           nvarchar       Đỗ Trọng Giáp          Tên người dùng
+
+                                 SDT            varchar         0395601111        Số điện thoại của người
+                                                                                           dùng
+
+                                 Email          varchar        dogiap@gmail.c      Email của người dùng
+                                                                     om
+
+                                  Ext             text              null            Thông tin mở rộng
+
+
+                                                           Bảng 3 – Bảng quyền
+
+                           Tên thuộc tính     Kiểu dữ liệu      Giá trị mẫu               Mô tả
+
+                                  Id               int               1             Mã định danh cho từng
+                                                                                          quyền
+
+                                  Ten           nvarchar         Quản trị hệ        Tên quyền quản trị
+                                                                   thống
+
+                                  Ext           varchar            Admin            Thông tin mở rộng
+
+
+                                                         Bảng 4 – Bảng tài khoản
+
+                           Tên thuộc tính     Kiểu dữ liệu      Giá trị mẫu               Mô tả
+
+                                  Ten           varchar            admin               Tên tài khoản
+
+                                MatKhau         varchar           123abc          Mật khẩu của tài khoản
+
+                                QuyenId            int               1                  Khóa ngoại
+
+                                HoSoId             int               2                  Khóa ngoại
+
+
+
+
+https://getthispdf.com                                                                                                          25/44
+6/6/26, 4:18 PM                            Báo cáo Bài Tập Lớn Kỹ Thuật Phần Mềm Ứng Dụng: Hệ Thống Quản Lý CSDL Trồng Trọt
+
+
+
+
+                                                            Bảng 5 – Bảng hành chính
+
+                         Tên thuộc tính     Kiểu dữ liệu              Giá trị mẫu               Mô tả
+
+                               Id                    int                   1          Mã định danh cho từng cấp
+                                                                                             hành chính
+
+                              Ten             nvarchar                 Thành phố       Tên từng cấp hành chính
+
+                          TructhuocId                int                   2                  Khóa ngoại
+
+
+                                                      Bảng 6 – Bảng tên hành chính
+
+                         Tên thuộc tính     Kiểu dữ liệu              Giá trị mẫu               Mô tả
+
+                              Ten             nvarchar                   Quận           Tên hành chính đặc thù
+
+
+
+                                                      Bảng 7 – Bảng bản đồ phân bố
+
+                         Tên thuộc tính     Kiểu dữ liệu              Giá trị mẫu               Mô tả
+
+                               Id                    int                   1            Mã định danh cho từng
+                                                                                              khu vực
+
+                            ToaDoX                  float                21.0                  Vĩ tuyến
+
+                            ToaDoY                  float                105.8                Kinh tuyến
+
+
+                                                            Bảng 8 – Bảng vùng trồng
+
+                         Tên thuộc      Kiểu dữ liệu         Giá trị mẫu                    Mô tả
+                           tính
+
+                             Id              int                  1            Mã định danh cho từng vùng trồng
+
+
+                          QuyMo             float               1000                Quy mô mỗi vùng trồng
+
+                           DiaChi         nvarchar             Hà Nội             Địa chỉ của mỗi vùng trồng
+
+                          BanDoId            int                  1                      Khóa ngoại
+
+
+                                                    Bảng 9 – Bảng giống cây lưu hành
+
+                         Tên thuộc tính     Kiểu dữ liệu              Giá trị mẫu               Mô tả
+
+
+
+
+https://getthispdf.com                                                                                                        26/44
+6/6/26, 4:18 PM                            Báo cáo Bài Tập Lớn Kỹ Thuật Phần Mềm Ứng Dụng: Hệ Thống Quản Lý CSDL Trồng Trọt
+
+
+
+
+                               Id                int              1           Mã định danh cho từng
+                                                                                giống cây chính
+
+                            LoaiCay           nvarchar       Cây ăn quả        Phân loại giống cây
+
+                           NoiPhoBien         nvarchar         Ôn đới         Khu vực thích hợp với
+                                                                                   giống cây
+
+                           CongDung           nvarchar     Có giá trị kinh tế Chức năng của các giống
+                                                                                       cây
+
+                            DacDiem           nvarchar     Thích hợp trồng Đặc điểm đặc thù của từng
+                                                            ở đất phù sa           giống cây
+
+
+
+                                              Bảng 10 – Bảng giống cây trồng chính
+
+                          Tên thuộc tính    Kiểu dữ liệu     Giá trị mẫu              Mô tả
+
+                               Id                int              1           Mã định danh cho từng
+                                                                                giống cây chính
+
+                               Ten            nvarchar           Lúa            Tên gọi giống cây
+
+                            PhanLoai          nvarchar     Cây lương thực          Khóa ngoại
+
+                             MuaVu            nvarchar         Hè thu       Mùa vụ trồng và thu hoạch
+
+
+                            SanLuong             int            1000         Sản lượng của giống cây
+
+
+                                               Bảng 11 – Bảng giống cây đầu dòng
+
+                          Tên thuộc tính    Kiểu dữ liệu     Giá trị mẫu              Mô tả
+
+                               Id                int              1           Mã định danh cho từng
+                                                                               giống cây đầu dòng
+
+                               Ten            nvarchar     Lúa Thái Bình        Tên gọi giống cây
+
+                           NguonGoc           nvarchar        Thái Bình      Nguồn gốc của giống cây
+
+                         DacTinh              nvarchar           Dẻo         Đặc tính đặc thù của từng
+                                                                                     giống cây
+
+                         ThoiGianThuHo           int             120         Thời gian thu hoạch của
+                              ach                                             giống cây theo tháng
+
+
+
+
+https://getthispdf.com                                                                                                        27/44
+6/6/26, 4:18 PM                           Báo cáo Bài Tập Lớn Kỹ Thuật Phần Mềm Ứng Dụng: Hệ Thống Quản Lý CSDL Trồng Trọt
+
+
+
+
+                            GiongId             int               1                  Khóa ngoại
+
+                             VTId               int               1                  Khóa ngoại
+
+
+
+                                                      Bảng 12 - Bảng phân bón
+
+                         Tên thuộc tính    Kiểu dữ liệu       Giá trị mẫu              Mô tả
+
+                               Id               int               1          Mã định danh cho từng
+                                                                                 loại phân bón
+
+                              Ten            nvarchar            Đạm         Tên sản phẩm phân bón
+
+                          ThanhPhan          nvarchar            Nitơ       Các thành phần chính của
+                                                                                   phân bón
+
+                           PhanLoai          nvarchar           Nhanh       Tốc độ hấp thụ của phân
+                                                                                      bón
+
+                             VTId               int               1                  Khóa ngoại
+
+
+                                             Bảng 13 – Bảng thuốc bảo vệ thực vật
+
+                         Tên thuộc tính    Kiểu dữ liệu       Giá trị mẫu              Mô tả
+
+                               Id               int               1          Mã định danh cho từng
+                                                                             thuốc bảo vệ thực vật
+
+                              Ten            nvarchar           Trừ Sâu     Tên gọi từng thuốc BVTV
+
+                            NgaySX             date            2025-1-1          Ngày sản xuất thuốc
+                                                                                       BVTV
+
+                            HanSD              date            2026-1-1         Ngày hết hạn      thuốc
+                                                                                      BVTV
+
+                             VTId               int               1                  Khóa ngoại
+
+
+                                                      Bảng 14 – Bảng phân loại
+
+                         Tên thuộc tính    Kiểu dữ liệu       Giá trị mẫu              Mô tả
+
+                               Id               int               1          Mã định danh cho từng
+                                                                                     hàng
+
+
+
+
+https://getthispdf.com                                                                                                       28/44
+6/6/26, 4:18 PM                         Báo cáo Bài Tập Lớn Kỹ Thuật Phần Mềm Ứng Dụng: Hệ Thống Quản Lý CSDL Trồng Trọt
+
+
+
+
+                             Loai          nvarchar           Phân bón       Phân loại phân bón hay
+                                                                              thuốc bảo vệ thực vật
+
+
+
+                                          Bảng 15 – Bảng cơ sở sản xuất phân bón
+
+                         Tên thuộc   Kiểu dữ liệu Giá trị mẫu                   Mô tả
+                           tính
+
+                            Id            int             1         Mã định danh cho từng cơ sở sản
+                                                                                 xuất
+
+                           Ten         nvarchar       Trung Tiến         Tên gọi cơ sở sản xuất
+
+                           DiaChi      nvarchar       Nam Định           Địa chỉ cơ sở sản xuất
+
+
+                         BanDoId          int             1                   Khóa ngoại
+
+
+                           VTId           int             1                    Khóa ngoại
+
+
+
+                                                Bảng 16 – Bảng cơ sở bán phân bón
+
+                         Tên thuộc   Kiểu dữ liệu     Giá trị mẫu                Mô tả
+                           tính
+
+                            Id            int             1         Mã định danh cho từng cơ sở buôn
+                                                                                  bán
+
+                           Ten         nvarchar       Công Hiếu          Tên gọi cơ sở buôn bán
+
+                          DiaChi       nvarchar       Nam Định           Địa chỉ cơ sở buôn bán
+
+
+                         BanDoId          int             1                   Khóa ngoại
+
+
+                           VTId           int             1                    Khóa ngoại
+
+
+
+                                     Bảng 17 – Bảng cơ sở sản xuất thuốc bảo vệ thực vật
+
+                         Tên thuộc   Kiểu dữ liệu     Giá trị mẫu                Mô tả
+                           tính
+
+
+
+
+https://getthispdf.com                                                                                                     29/44
+6/6/26, 4:18 PM                            Báo cáo Bài Tập Lớn Kỹ Thuật Phần Mềm Ứng Dụng: Hệ Thống Quản Lý CSDL Trồng Trọt
+
+
+
+
+                             Id              int             1             Mã định danh cho từng cơ sở sản
+                                                                                        xuất
+
+                            Ten           nvarchar       Hoàng Tiến             Tên gọi cơ sở sản xuất
+
+                           DiaChi         nvarchar       Nam Định               Địa chỉ cơ sở sản xuất
+
+
+                          BanDoId            int             1                       Khóa ngoại
+
+
+                           VTId              int             1                        Khóa ngoại
+
+
+
+                                          Bảng 18 – Bảng cơ sở bán thuốc bảo vệ thực vật
+
+                         Tên thuộc    Kiểu dữ liệu       Giá trị mẫu                    Mô tả
+                           tính
+
+                             Id              int             1             Mã định danh cho từng cơ sở buôn
+                                                                                         bán
+
+                            Ten           nvarchar       Hiếu Công              Tên gọi cơ sở buôn bán
+
+                            DiaChi        nvarchar       Nam Định               Địa chỉ cơ sở buôn bán
+
+
+                         BanDoId             int             1                       Khóa ngoại
+
+
+                           VTId              int             1                        Khóa ngoại
+
+
+
+                                                   Bảng 19 – Bảng loại cơ sở VietGap
+
+                         Tên thuộc tính     Kiểu dữ liệu         Giá trị mẫu                 Mô tả
+
+                               Id                  int                 1           Mã định danh cho từng cơ
+                                                                                       sở đạt Việt Gap
+
+                             Ten              nvarchar             Cơ sở 1         Tên gọi cơ sở đạt Việt Gap
+
+                            DiaChi            nvarchar           Nam Định          Địa chỉ cơ sở đạt Việt Gap
+
+
+                            BanDoId                int                 1                   Khóa ngoại
+
+
+
+
+https://getthispdf.com                                                                                                        30/44
+6/6/26, 4:18 PM                           Báo cáo Bài Tập Lớn Kỹ Thuật Phần Mềm Ứng Dụng: Hệ Thống Quản Lý CSDL Trồng Trọt
+
+
+
+
+                                                Bảng 20 – Bảng sinh vật gây hại
+
+                         Tên thuộc tính    Kiểu dữ liệu      Giá trị mẫu               Mô tả
+
+                               Id               int               1        Mã định danh cho từng sinh
+                                                                                  vật gây hại
+
+                              Ten            nvarchar            Sâu       Tên gọi của sinh vật gây hại
+
+                             PhanLoai        nvarchar         Côn trùng         Loại sinh vật gây hại
+
+
+                            CayAH            nvarchar            Lúa              Cây bị ảnh hưởng
+
+                             VTId               int               1                  Khóa ngoại
+
+
+
+                                            Bảng 21 – Bảng cập nhật sinh vật gây hại
+
+                         Tên thuộc tính    Kiểu dữ liệu      Giá trị mẫu               Mô tả
+
+                               Id               int               1        Mã định danh cho từng thời
+                                                                                 điểm cập nhật
+
+                          NgayGioCN            date            2025-1-1          Thời gian cập nhật
+
+                            TienDo           nvarchar           Nhanh       Tốc độ lan truyền của sinh
+                                                                                   vật gây hại
+
+                             SVId               int               1                  Khóa ngoại
+
+
+
+
+                                                      Bảng 22 – Bảng tuổi sâu
+
+                         Tên thuộc tính    Kiểu dữ liệu      Giá trị mẫu               Mô tả
+
+                               Id               int               1        Mã định danh cho từng thời
+                                                                                 điểm cập nhật
+
+                              Ten            nvarchar         Châu chấu     Tên của từng loại sinh vật
+                                                                                     gây hại
+
+                           TuoiSau              int               3         Thời gian sinh vật gây hại
+                                                                                      xuất hiện
+
+
+
+
+https://getthispdf.com                                                                                                       31/44
+6/6/26, 4:18 PM                                Báo cáo Bài Tập Lớn Kỹ Thuật Phần Mềm Ứng Dụng: Hệ Thống Quản Lý CSDL Trồng Trọt
+
+
+
+
+                                DoPhoBien         nvarchar         Phổ biến      Độ phổ biến của sinh vật gây
+                                                                                             hại
+
+                                  VTId                 int             1                 Khóa ngoại
+
+
+
+                         3.2.        SQL Sever
+
+                         Tên code              Đoạn code
+                                            CREATE DATABASE KTPM
+                    Tạo database            GO
+
+                                            USE KTPM
+                         Sử dụng            GO
+                         database
+                                            CREATE TABLE HoSo (
+                     Tạo bảng hồ                Id INT PRIMARY KEY IDENTITY,
+                                                Ten NVARCHAR(50),
+                          sơ                    SDT VARCHAR(50),
+                                                Email VARCHAR(50),
+                                                Ext TEXT
+                                            )
+                                            GO
+                                            INSERT INTO HoSo (Ten, SDT, Email, Ext) VALUES
+                                            (N'Nguyễn Văn A', '0912345678', 'a.nguyenvan@hust.edu.vn', NULL),
+                                            (N'Trần Thị B', '0923456789', 'b.tranthi@hust.edu.vn', NULL),
+                                            GO
+                                            CREATE TABLE Quyen (
+                         Tạo bảng               Id INT PRIMARY KEY IDENTITY,
+                                                Ten NVARCHAR(50),
+                          Quyền                 Ext VARCHAR(50)
+                                            )
+                                            GO
+                                            INSERT INTO Quyen (Ten, Ext) VALUES
+                                            (N'Lập trình viên', 'Developer'),
+                                            (N'Quản trị hệ thống', 'Admin'),
+                                            (N'Cán bộ nghiệp vụ', 'Staff')
+                                            GO
+                                            CREATE TABLE TaiKhoan (
+                    Tạo bảng Tài                Ten VARCHAR(50) PRIMARY KEY,
+                                                MatKhau VARCHAR(255),
+                       khoản                    QuyenId INT FOREIGN KEY REFERENCES Quyen(Id),
+                                                HoSoId INT FOREIGN KEY REFERENCES HoSo(Id)
+                                            )
+                                            GO
+                                            INSERT INTO TaiKhoan (Ten, MatKhau, QuyenId, HoSoId) VALUES
+                                            ('dev', '1234', 1, NULL),
+                                            ('admin', '1234', 2, NULL),
+                                            ('0989154248', '1234', 3, 1),
+                                            ('0989708960', '1234', 3, 2)
+                                            GO
+                                            CREATE TABLE HanhChinh (
+                         Tạo bảng               Id INT PRIMARY KEY IDENTITY,
+                                                Ten NVARCHAR(50),
+                         Hành chính             TrucThuocId INT FOREIGN KEY REFERENCES HanhChinh(Id)
+                                            )
+                                            GO
+                                            INSERT INTO HanhChinh (Ten, TrucThuocId) VALUES
+
+
+
+
+https://getthispdf.com                                                                                                            32/44
+6/6/26, 4:18 PM                       Báo cáo Bài Tập Lớn Kỹ Thuật Phần Mềm Ứng Dụng: Hệ Thống Quản Lý CSDL Trồng Trọt
+
+
+
+
+                                   (N'Tỉnh/Thành', NULL),
+                                   (N'Quận/Huyện', 1),
+                                   (N'Phường/Xã', 2),
+                                   (N'Tổ/Thôn', 3)
+                                   GO
+                                   CREATE TABLE TenHanhChinh (
+                    Tạo bảng Tên       Ten NVARCHAR(50)
+                                   )
+                     hành chính    GO
+                                   INSERT INTO TenHanhChinh (Ten) VALUES
+                                   (N'Ấp'),
+                                   (N'Bản'),
+                                   (N'Buôn'),
+                                   (N'Huyện'),
+                                   (N'Làng'),
+                                   (N'Phường'),
+                                   (N'Quận'),
+                                   (N'Sóc'),
+                                   (N'Thành phố'),
+                                   (N'Thị xã'),
+                                   (N'Thị trấn'),
+                                   (N'Thôn'),
+                                   (N'Tỉnh'),
+                                   (N'Tổ'),
+                                   (N'Xã')
+                                   GO
+                                   CREATE TABLE DonVi (
+                    Tạo bảng Đơn       Id INT PRIMARY KEY IDENTITY,
+                                       Ten NVARCHAR(50),
+                         vị            HanhChinhId INT FOREIGN KEY REFERENCES HanhChinh(Id),
+                                       TenHanhChinh NVARCHAR(50),
+                                       TrucThuocId INT FOREIGN KEY REFERENCES DonVi(Id)
+                                   )
+                                   GO
+                                   INSERT INTO DonVi (Ten, HanhChinhId, TenHanhChinh, TrucThuocId)
+                                   VALUES
+                                   (N'Hà Nội', 1, N'Thành phố', NULL),
+                                   (N'Hai Bà Trưng', 2, N'Quận', 1),
+                                   (N'Bách Khoa', 3, N'Phường', 2),
+                                   (N'Đồng Tâm', 3, N'Phường', 2),
+                                   (N'Thái Bình', 1, N'Tỉnh', NULL),
+                                   (N'Thái Thụy', 2, N'Huyện', 5),
+                                   (N'Thụy Hải', 3, N'Xã', 6),
+                                   (N'Thụy Xuân', 3, N'Xã', 6)
+                                   GO
+                                   CREATE TABLE BanDoPhanBo (
+                    Tạo bảng Bản       Id INT PRIMARY KEY IDENTITY,
+                                       ToaDoX FLOAT,
+                     đồ phân bố        ToaDoY FLOAT
+                                   )
+                                   GO
+                                   INSERT INTO BanDoPhanBo VALUES (21.0, 105.8);
+                                   INSERT INTO BanDoPhanBo VALUES (20.9, 105.9);
+                                   INSERT INTO BanDoPhanBo VALUES (21.1, 105.7);
+                                   INSERT INTO BanDoPhanBo VALUES (21.2, 105.6);
+                                   GO
+                                   CREATE TABLE VungTrong(
+                   Tạo bảng Vùng       Id INT PRIMARY KEY IDENTITY,
+                                       QuyMo FLOAT,
+                       trồng           DiaChi NVARCHAR(50),
+                                       BanDoId INT FOREIGN KEY REFERENCES BanDoPhanBo(Id)
+                                   )
+                                   GO
+                                   INSERT INTO VungTrong (QuyMo, DiaChi, BanDoId) VALUES
+
+
+
+
+https://getthispdf.com                                                                                                   33/44
+6/6/26, 4:18 PM                         Báo cáo Bài Tập Lớn Kỹ Thuật Phần Mềm Ứng Dụng: Hệ Thống Quản Lý CSDL Trồng Trọt
+
+
+
+
+                                     (1000, N'Nam Định', 1),
+                                     (2000, N'Thái Bình', 2),
+                                     (3000, N'Vĩnh Phúc', 3),
+                                     (4000, N'Hà Nội', 4);
+                                     GO
+                                     CREATE TABLE GiongCayLuuHanh (
+                      Tạo bảng           Id INT IDENTITY,
+                                         LoaiCay NVARCHAR(50) PRIMARY KEY,
+                    Giống cây lưu        NoiPhoBien NVARCHAR(255),
+                        hành             CongDung NVARCHAR(255),
+                                         DacDiem NVARCHAR(255)
+                                     );
+                                     GO
+                                     INSERT INTO GiongCayLuuHanh (LoaiCay, NoiPhoBien, CongDung, DacDiem)
+                                     VALUES
+                                     (N'Cây ăn quả', N'Vùng nhiệt đới', N'Có giá trị kinh tế cao',
+                                     N'Thích hợp trồng ở vùng đất phù sa'),
+                                     (N'Cây lấy gỗ', N'Vùng ôn đới', N'Sử dụng trong xây dựng', N'Phát
+                                     triển nhanh, thân gỗ cứng'),
+                                     (N'Cây lương thực', N'Vùng đồng bằng', N'Nguồn cung cấp thực phẩm
+                                     chính', N'Chịu hạn tốt'),
+                                     (N'Cây công nghiệp', N'Vùng cao nguyên', N'Tạo nguyên liệu cho ngành
+                                     công nghiệp', N'Yêu cầu khí hậu mát mẻ'),
+                                     (N'Cây dược liệu', N'Vùng nhiệt đới', N'Sử dụng trong y học cổ
+                                     truyền', N'Chứa nhiều chất có hoạt tính sinh học'),
+                                     (N'Cây cảnh', N'Vùng đô thị', N'Trang trí nhà cửa và công viên',
+                                     N'Hình dáng đẹp, dễ chăm sóc'),
+                                     (N'Cây lấy nhựa', N'Vùng nhiệt đới', N'Chiết xuất nhựa làm nguyên
+                                     liệu công nghiệp', N'Sản lượng nhựa cao'),
+                                     (N'Cây lấy sợi', N'Vùng nông thôn', N'Nguyên liệu cho ngành dệt
+                                     may', N'Sợi dai và bền'),
+                                     (N'Cây lấy dầu', N'Vùng duyên hải', N'Sản xuất dầu ăn và dầu công
+                                     nghiệp', N'Hàm lượng dầu cao'),
+                                     (N'Cây lấy hương liệu', N'Vùng cao nguyên', N'Chiết xuất tinh dầu và
+                                     hương liệu', N'Mùi hương đặc trưng, dễ chiết xuất');
+                                     GO
+                                     CREATE TABLE GiongCayChinh (
+                         Tạo bảng        Id INT PRIMARY KEY IDENTITY,
+                                         Ten NVARCHAR(50),
+                         Giống cây       PhanLoai NVARCHAR(50)FOREIGN KEY REFERENCES
+                           chính     GiongCayLuuHanh(LoaiCay),
+                                         MuaVu NVARCHAR(50),
+                                         SanLuong INT
+                                     );
+                                     GO
+                                     INSERT INTO GiongCayChinh (Ten, PhanLoai, MuaVu, SanLuong) VALUES
+                                     (N'Lúa', N'Cây lương thực', N'Mùa hè', 5000),
+                                     (N'Lê', N'Cây ăn quả', N'Mùa đông', 2000),
+                                     (N'Xoài', N'Cây ăn quả', N'Mùa hè', 3000),
+                                     (N'Cam', N'Cây ăn quả', N'Mùa xuân', 4000),
+                                     (N'Ngô', N'Cây lương thực', N'Mùa thu', 4500),
+                                     (N'Bưởi', N'Cây ăn quả', N'Mùa hè', 2500),
+                                     (N'Si', N'Cây cảnh', N'Quanh năm', 150),
+                                     (N'Keo', N'Cây lấy gỗ', N'Quanh năm', 10000),
+                                     (N'Hoa hồng', N'Cây cảnh', N'Quanh năm', 300),
+                                     (N'Dừa', N'Cây ăn quả', N'Mùa hè', 3500);
+                                     GO
+                                     CREATE TABLE GiongCayDauDong (
+                     Tạo bảng            Id INT PRIMARY KEY IDENTITY,
+                                         Ten NVARCHAR(50),
+                   Giống cây đầu         NguonGoc NVARCHAR(50),
+                       dòng              DacTinh NVARCHAR(255),
+                                         ThoiGianThuHoach INT,
+                                         GiongId INT FOREIGN KEY REFERENCES GiongCayChinh(Id),
+
+
+
+
+https://getthispdf.com                                                                                                     34/44
+6/6/26, 4:18 PM                       Báo cáo Bài Tập Lớn Kỹ Thuật Phần Mềm Ứng Dụng: Hệ Thống Quản Lý CSDL Trồng Trọt
+
+
+
+
+                                       VTId INT FOREIGN KEY REFERENCES VungTrong(Id)
+                                   );
+                                   GO
+                                   INSERT INTO GiongCayDauDong (Ten, NguonGoc, DacTinh,
+                                   ThoiGianThuHoach, GiongId, VTId) VALUES
+                                   (N'Lúa Thái Bình', N'Thái Bình', N'Dẻo, thơm, chịu hạn tốt', 120, 1,
+                                   1),
+                                   (N'Lúa Bắc Giang', N'Bắc Giang', N'Năng suất cao, chống sâu bệnh',
+                                   115, 1, 2),
+                                   (N'Cam Xã Đoài', N'Nghệ An', N'Vỏ mỏng, vị ngọt, mọng nước', 150, 4,
+                                   3),
+                                   (N'Cam Cao Phong', N'Hòa Bình', N'Quả to, thơm, vị đậm', 160, 4, 4),
+                                   (N'Bưởi Phúc Trạch', N'Hà Tĩnh', N'Vỏ vàng, cùi mỏng, ngọt đậm',
+                                   180, 6, 1),
+                                   (N'Bưởi Năm Roi', N'Vĩnh Long', N'Mọng nước, vị thanh, ít hạt', 170,
+                                   6, 2),
+                                   (N'Xoài Cát Chu', N'Đồng Tháp', N'Ngọt, thơm, thịt chắc', 140, 3,
+                                   3),
+                                   (N'Lê Sapa', N'Lào Cai', N'Ngọt, giòn, nhiều nước', 130, 2, 4),
+                                   (N'Dừa xiêm Bến Tre', N'Bến Tre', N'Ngọt, cùi dày, nước nhiều', 200,
+                                   10, 2),
+                                   (N'Hoa hồng Đà Lạt', N'Lâm Đồng', N'Hoa to, đẹp, dễ chăm sóc', 300,
+                                   9, 3);
+                                   GO
+                                   CREATE TABLE PhanBon (
+                   Tạo bảng Phân       Id INT PRIMARY KEY IDENTITY,
+                                       Ten NVARCHAR(50),
+                        bón            ThanhPhan NVARCHAR(50),
+                                       PhanLoai NVARCHAR(50),
+                                       VTId INT FOREIGN KEY REFERENCES VungTrong(Id)
+                                   )
+                                   GO
+                                   INSERT INTO PhanBon (Ten, ThanhPhan, PhanLoai, VTId) VALUES
+                                   (N'Đạm', N'Nito', N'Nhanh', 3),
+                                   (N'Lân', N'Photpho', N'Nhanh', 2),
+                                   (N'Kali', N'Kali', N'Chậm', 3),
+                                   (N'NPK', N'Nito Photpho Kali', N'Nhanh', 4);
+                                   GO
+                                   CREATE TABLE ThuocBVTV (
+                     Tạo bảng          Id INT PRIMARY KEY IDENTITY,
+                                       Ten NVARCHAR(50),
+                    Thuốc bảo vệ       NgaySX DATE,
+                      thực vật         HanSD DATE,
+                                       VTId INT FOREIGN KEY REFERENCES VungTrong(Id)
+                                   )
+                                   GO
+                                   INSERT INTO ThuocBVTV (Ten, NgaySX, HanSD, VTId) VALUES
+                                   (N'Trừ Sâu', '2025-01-01', '2026-01-01', 1),
+                                   (N'Diệt Cỏ', '2025-01-01', '2026-01-01', 2),
+                                   (N'A', '2025-01-01', '2026-01-01', 3),
+                                   (N'B', '2025-01-01', '2026-01-01', 4);
+                                   GO
+                                   CREATE TABLE PhanLoai (
+                   Tạo bảng Phân       Id INT PRIMARY KEY IDENTITY,
+                                       Loai NVARCHAR(50)
+                        loại       )
+                                   GO
+                                   INSERT INTO PhanLoai (Loai) VALUES
+                                   (N'Phân bón'),
+                                   (N'Thuốc BVTV'),
+                                   (N'Phân bón và thuốc BVTV');
+                                   GO
+                                   CREATE TABLE CoSoSanXuatPhanBon (
+                     Tạo bảng Cơ       Id INT PRIMARY KEY IDENTITY,
+
+
+
+
+https://getthispdf.com                                                                                                   35/44
+6/6/26, 4:18 PM                           Báo cáo Bài Tập Lớn Kỹ Thuật Phần Mềm Ứng Dụng: Hệ Thống Quản Lý CSDL Trồng Trọt
+
+
+
+
+                         sở sản xuất      Ten NVARCHAR(50),
+                                          DiaChi NVARCHAR(50),
+                          phân bón        BanDoId INT FOREIGN KEY REFERENCES BanDoPhanBo(Id),
+                                          LoaiId INT FOREIGN KEY REFERENCES PhanLoai(Id)
+                                       )
+                                       GO
+                                       INSERT INTO CoSoSanXuatPhanBon (Ten, DiaChi, BanDoId, LoaiId) VALUES
+                                       ('AA', N'Hà Nội', 1, 1),
+                                       ('BB', N'Vĩnh Phúc', 2, 1),
+                                       ('C', N'Nam Định', 2, 3),
+                                       ('D', N'Thái Bình', 1, 3);
+                                       GO
+                                       CREATE TABLE CoSoBanPhanBon (
+                     Tạo bảng Cơ           Id INT PRIMARY KEY IDENTITY,
+                                           Ten NVARCHAR(50),
+                     sở bán phân           DiaChi NVARCHAR(50),
+                         bón               BanDoId INT FOREIGN KEY REFERENCES BanDoPhanBo(Id),
+                                           LoaiId INT FOREIGN KEY REFERENCES PhanLoai(Id)
+                                       )
+                                       GO
+                                       INSERT INTO CoSoBanPhanBon (Ten, DiaChi, BanDoId, LoaiId) VALUES
+                                       (N'E', N'Hà Nội', 2, 1),
+                                       (N'F', N'Hòa Bình', 4, 1),
+                                       (N'G', N'Phú Thọ', 4, 3),
+                                       (N'H', N'Bắc Giang', 1, 3);
+                                       GO
+                                       IF NOT EXISTS (SELECT * FROM sys.tables WHERE name =
+                    Tạo bảng liên      'PhanBon_CoSoBan')
+                                       CREATE TABLE PhanBon_CoSoBan (
+                    kết Cơ sở bán          PhanBonId INT FOREIGN KEY REFERENCES PhanBon(Id),
+                     phân bón và           CoSoBanId INT FOREIGN KEY REFERENCES CoSoBanPhanBon(Id),
+                                           PRIMARY KEY (PhanBonId, CoSoBanId)
+                      Phân bón         )
+                                       GO
+                                       INSERT INTO PhanBon_CoSoBan (PhanBonId, CoSoBanId) VALUES
+                                       (1, 1),
+                                       (1, 2),
+                                       (2, 1),
+                                       (2, 3),
+                                       (3, 4),
+                                       (4, 1)
+                                       GO
+                                       IF NOT EXISTS (SELECT * FROM sys.tables WHERE name =
+                    Tạo bảng liên      'PhanBon_CoSoSanXuat')
+                                       CREATE TABLE PhanBon_CoSoSanXuat (
+                    kết Cơ sở sản          PhanBonId INT FOREIGN KEY REFERENCES PhanBon(Id),
+                    xuất phân bón          CoSoSanXuatId INT FOREIGN KEY REFERENCES CoSoSanXuatPhanBon(Id),
+                                           PRIMARY KEY (PhanBonId, CoSoSanXuatId)
+                     và Phân bón       )
+                                       GO
+
+                                       -- Chèn dữ liệu mẫu vào bảng liên kết PhanBon_CoSoSanXuat
+                                       INSERT INTO PhanBon_CoSoSanXuat (PhanBonId, CoSoSanXuatId) VALUES
+                                       (1, 1),
+                                       (1, 2),
+                                       (2, 3),
+                                       (3, 1),
+                                       (3, 4)
+                                       GO
+                                       CREATE TABLE CoSoSanXuatThuocBVTV (
+                     Tạo bảng cơ           Id INT PRIMARY KEY IDENTITY,
+                                           Ten NVARCHAR(50),
+                     sở sản xuất           DiaChi NVARCHAR(50),
+                                           BanDoId INT FOREIGN KEY REFERENCES BanDoPhanBo(Id),
+
+
+
+
+https://getthispdf.com                                                                                                       36/44
+6/6/26, 4:18 PM                         Báo cáo Bài Tập Lớn Kỹ Thuật Phần Mềm Ứng Dụng: Hệ Thống Quản Lý CSDL Trồng Trọt
+
+
+
+
+                     thuốc bảo vệ    )
+                                         LoaiId INT FOREIGN KEY REFERENCES PhanLoai(Id)
+
+                       thực vật      GO
+                                     INSERT INTO CoSoSanXuatThuocBVTV (Ten, DiaChi, BanDoId, LoaiId)
+                                     VALUES
+                                     (N'A', N'Hà Nội', 1, 2),
+                                     (N'B', N'Vũng Tàu', 2, 2),
+                                     (N'C', N'Thái Nguyên', 4, 3),
+                                     (N'D', N'Quảng Ninh', 4, 3);
+                                     GO
+                                     CREATE TABLE CoSoBanThuocBVTV (
+                    Tạo bảng cơ          Id INT PRIMARY KEY IDENTITY,
+                                         Ten NVARCHAR(50),
+                    sở bán thuốc         DiaChi NVARCHAR(50),
+                   bảo vệ thực vật       BanDoId INT FOREIGN KEY REFERENCES BanDoPhanBo(Id),
+                                         LoaiId INT FOREIGN KEY REFERENCES PhanLoai(Id)
+                                     )
+                                     GO
+                                     INSERT INTO CoSoBanThuocBVTV (Ten, DiaChi, BanDoId, LoaiId) VALUES
+                                     (N'J', N'Hà Nội', 1, 2),
+                                     (N'Q', N'Yên Bái', 2, 2),
+                                     (N'G', N'Lào Cai', 3, 3),
+                                     (N'H', N'Bắc Kạn', 4, 3);
+                                     GO
+                                     IF NOT EXISTS (SELECT * FROM sys.tables WHERE name =
+                    Tạo bảng liên    'ThuocBVTV_CoSoBan')
+                                     CREATE TABLE ThuocBVTV_CoSoBan (
+                    kết giữa Cơ sở       ThuocBVTVId INT FOREIGN KEY REFERENCES ThuocBVTV(Id),
+                    bán và Thuốc         CoSoBanId INT FOREIGN KEY REFERENCES CoSoBanThuocBVTV(Id),
+                                         PRIMARY KEY (ThuocBVTVId, CoSoBanId)
+                        BVTV         )
+                                     GO
+                                     INSERT INTO ThuocBVTV_CoSoBan (ThuocBVTVId, CoSoBanId) VALUES
+                                     (1, 1),
+                                     (2, 3),
+                                     (2, 1),
+                                     (2, 4),
+                                     (3, 4),
+                                     (4, 2)
+                                     GO
+                                     IF NOT EXISTS (SELECT * FROM sys.tables WHERE name =
+                    Tạo bảng liên    'ThuocBVTV_CoSoSanXuat')
+                                     CREATE TABLE ThuocBVTV_CoSoSanXuat (
+                    kết giữa Cơ sở       ThuocBVTVId INT FOREIGN KEY REFERENCES ThuocBVTV(Id),
+                     sản xuất và         CoSoSanXuatId INT FOREIGN KEY REFERENCES
+                                     CoSoSanXuatThuocBVTV(Id),
+                    Thuốc BVTV           PRIMARY KEY (ThuocBVTVId, CoSoSanXuatId)
+                                     )
+                                     GO
+
+                                     INSERT INTO ThuocBVTV_CoSoSanXuat (ThuocBVTVId, CoSoSanXuatId)
+                                     VALUES
+                                     (1, 1),
+                                     (1, 3),
+                                     (2, 3),
+                                     (3, 1),
+                                     (3, 4)
+                                     GO
+                                     CREATE TABLE CS_VG (
+                                         Id INT PRIMARY KEY IDENTITY,
+                                         Ten NVARCHAR(50),
+                     Tạo bảng Cơ         DiaChi NVARCHAR(50),
+                                         BanDoId INT FOREIGN KEY REFERENCES BanDoPhanBo(Id)
+                                     )
+
+
+
+
+https://getthispdf.com                                                                                                     37/44
+6/6/26, 4:18 PM                          Báo cáo Bài Tập Lớn Kỹ Thuật Phần Mềm Ứng Dụng: Hệ Thống Quản Lý CSDL Trồng Trọt
+
+
+
+
+                         sở VietGap   GO
+                                      INSERT INTO CS_VG (Ten, DiaChi, BanDoId) VALUES
+                                      (N'VietGap 1', N'Bạc Liêu', 1),
+                                      (N'VietGap 2', N'Sóc Trăng', 2),
+                                      (N'VietGap 3', N'Nghệ An', 3),
+                                      (N'VietGap 4', N'Ninh Bình', 1);
+                                      GO
+                                      CREATE TABLE SinhVatGayHai (
+                    Tạo bảng Sinh         Id INT PRIMARY KEY IDENTITY,
+                                          Ten NVARCHAR(50),
+                     vật gây hại          PhanLoai NVARCHAR(50),
+                                          CayAH NVARCHAR(50),
+                                          VTId INT FOREIGN KEY REFERENCES VungTrong(Id)
+                                      )
+                                      GO
+                                      INSERT INTO SinhVatGayHai (Ten, PhanLoai, CayAH, VTId) VALUES
+                                      (N'Châu chấu', N'Côn trùng', N'Lúa', 2),
+                                      (N'Sâu róm', N'Côn trùng', N'Lúa', 2),
+                                      (N'Rệp', N'Côn trùng', N'Lúa', 2),
+                                      (N'Sâu lá', N'Côn trùng', N'Lúa', 3);
+                                      GO
+                                      CREATE TABLE CapNhat_SVGH (
+                    Cập nhật Sinh         Id INT PRIMARY KEY IDENTITY,
+                                          NgayGioCN DATETIME,
+                     vật gây hại          TienDo NVARCHAR(50),
+                                          SVId INT FOREIGN KEY REFERENCES SinhVatGayHai(Id)
+                                      )
+                                      GO
+                                      INSERT INTO CapNhat_SVGH (NgayGioCN, TienDo, SVId) VALUES
+                                      ('2024-11-29 10:30:30', N'Nhanh', 1),
+                                      ('2024-11-29 10:30:30', N'Vừa Phải', 1),
+                                      ('2024-11-29 10:30:30', N'Nhanh', 2),
+                                      ('2024-11-29 10:30:30', N'Chậm', 2);
+                                      GO
+                                      CREATE TABLE TuoiSau (
+                   Tạo bảng Tuổi          Id INT PRIMARY KEY IDENTITY,
+                                          Ten NVARCHAR(50),
+                        sâu               TuoiSau INT,
+                                          DoPhoBien NVARCHAR(50),
+                                          SVId INT FOREIGN KEY REFERENCES SinhVatGayHai(Id)
+                                      )
+                                      GO
+                                      INSERT INTO TuoiSau (Ten, TuoiSau, DoPhoBien, SVId) VALUES
+                                      (N'Châu chấu', 3, N'Phổ biến', 1),
+                                      (N'Sâu róm', 3, N'Không phổ biến', 2),
+                                      (N'Rệp', 3, N'Không phổ biến', 1),
+                                      (N'Sâu lá', 3, N'Phổ biến', 2);
+                                      GO
+                                      CREATE VIEW ViewHoSo AS
+                     Tạo View Hồ      SELECT
+                                          HoSo.*,
+                          sơ              TaiKhoan.Ten AS TenDangNhap,
+                                          MatKhau,
+                                          QuyenId,
+                                          Quyen.Ten AS Quyen
+                                      FROM TaiKhoan
+                                      INNER JOIN Quyen ON QuyenId = Quyen.Id
+                                      INNER JOIN HoSo ON HoSoId = HoSo.Id
+                                      GO
+                                      CREATE VIEW ViewDonVi AS
+                                      SELECT
+                                          T.*,
+                    Tạo View Đơn          DonVi.Ten AS TrucThuoc
+                                      FROM (
+
+
+
+
+https://getthispdf.com                                                                                                      38/44
+6/6/26, 4:18 PM                       Báo cáo Bài Tập Lớn Kỹ Thuật Phần Mềm Ứng Dụng: Hệ Thống Quản Lý CSDL Trồng Trọt
+
+
+
+
+                         vị            SELECT
+                                           DonVi.*,
+                                           HanhChinh.Ten AS Cap
+                                       FROM DonVi
+                                       INNER JOIN HanhChinh ON HanhChinhId = HanhChinh.Id
+                                   ) AS T
+                                   LEFT JOIN DonVi ON T.TrucThuocId = DonVi.Id
+                                   GO
+                                   CREATE VIEW ViewCoSoBuonBan
+                     Tạo View Cơ   AS
+                                   WITH Combined AS (
+                     sở buôn bán       SELECT
+                                           Id,
+                                           Ten,
+                                           DiaChi,
+                                           BanDoId,
+                                           LoaiId
+                                       FROM CoSoBanPhanBon
+
+                                       UNION ALL
+
+                                       SELECT
+                                           Id,
+                                           Ten,
+                                           DiaChi,
+                                           BanDoId,
+                                           LoaiId
+                                       FROM CoSoBanThuocBVTV
+                                   )
+                                   SELECT
+                                       C.Id,
+                                       C.Ten AS Ten,
+                                       C.LoaiId,
+                                       PL.Loai AS Loai,
+                                       C.DiaChi AS DiaChi,
+                                       C.BanDoId,
+                                       BDPB.ToaDoX,
+                                       BDPB.ToaDoY
+                                   FROM
+                                   (
+                                        SELECT
+                                            *,
+                                            ROW_NUMBER() OVER (PARTITION BY Ten ORDER BY Id) AS RN
+                                        FROM Combined
+                                   ) AS C
+                                   INNER JOIN PhanLoai PL
+                                        ON C.LoaiId = PL.Id
+                                   INNER JOIN BanDoPhanBo BDPB
+                                        ON C.BanDoId = BDPB.Id
+                                   WHERE C.RN = 1;
+                                   GO
+                                   CREATE VIEW ViewCoSoSanXuat
+                     Tạo View cơ   AS
+                                   WITH Combined AS (
+                     sở sản xuất        SELECT
+                                            Id,
+                                            Ten,
+                                            DiaChi,
+                                            BanDoId,
+                                            LoaiId
+                                        FROM CoSoSanXuatPhanBon
+
+                                       UNION ALL
+
+
+
+
+https://getthispdf.com                                                                                                   39/44
+6/6/26, 4:18 PM                         Báo cáo Bài Tập Lớn Kỹ Thuật Phần Mềm Ứng Dụng: Hệ Thống Quản Lý CSDL Trồng Trọt
+
+
+
+
+                                         SELECT
+                                             Id,
+                                             Ten,
+                                             DiaChi,
+                                             BanDoId,
+                                             LoaiId
+                                         FROM CoSoSanXuatThuocBVTV
+                                     )
+                                     SELECT
+                                         C.Id,
+                                         C.Ten AS Ten,
+                                         C.LoaiId,
+                                         PL.Loai,
+                                         C.DiaChi AS DiaChi,
+                                         C.BanDoId,
+                                         BDPB.ToaDoX,
+                                         BDPB.ToaDoY
+                                     FROM
+                                     (
+                                          SELECT
+                                              *,
+                                              ROW_NUMBER() OVER (PARTITION BY Ten ORDER BY Id) AS RN
+                                          FROM Combined
+                                     ) AS C
+                                     INNER JOIN PhanLoai PL ON C.LoaiId = PL.Id
+                                     INNER JOIN BanDoPhanBo BDPB ON C.BanDoId = BDPB.Id
+                                     WHERE C.RN = 1;
+                                     GO
+                                     CREATE VIEW ViewGiongCay
+                         Tạo View    AS
+                                     SELECT
+                         Giống cây       GCD.Id,
+                                         GCD.Ten AS Ten,
+                                         GCD.NguonGoc,
+                                         GCD.DacTinh,
+                                         GCD.ThoiGianThuHoach,
+                                         GCC.Ten AS Giong,
+                                         VT.DiaChi AS VungTrong,
+                                         BDPB.ToaDoX,
+                                         BDPB.ToaDoY
+                                     FROM
+                                         GiongCayDauDong GCD
+                                     INNER JOIN
+                                         GiongCayChinh GCC ON GCD.GiongId = GCC.Id
+                                     INNER JOIN
+                                         VungTrong VT ON GCD.VTId = VT.Id
+                                     INNER JOIN
+                                         BanDoPhanBo BDPB ON VT.BanDoId = BDPB.Id;
+                                     GO
+                                     CREATE VIEW ViewSinhVatGayHai
+                    Tạo View Sinh    AS
+                                     SELECT
+                     vật gây hại         TS.Id AS Id,
+                                         TS.Ten AS Ten,
+                                         TS.TuoiSau,
+                                         TS.DoPhoBien,
+                                         SVGH.PhanLoai,
+                                         SVGH.CayAH,
+                                         VT.DiaChi AS Vung,
+                                         BDPB.ToaDoX,
+                                         BDPB.ToaDoY
+                                     FROM
+                                         TuoiSau TS
+                                     INNER JOIN
+
+
+
+
+https://getthispdf.com                                                                                                     40/44
+6/6/26, 4:18 PM                       Báo cáo Bài Tập Lớn Kỹ Thuật Phần Mềm Ứng Dụng: Hệ Thống Quản Lý CSDL Trồng Trọt
+
+
+
+
+                                       SinhVatGayHai SVGH ON TS.SVId = SVGH.Id
+                                   INNER JOIN
+                                       VungTrong VT ON SVGH.VTId = VT.Id
+                                   INNER JOIN
+                                       BanDoPhanBo BDPB ON VT.BanDoId = BDPB.Id;
+                                   GO
+
+                         3.3.   Giao diện ứng dụng
+
+
+
+
+                                         Hình 15: Giao diện đăng nhập hệ thống
+
+
+
+
+                                         Hình 16: Giao diện menu của ứng dụng
+
+
+
+
+https://getthispdf.com                                                                                                   41/44
+6/6/26, 4:18 PM                 Báo cáo Bài Tập Lớn Kỹ Thuật Phần Mềm Ứng Dụng: Hệ Thống Quản Lý CSDL Trồng Trọt
+
+
+
+
+                         Hình 17: Giao diện bảng và các thao tác tìm kiếm, thêm mới
+
+
+
+
+                           Hình 18: Thao tác sửa, xóa với các thông tin trong bảng
+
+
+
+
+https://getthispdf.com                                                                                             42/44
+6/6/26, 4:18 PM          Báo cáo Bài Tập Lớn Kỹ Thuật Phần Mềm Ứng Dụng: Hệ Thống Quản Lý CSDL Trồng Trọt
+
+
+
+
+                                 Hình 19: Quản lý hành chính
+
+
+
+
+                                 Hình 20: Quản lý người dùng
+
+
+
+
+https://getthispdf.com                                                                                      43/44
+6/6/26, 4:18 PM                        Báo cáo Bài Tập Lớn Kỹ Thuật Phần Mềm Ứng Dụng: Hệ Thống Quản Lý CSDL Trồng Trọt
+
+
+
+
+                   CHƯƠNG 4: KẾT LUẬN
+                      Trong quá trình thực hiện bài tập lớn, chúng em đã có cơ hội tiếp thu và tích
+                   lũy thêm nhiều kiến thức mới, đồng thời rèn luyện những kỹ năng quan trọng
+                   như làm việc nhóm, tư duy logic và giải quyết vấn đề. Dù hệ thống mà nhóm
+                   phát triển vẫn còn một số hạn chế, nhưng trải nghiệm này đã giúp chúng em hiểu
+                   sâu hơn về cấu trúc, nguyên lý hoạt động của lập trình phần mềm, cũng như nắm
+                   vững hơn ngôn ngữ C# và lập trình SQL Server. Qua đó, tư duy lập trình của
+                   chúng em cũng được nâng cao một cách đáng kể.
+                      Không chỉ dừng lại ở những kiến thức trong phạm vi môn học, bài tập lớn
+                   còn mở ra cho chúng em cơ hội khám phá và học hỏi nhiều kỹ năng mới. Chúng
+                   em đã cùng nhau nghiên cứu chủ đề, học cách xây dựng thư viện, sử dụng thành
+                   thạo các công cụ như Visual Studio, và phối hợp nhịp nhàng để hoàn thành dự
+                   án một cách hiệu quả. Những trải nghiệm này không chỉ giúp chúng em củng cố
+                   kiến thức chuyên môn mà còn rèn luyện khả năng làm việc nhóm và quản lý thời
+                   gian.
+                       Cuối cùng, nhóm em xin gửi lời cảm ơn chân thành đến thầy Vũ Song Tùng
+                   vì sự hướng dẫn tận tình và sự hỗ trợ quý báu trong suốt quá trình thực hiện bài
+                   tập lớn. Do kiến thức và kinh nghiệm còn hạn chế, bài làm của chúng em chắc
+                   chắn không tránh khỏi những thiếu sót. Chúng em rất mong nhận được sự thông
+                   cảm và những góp ý quý báu từ thầy để chúng em có thể hoàn thiện bản thân và
+                   sản phẩm của mình hơn nữa trong tương lai.
+
+
+
+
+https://getthispdf.com                                                                                                    44/44
+

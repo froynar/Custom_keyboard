@@ -39,7 +39,7 @@ public sealed class SqlChatRepository : IChatRepository
                   AND ISNULL(buyer_id, 0) = ISNULL(@buyer_id, 0)
                   AND ISNULL(admin_user_id, 0) = ISNULL(@admin_user_id, 0)
                   AND ISNULL(build_request_id, '') = ISNULL(@build_request_id, '')
-                ORDER BY created_at, conversation_id;
+                ORDER BY created_at, id;
                 """;
             findCommand.AddParameter("@seller_user_id", SqlDbType.Int, sellerUserId);
             findCommand.AddParameter("@buyer_id", SqlDbType.Int, buyerId);
@@ -58,7 +58,7 @@ public sealed class SqlChatRepository : IChatRepository
         await using var insertCommand = connection.CreateCommand();
         insertCommand.CommandText = $"""
             INSERT INTO chat_conversations (
-                conversation_id,
+                id,
                 seller_user_id,
                 buyer_id,
                 admin_user_id,
@@ -76,7 +76,7 @@ public sealed class SqlChatRepository : IChatRepository
 
             SELECT {ConversationColumns}
             FROM chat_conversations
-            WHERE conversation_id = @conversation_id;
+            WHERE id = @conversation_id;
             """;
         insertCommand.AddParameter("@conversation_id", SqlDbType.VarChar, conversationId, 50);
         insertCommand.AddParameter("@seller_user_id", SqlDbType.Int, sellerUserId);
@@ -102,7 +102,7 @@ public sealed class SqlChatRepository : IChatRepository
         command.CommandText = $"""
             SELECT {ConversationColumns}
             FROM chat_conversations
-            WHERE conversation_id = @conversation_id;
+            WHERE id = @conversation_id;
             """;
         command.AddParameter("@conversation_id", SqlDbType.VarChar, conversationId, 50);
 
@@ -124,7 +124,7 @@ public sealed class SqlChatRepository : IChatRepository
             WHERE seller_user_id = @user_id
                OR buyer_id = @user_id
                OR admin_user_id = @user_id
-            ORDER BY COALESCE(updated_at, created_at) DESC, conversation_id;
+            ORDER BY COALESCE(updated_at, created_at) DESC, id;
             """;
         command.AddParameter("@user_id", SqlDbType.Int, userId);
 
@@ -147,14 +147,14 @@ public sealed class SqlChatRepository : IChatRepository
         await using var command = connection.CreateCommand();
         command.CommandText = """
             SELECT
-                message_id,
+                id AS message_id,
                 conversation_id,
                 sender_user_id,
                 message_text,
                 sent_at
             FROM chat_messages
             WHERE conversation_id = @conversation_id
-            ORDER BY sent_at, message_id;
+            ORDER BY sent_at, id;
             """;
         command.AddParameter("@conversation_id", SqlDbType.VarChar, conversationId, 50);
 
@@ -180,7 +180,7 @@ public sealed class SqlChatRepository : IChatRepository
         await using var command = connection.CreateCommand();
         command.CommandText = """
             INSERT INTO chat_messages (
-                message_id,
+                id,
                 conversation_id,
                 sender_user_id,
                 message_text,
@@ -196,16 +196,16 @@ public sealed class SqlChatRepository : IChatRepository
 
             UPDATE chat_conversations
             SET updated_at = SYSUTCDATETIME()
-            WHERE conversation_id = @conversation_id;
+            WHERE id = @conversation_id;
 
             SELECT
-                message_id,
+                id AS message_id,
                 conversation_id,
                 sender_user_id,
                 message_text,
                 sent_at
             FROM chat_messages
-            WHERE message_id = @message_id;
+            WHERE id = @message_id;
             """;
         command.AddParameter("@message_id", SqlDbType.VarChar, message.MessageId, 50);
         command.AddParameter("@conversation_id", SqlDbType.VarChar, message.ConversationId, 50);
@@ -223,7 +223,7 @@ public sealed class SqlChatRepository : IChatRepository
     }
 
     private const string ConversationColumns = """
-        conversation_id,
+        id AS conversation_id,
         seller_user_id,
         buyer_id,
         admin_user_id,

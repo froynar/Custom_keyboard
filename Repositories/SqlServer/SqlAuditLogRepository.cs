@@ -24,7 +24,7 @@ public sealed class SqlAuditLogRepository : IAuditLogRepository
         await using var command = connection.CreateCommand();
         command.CommandText = """
             SELECT TOP (@take)
-                log_id,
+                id AS log_id,
                 user_id,
                 table_name,
                 record_id,
@@ -33,7 +33,7 @@ public sealed class SqlAuditLogRepository : IAuditLogRepository
                 new_value_json,
                 changed_at
             FROM audit_log
-            ORDER BY changed_at DESC, log_id DESC;
+            ORDER BY changed_at DESC, id DESC;
             """;
         command.AddParameter("@take", SqlDbType.Int, take);
 
@@ -73,7 +73,7 @@ public sealed class SqlAuditLogRepository : IAuditLogRepository
             DECLARE @new_log_id INT = CAST(SCOPE_IDENTITY() AS INT);
 
             SELECT
-                log_id,
+                id AS log_id,
                 user_id,
                 table_name,
                 record_id,
@@ -82,7 +82,7 @@ public sealed class SqlAuditLogRepository : IAuditLogRepository
                 new_value_json,
                 changed_at
             FROM audit_log
-            WHERE log_id = @new_log_id;
+            WHERE id = @new_log_id;
             """;
         command.AddParameter("@user_id", SqlDbType.Int, entry.UserId);
         command.AddParameter("@table_name", SqlDbType.VarChar, entry.TableName, 100);

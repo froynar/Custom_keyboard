@@ -29,11 +29,11 @@ public sealed class SqlDeviceKeyTestResultRepository : IDeviceKeyTestResultRepos
 
             BEGIN TRANSACTION;
 
-            SELECT TOP (1) @key_test_id = key_test_id
+            SELECT TOP (1) @key_test_id = id
             FROM device_key_test_results WITH (UPDLOCK, HOLDLOCK)
             WHERE session_id = @session_id
               AND key_code = @key_code
-            ORDER BY key_test_id;
+            ORDER BY id;
 
             IF @key_test_id IS NULL
             BEGIN
@@ -86,7 +86,7 @@ public sealed class SqlDeviceKeyTestResultRepository : IDeviceKeyTestResultRepos
             COMMIT TRANSACTION;
 
             SELECT
-                key_test_id,
+                id AS key_test_id,
                 session_id,
                 request_id,
                 device_id,
@@ -107,7 +107,7 @@ public sealed class SqlDeviceKeyTestResultRepository : IDeviceKeyTestResultRepos
                 failure_reason,
                 recorded_at
             FROM device_key_test_results
-            WHERE key_test_id = @key_test_id;
+            WHERE id = @key_test_id;
             """;
         AddKeyResultParameters(command, result);
 
@@ -128,7 +128,7 @@ public sealed class SqlDeviceKeyTestResultRepository : IDeviceKeyTestResultRepos
         await connection.OpenAsync(cancellationToken);
 
         await using var command = connection.CreateCommand();
-        command.CommandText = $"{BaseSelectSql} WHERE session_id = @session_id ORDER BY key_test_id;";
+        command.CommandText = $"{BaseSelectSql} WHERE session_id = @session_id ORDER BY id;";
         command.AddParameter("@session_id", SqlDbType.VarChar, sessionId, 50);
 
         await using var reader = await command.ExecuteReaderAsync(cancellationToken);
@@ -142,7 +142,7 @@ public sealed class SqlDeviceKeyTestResultRepository : IDeviceKeyTestResultRepos
 
     private const string BaseSelectSql = """
         SELECT
-            key_test_id,
+            id AS key_test_id,
             session_id,
             request_id,
             device_id,

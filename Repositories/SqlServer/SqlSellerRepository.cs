@@ -33,22 +33,22 @@ public sealed class SqlSellerRepository : ISellerRepository
         return QuerySellerRowsAsync(
             """
             SELECT
-                u.user_id,
+                u.id AS user_id,
                 u.username,
                 u.email,
                 u.phone AS user_phone,
                 u.is_active,
-                COALESCE(sp.seller_profile_id, 0) AS seller_profile_id,
+                COALESCE(sp.id, 0) AS seller_profile_id,
                 COALESCE(sp.shop_name, '') AS shop_name,
                 COALESCE(sp.phone, '') AS profile_phone,
                 COALESCE(sp.address, '') AS address,
                 CAST(COALESCE(sp.is_verified, 0) AS bit) AS is_verified,
                 sp.verified_at
             FROM users AS u
-            INNER JOIN roles AS r ON r.role_id = u.role_id
-            LEFT JOIN seller_profiles AS sp ON sp.user_id = u.user_id
+            INNER JOIN roles AS r ON r.id = u.role_id
+            LEFT JOIN seller_profiles AS sp ON sp.user_id = u.id
             WHERE r.role_name = 'Seller'
-            ORDER BY u.user_id;
+            ORDER BY u.id;
             """,
             cancellationToken);
     }
@@ -58,7 +58,7 @@ public sealed class SqlSellerRepository : ISellerRepository
         return QueryAsync(
             """
             SELECT
-                sp.seller_profile_id,
+                sp.id AS seller_profile_id,
                 sp.user_id,
                 sp.shop_name,
                 sp.phone,
@@ -66,8 +66,8 @@ public sealed class SqlSellerRepository : ISellerRepository
                 sp.is_verified,
                 sp.verified_at
             FROM seller_profiles AS sp
-            INNER JOIN users AS u ON u.user_id = sp.user_id
-            INNER JOIN roles AS r ON r.role_id = u.role_id
+            INNER JOIN users AS u ON u.id = sp.user_id
+            INNER JOIN roles AS r ON r.id = u.role_id
             WHERE sp.is_verified = 1
               AND u.is_active = 1
               AND r.role_name = 'Seller'
@@ -86,7 +86,7 @@ public sealed class SqlSellerRepository : ISellerRepository
         command.CommandText = """
             SELECT COUNT(*)
             FROM users AS u
-            INNER JOIN roles AS r ON r.role_id = u.role_id
+            INNER JOIN roles AS r ON r.id = u.role_id
             WHERE r.role_name = 'Seller';
             """;
 
@@ -97,27 +97,34 @@ public sealed class SqlSellerRepository : ISellerRepository
     {
         await using var connection = _connectionFactory.CreateConnection();
         await connection.OpenAsync(cancellationToken);
+        await using var transaction = (SqlTransaction)await connection.BeginTransactionAsync(
+            IsolationLevel.Serializable,
+            cancellationToken);
 
         await using var command = connection.CreateCommand();
+        command.Transaction = transaction;
         command.CommandText = """
-            IF EXISTS (
-                SELECT 1
-                FROM seller_profiles
-                WHERE seller_profile_id = @seller_profile_id
-                   OR user_id = @user_id
-            )
+            IF @seller_profile_id > 0
+               AND NOT EXISTS (
+                   SELECT 1
+                   FROM seller_profiles
+                   WHERE id = @seller_profile_id
+                     AND user_id = @user_id
+               )
             BEGIN
-                UPDATE seller_profiles
-                SET
-                    shop_name = @shop_name,
-                    phone = @phone,
-                    address = @address,
-                    is_verified = @is_verified,
-                    verified_at = @verified_at
-                WHERE seller_profile_id = @seller_profile_id
-                   OR user_id = @user_id;
-            END
-            ELSE
+                THROW 51000, 'Seller profile id is stale or does not match the supplied seller user id.', 1;
+            END;
+
+            UPDATE seller_profiles
+            SET
+                shop_name = @shop_name,
+                phone = @phone,
+                address = @address,
+                is_verified = @is_verified,
+                verified_at = @verified_at
+            WHERE user_id = @user_id;
+
+            IF @@ROWCOUNT = 0
             BEGIN
                 INSERT INTO seller_profiles (
                     user_id,
@@ -138,7 +145,7 @@ public sealed class SqlSellerRepository : ISellerRepository
             END;
 
             SELECT
-                seller_profile_id,
+                id AS seller_profile_id,
                 user_id,
                 shop_name,
                 phone,
@@ -150,13 +157,22 @@ public sealed class SqlSellerRepository : ISellerRepository
             """;
         AddSellerProfileParameters(command, sellerProfile);
 
-        await using var reader = await command.ExecuteReaderAsync(cancellationToken);
-        if (await reader.ReadAsync(cancellationToken))
+        SellerProfile? savedProfile = null;
+        await using (var reader = await command.ExecuteReaderAsync(cancellationToken))
         {
-            return MapSellerProfile(reader);
+            if (await reader.ReadAsync(cancellationToken))
+            {
+                savedProfile = MapSellerProfile(reader);
+            }
         }
 
-        throw new InvalidOperationException("Could not save seller profile.");
+        if (savedProfile is null)
+        {
+            throw new InvalidOperationException("Could not save seller profile.");
+        }
+
+        await transaction.CommitAsync(cancellationToken);
+        return savedProfile;
     }
 
     public async Task SetVerifiedAsync(int sellerUserId, bool isVerified, int adminUserId, CancellationToken cancellationToken = default)
@@ -183,7 +199,7 @@ public sealed class SqlSellerRepository : ISellerRepository
 
     private const string BaseSelectSql = """
         SELECT
-            seller_profile_id,
+            id AS seller_profile_id,
             user_id,
             shop_name,
             phone,

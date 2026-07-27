@@ -19,7 +19,7 @@ public sealed class SqlBuildRepository : IBuildRepository
     {
         // Archived builds are soft-removed from the buyer's main list (use case: archive hides a build).
         return QueryAsync(
-            $"{BuildSelectSql} WHERE buyer_id = @buyer_id AND status <> 'Archived' ORDER BY created_at DESC, build_id;",
+            $"{BuildSelectSql} WHERE buyer_id = @buyer_id AND status <> 'Archived' ORDER BY created_at DESC, id;",
             command => command.AddParameter("@buyer_id", SqlDbType.Int, buyerId),
             cancellationToken);
     }
@@ -30,7 +30,7 @@ public sealed class SqlBuildRepository : IBuildRepository
         await connection.OpenAsync(cancellationToken);
 
         await using var command = connection.CreateCommand();
-        command.CommandText = $"{BuildSelectSql} WHERE build_id = @build_id;";
+        command.CommandText = $"{BuildSelectSql} WHERE id = @build_id;";
         command.AddParameter("@build_id", SqlDbType.VarChar, buildId, 50);
 
         await using var reader = await command.ExecuteReaderAsync(cancellationToken);
@@ -61,7 +61,7 @@ public sealed class SqlBuildRepository : IBuildRepository
         await using var command = connection.CreateCommand();
         command.Transaction = transaction;
         command.CommandText = """
-            IF EXISTS (SELECT 1 FROM builds WHERE build_id = @build_id)
+            IF EXISTS (SELECT 1 FROM builds WHERE id = @build_id)
             BEGIN
                 UPDATE builds
                 SET
@@ -73,12 +73,12 @@ public sealed class SqlBuildRepository : IBuildRepository
                     status = @status,
                     total_cost_snapshot = @total_cost_snapshot,
                     updated_at = SYSUTCDATETIME()
-                WHERE build_id = @build_id;
+                WHERE id = @build_id;
             END
             ELSE
             BEGIN
                 INSERT INTO builds (
-                    build_id,
+                    id,
                     buyer_id,
                     kit_id,
                     name,
@@ -102,7 +102,7 @@ public sealed class SqlBuildRepository : IBuildRepository
             END;
 
             SELECT
-                build_id,
+                id AS build_id,
                 buyer_id,
                 kit_id,
                 name,
@@ -113,7 +113,7 @@ public sealed class SqlBuildRepository : IBuildRepository
                 created_at,
                 updated_at
             FROM builds
-            WHERE build_id = @build_id;
+            WHERE id = @build_id;
             """;
         AddBuildParameters(command, build);
 
@@ -146,7 +146,7 @@ public sealed class SqlBuildRepository : IBuildRepository
             UPDATE builds
             SET status = @status,
                 updated_at = SYSUTCDATETIME()
-            WHERE build_id = @build_id;
+            WHERE id = @build_id;
             """;
         command.AddParameter("@status", SqlDbType.VarChar, status.ToString(), 50);
         command.AddParameter("@build_id", SqlDbType.VarChar, buildId, 50);
@@ -158,7 +158,7 @@ public sealed class SqlBuildRepository : IBuildRepository
 
     private const string BuildSelectSql = """
         SELECT
-            build_id,
+            id AS build_id,
             buyer_id,
             kit_id,
             name,
@@ -215,7 +215,7 @@ public sealed class SqlBuildRepository : IBuildRepository
         command.Transaction = transaction;
         command.CommandText = """
             SELECT
-                build_item_id,
+                id AS build_item_id,
                 build_id,
                 switch_id,
                 keycap_id,
@@ -226,7 +226,7 @@ public sealed class SqlBuildRepository : IBuildRepository
                 notes
             FROM build_items
             WHERE build_id = @build_id
-            ORDER BY build_item_id;
+            ORDER BY id;
             """;
         command.AddParameter("@build_id", SqlDbType.VarChar, buildId, 50);
 
@@ -306,14 +306,14 @@ public sealed class SqlBuildRepository : IBuildRepository
         command.Transaction = transaction;
         command.CommandText = """
             SELECT
-                mod_id,
+                id AS mod_id,
                 build_id,
                 mod_type,
                 target_component,
                 notes
             FROM build_mods
             WHERE build_id = @build_id
-            ORDER BY mod_id;
+            ORDER BY id;
             """;
         command.AddParameter("@build_id", SqlDbType.VarChar, buildId, 50);
 

@@ -74,14 +74,14 @@ Enum KeyFailureType {
 }
 
 Table roles {
-  role_id int [pk, increment]
+  id int [pk, increment]
   role_name UserRole [unique, not null]
   permissions varchar
 }
 
 Table users {
-  user_id int [pk, increment]
-  role_id int [not null, ref: > roles.role_id]
+  id int [pk, increment]
+  role_id int [not null, ref: > roles.id]
   username varchar(100) [unique, not null]
   email varchar(255) [unique, not null]
   phone varchar(30) [unique, not null]
@@ -90,8 +90,8 @@ Table users {
 }
 
 Table seller_profiles {
-  seller_profile_id int [pk, increment]
-  user_id int [not null, unique, ref: > users.user_id]
+  id int [pk, increment]
+  user_id int [not null, unique, ref: > users.id]
   shop_name varchar(255) [not null]
   phone varchar(30) [not null]
   address varchar(500) [not null]
@@ -100,8 +100,8 @@ Table seller_profiles {
 }
 
 Table seller_applications {
-  application_id int [pk, increment]
-  buyer_user_id int [not null, ref: > users.user_id]
+  id int [pk, increment]
+  buyer_user_id int [not null, ref: > users.id]
   shop_name varchar(255) [not null]
   phone varchar(30) [not null]
   address varchar(500) [not null]
@@ -110,28 +110,28 @@ Table seller_applications {
   review_note varchar(500)
   created_at datetime [not null]
   reviewed_at datetime
-  reviewed_by int [ref: > users.user_id]
+  reviewed_by int [ref: > users.id]
 
   Note: 'Buyer requests an upgrade to Seller. Admin approves (-> set users.role to Seller + create seller_profiles) or rejects. At most one Pending application per buyer (filtered unique index UX_seller_applications_pending_buyer).'
 }
 
 Table brands {
-  brand_id int [pk, increment]
+  id int [pk, increment]
   brand_name varchar(255) [unique, not null]
   country varchar(100)
 }
 
 Table layouts {
-  layout_id varchar(50) [pk]
+  id varchar(50) [pk]
   layout_name varchar(100) [not null]
   form_factor varchar(100) [not null] // 60, 65, 75, TKL, 100, Alice...
   key_count int [not null]
 }
 
 Table keyboard_kits {
-  kit_id varchar(50) [pk]
-  brand_id int [not null, ref: > brands.brand_id]
-  layout_id varchar(50) [not null, ref: > layouts.layout_id]
+  id varchar(50) [pk]
+  brand_id int [not null, ref: > brands.id]
+  layout_id varchar(50) [not null, ref: > layouts.id]
   kit_name varchar(255) [not null]
   pcb_technology SwitchTechnology [not null]
   switch_mount varchar(100) [not null] // MX 3-pin, MX 5-pin, HE, Topre, Optical
@@ -142,8 +142,8 @@ Table keyboard_kits {
 }
 
 Table switches {
-  switch_id varchar(50) [pk]
-  brand_id int [not null, ref: > brands.brand_id]
+  id varchar(50) [pk]
+  brand_id int [not null, ref: > brands.id]
   switch_name varchar(255) [not null]
   switch_technology SwitchTechnology [not null]
   mount_type varchar(100) [not null] // MX 3-pin, MX 5-pin, HE, Topre, Optical
@@ -154,8 +154,8 @@ Table switches {
 }
 
 Table keycap_sets {
-  keycap_id varchar(50) [pk]
-  brand_id int [not null, ref: > brands.brand_id]
+  id varchar(50) [pk]
+  brand_id int [not null, ref: > brands.id]
   keycap_name varchar(255) [not null]
   supported_form_factor varchar(255) [not null] // 60/65/75/TKL/100/universal notes
   profile varchar(100)
@@ -165,8 +165,8 @@ Table keycap_sets {
 }
 
 Table stabilizers {
-  stab_id varchar(50) [pk]
-  brand_id int [not null, ref: > brands.brand_id]
+  id varchar(50) [pk]
+  brand_id int [not null, ref: > brands.id]
   stab_name varchar(255) [not null]
   supported_layouts varchar(255) [not null] // 60/65/75/TKL/100 or universal
   price_usd decimal(10,2) [not null]
@@ -174,7 +174,7 @@ Table stabilizers {
 }
 
 Table accessories {
-  accessory_id varchar(50) [pk]
+  id varchar(50) [pk]
   accessory_type varchar(100) [not null] // Lube, Spring, Film, Foam, Cable, Tool
   accessory_name varchar(255) [not null]
   target_component varchar(100) // Switch, Stabilizer, Kit, General
@@ -183,9 +183,9 @@ Table accessories {
 }
 
 Table builds {
-  build_id varchar(50) [pk]
-  buyer_id int [not null, ref: > users.user_id]
-  kit_id varchar(50) [not null, ref: > keyboard_kits.kit_id]
+  id varchar(50) [pk]
+  buyer_id int [not null, ref: > users.id]
+  kit_id varchar(50) [not null, ref: > keyboard_kits.id]
   name varchar(255) [not null]
   notes varchar(500)
   noise_requirement NoiseRequirement [not null]
@@ -196,12 +196,12 @@ Table builds {
 }
 
 Table build_items {
-  build_item_id int [pk, increment]
-  build_id varchar(50) [not null, ref: > builds.build_id]
-  switch_id varchar(50) [ref: > switches.switch_id]
-  keycap_id varchar(50) [ref: > keycap_sets.keycap_id]
-  stab_id varchar(50) [ref: > stabilizers.stab_id]
-  accessory_id varchar(50) [ref: > accessories.accessory_id]
+  id int [pk, increment]
+  build_id varchar(50) [not null, ref: > builds.id]
+  switch_id varchar(50) [ref: > switches.id]
+  keycap_id varchar(50) [ref: > keycap_sets.id]
+  stab_id varchar(50) [ref: > stabilizers.id]
+  accessory_id varchar(50) [ref: > accessories.id]
   quantity int [not null]
   unit_price_snapshot decimal(10,2) [not null]
   notes varchar(500)
@@ -210,17 +210,17 @@ Table build_items {
 }
 
 Table build_mods {
-  mod_id int [pk, increment]
-  build_id varchar(50) [not null, ref: > builds.build_id]
+  id int [pk, increment]
+  build_id varchar(50) [not null, ref: > builds.id]
   mod_type varchar(100) [not null] // Lube, Film, Spring_swap, Tape_mod, Foam_mod
   target_component varchar(100) [not null] // Switch, Stabilizer, Kit, Build
   notes varchar(500)
 }
 
 Table build_requests {
-  request_id varchar(50) [pk]
-  build_id varchar(50) [not null, ref: > builds.build_id]
-  seller_user_id int [not null, ref: > users.user_id]
+  id varchar(50) [pk]
+  build_id varchar(50) [not null, ref: > builds.id]
+  seller_user_id int [not null, ref: > users.id]
   request_payload_json text [not null]
   status RequestStatus [not null]
   note varchar(500)
@@ -231,8 +231,8 @@ Table build_requests {
 }
 
 Table devices {
-  device_id varchar(50) [pk]
-  seller_user_id int [not null, ref: > users.user_id]
+  id varchar(50) [pk]
+  seller_user_id int [not null, ref: > users.id]
   device_name varchar(100) [not null]
   device_type DeviceType [not null]
   is_active boolean [not null]
@@ -243,10 +243,10 @@ Table devices {
 }
 
 Table device_test_sessions {
-  session_id varchar(50) [pk]
-  request_id varchar(50) [not null, ref: > build_requests.request_id]
-  device_id varchar(50) [not null, ref: > devices.device_id]
-  seller_user_id int [not null, ref: > users.user_id]
+  id varchar(50) [pk]
+  request_id varchar(50) [not null, ref: > build_requests.id]
+  device_id varchar(50) [not null, ref: > devices.id]
+  seller_user_id int [not null, ref: > users.id]
   switch_technology SwitchTechnology [not null]
   noise_requirement NoiseRequirement [not null]
   total_keys int [not null]
@@ -266,10 +266,10 @@ Table device_test_sessions {
 }
 
 Table device_key_test_results {
-  key_test_id bigint [pk, increment]
-  session_id varchar(50) [not null, ref: > device_test_sessions.session_id]
-  request_id varchar(50) [not null, ref: > build_requests.request_id]
-  device_id varchar(50) [not null, ref: > devices.device_id]
+  id bigint [pk, increment]
+  session_id varchar(50) [not null, ref: > device_test_sessions.id]
+  request_id varchar(50) [not null, ref: > build_requests.id]
+  device_id varchar(50) [not null, ref: > devices.id]
   key_code varchar(30) [not null]
   expected_key varchar(30) [not null]
   received_key varchar(30)
@@ -295,8 +295,8 @@ Table device_key_test_results {
 }
 
 Table audit_log {
-  log_id int [pk, increment]
-  user_id int [not null, ref: > users.user_id]
+  id int [pk, increment]
+  user_id int [not null, ref: > users.id]
   table_name varchar(100) [not null]
   record_id varchar(100) [not null]
   action varchar(100) [not null]
@@ -306,11 +306,11 @@ Table audit_log {
 }
 
 Table chat_conversations {
-  conversation_id varchar(50) [pk]
-  seller_user_id int [not null, ref: > users.user_id]
-  buyer_id int [ref: > users.user_id]
-  admin_user_id int [ref: > users.user_id]
-  build_request_id varchar(50) [ref: > build_requests.request_id]
+  id varchar(50) [pk]
+  seller_user_id int [not null, ref: > users.id]
+  buyer_id int [ref: > users.id]
+  admin_user_id int [ref: > users.id]
+  build_request_id varchar(50) [ref: > build_requests.id]
   created_at datetime [not null]
   updated_at datetime
 
@@ -318,9 +318,9 @@ Table chat_conversations {
 }
 
 Table chat_messages {
-  message_id varchar(50) [pk]
-  conversation_id varchar(50) [not null, ref: > chat_conversations.conversation_id]
-  sender_user_id int [not null, ref: > users.user_id]
+  id varchar(50) [pk]
+  conversation_id varchar(50) [not null, ref: > chat_conversations.id]
+  sender_user_id int [not null, ref: > users.id]
   message_text text [not null]
   sent_at datetime [not null]
 }

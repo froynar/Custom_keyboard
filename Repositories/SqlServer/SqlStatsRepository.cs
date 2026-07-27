@@ -60,7 +60,7 @@ public sealed class SqlStatsRepository : IStatsRepository
                 AVG(CASE WHEN br.status = 'Completed' AND br.accepted_at IS NOT NULL AND br.completed_at IS NOT NULL
                          THEN CAST(DATEDIFF(day, br.accepted_at, br.completed_at) AS float) END) AS avg_days
             FROM build_requests AS br
-            INNER JOIN builds AS b ON b.build_id = br.build_id
+            INNER JOIN builds AS b ON b.id = br.build_id
             WHERE br.seller_user_id = @seller_id;
             """;
         command.AddParameter("@seller_id", SqlDbType.Int, sellerUserId);
@@ -135,7 +135,7 @@ public sealed class SqlStatsRepository : IStatsRepository
                 AVG(CASE WHEN br.status = 'Completed' AND br.accepted_at IS NOT NULL AND br.completed_at IS NOT NULL
                          THEN CAST(DATEDIFF(day, br.accepted_at, br.completed_at) AS float) END) AS avg_days
             FROM build_requests AS br
-            INNER JOIN builds AS b ON b.build_id = br.build_id
+            INNER JOIN builds AS b ON b.id = br.build_id
             WHERE br.seller_user_id = @seller_id;
             """;
         command.AddParameter("@seller_id", SqlDbType.Int, sellerUserId);
@@ -176,7 +176,7 @@ public sealed class SqlStatsRepository : IStatsRepository
                    COUNT(*) AS orders,
                    SUM(b.total_cost_snapshot) AS revenue
             FROM build_requests AS br
-            INNER JOIN builds AS b ON b.build_id = br.build_id
+            INNER JOIN builds AS b ON b.id = br.build_id
             WHERE br.status = 'Completed' AND br.completed_at IS NOT NULL {sellerFilter}
             GROUP BY {labelExpr}
             ORDER BY MIN(br.completed_at);
@@ -241,8 +241,8 @@ public sealed class SqlStatsRepository : IStatsRepository
                 COUNT(*) AS orders,
                 SUM(b.total_cost_snapshot) AS revenue
             FROM build_requests AS br
-            INNER JOIN builds AS b ON b.build_id = br.build_id
-            INNER JOIN keyboard_kits AS k ON k.kit_id = b.kit_id
+            INNER JOIN builds AS b ON b.id = br.build_id
+            INNER JOIN keyboard_kits AS k ON k.id = b.kit_id
             WHERE br.seller_user_id = @seller_id AND br.status = 'Completed'
             GROUP BY b.kit_id, k.kit_name
             ORDER BY COUNT(*) DESC, SUM(b.total_cost_snapshot) DESC;
@@ -272,7 +272,7 @@ public sealed class SqlStatsRepository : IStatsRepository
                 COUNT(*) AS products_made,
                 SUM(b.total_cost_snapshot) AS revenue
             FROM build_requests AS br
-            INNER JOIN builds AS b ON b.build_id = br.build_id
+            INNER JOIN builds AS b ON b.id = br.build_id
             LEFT JOIN seller_profiles AS sp ON sp.user_id = br.seller_user_id
             WHERE br.status = 'Completed'
             GROUP BY br.seller_user_id, sp.shop_name
@@ -316,9 +316,9 @@ public sealed class SqlStatsRepository : IStatsRepository
 
         await using var roleCommand = connection.CreateCommand();
         roleCommand.CommandText = """
-            SELECT r.role_name, COUNT(u.user_id) AS user_count
+            SELECT r.role_name, COUNT(u.id) AS user_count
             FROM roles AS r
-            LEFT JOIN users AS u ON u.role_id = r.role_id
+            LEFT JOIN users AS u ON u.role_id = r.id
             GROUP BY r.role_name
             ORDER BY r.role_name;
             """;

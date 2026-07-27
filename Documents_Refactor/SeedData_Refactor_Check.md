@@ -3,7 +3,8 @@
 ## Target
 
 - ERD: `Documents_Refactor/Custom_Keyboard_ERD_Realistic_Kit_Shop_Proposal.dbml`
-- Dataset: `Documents_Refactor/SeedData_Refactor.sql`
+- Dataset launcher: `Documents_Refactor/SeedData_Refactor.sql`
+- Internal DML body: `Documents_Refactor/SeedData_Refactor.Body.sql` (included only after postflight passes)
 - Scope: seed data for the refactored ERD only, not the current runtime schema.
 
 ## Table Coverage
@@ -13,6 +14,7 @@
 | roles | 3 rows | Buyer, Seller, Admin permissions |
 | users | 7 rows | Active/inactive buyers, verified/unverified sellers, admin |
 | seller_profiles | 3 rows | Seller verification scenarios |
+| seller_applications | 1 row | Pending buyer-to-seller upgrade request |
 | brands | 13 rows | Brands used by kits, switches, keycaps, stabs |
 | layouts | 4 rows | 65, 75, TKL, 100 |
 | keyboard_kits | 9 rows | Mechanical, HE, available/unavailable kits |
@@ -24,6 +26,9 @@
 | build_items | 17 rows | Switch, keycap, stab, accessory choices |
 | build_mods | 5 rows | Lube, tune, calibration, film scenarios |
 | build_requests | 2 rows | Pending and Completed seller requests |
+| devices | 1 row | Active seller QC station |
+| device_test_sessions | 1 row | Completed warning-level QC session |
+| device_key_test_results | 3 rows | Pass and warning per-key telemetry |
 | audit_log | 3 rows | Admin/catalog/status audit examples |
 | chat_conversations | 2 rows | Buyer-seller and admin-seller conversations |
 | chat_messages | 4 rows | Messages tied to valid conversations and senders |

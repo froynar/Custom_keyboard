@@ -9,27 +9,35 @@ Du an hien tai la ung dung desktop WPF dung .NET va SQL Server database `CustomK
 - Refactor kit-based da hoan thanh loi MVP (Phase 0-10): build/request/seller-status/chat-DB/admin/audit + validation & logging (Phase 7) + MQTT realtime tuy chon (Phase 8) + test matrix & handover (Phase 9-10). Chat SignalR (Phase 8A) con lai, tuy chon.
 - ERD refactor moi la source of truth: `Documents_Refactor/`.
 - Tai lieu cu (`Documents/`) va template/SQL legacy da go khoi repo; tra cuu qua lich su git neu can.
-- Test/verification runner nam o `Phase6Verification/` (service/SQL) va `WpfUiVerification/` (UI).
+- DB verification hien nam trong `Database/SqlServer/VerifyRefactor.sql` cho clean seed va bo script `VerifyPkToId_*` cho migration giu du lieu.
 - DB test mac dinh: `CustomKeyboard_Refactor` tren `KHOADZS1VN\SQLEXPRESS`.
 
 Lenh kiem tra chinh:
 
 ```powershell
 dotnet build
-dotnet run --project Phase6Verification\Phase6Verification.csproj
+powershell -NoProfile -ExecutionPolicy Bypass -File Database\SqlServer\VerifyPkToId_Source.ps1
 ```
 
 ## Cai Dat Clean Machine & Tai Khoan Demo
 
-Huong dan setup day du (clean machine, troubleshooting, goi ban giao): **`Documents_Refactor/Phase10_Handover.md`**.
+Quickstart hien tai nam ngay ben duoi. Bao cao audit migration PK-to-id nam tai `Documents_Refactor/PK_To_Id_Audit_Report_2026-07-15.md`.
 
 Quickstart:
 
 1. Sua `Server` trong `Data/SqlServer/SqlServerSettings.cs` neu instance khac `KHOADZS1VN\SQLEXPRESS`.
-2. Tao schema (script tu `CREATE DATABASE`, chay **khong kem `-d`**): `CreateSchema_Refactor.sql`.
-3. Seed du lieu (da gom hash that cua `Password123`): `Documents_Refactor/SeedData_Refactor.sql`.
+2. Tao schema clean/disposable (script tu `CREATE DATABASE`, chay **khong kem `-d`**): `CreateSchema_Refactor.sql`. Script nay drop/recreate 21 bang nghiep vu va reset `schema_migrations` neu chay lai, khong dung cho DB can giu du lieu.
+3. Seed du lieu (da gom hash that cua `Password123`) tu repository root bang `sqlcmd -S "<server>" -E -C -b -d "CustomKeyboard_Refactor" -i Documents_Refactor\SeedData_Refactor.sql`. Launcher chi include DML sau khi postflight schema dat.
 4. `dotnet build` -> `dotnet run`.
-5. Verify: `dotnet run --project Phase6Verification\Phase6Verification.csproj` -> ky vong `Passed: 18`.
+5. Verify clean seed bang `Database/SqlServer/VerifyRefactor.sql`.
+
+Neu DB da co du lieu runtime va van dung PK cu (`user_id`, `build_id`, ... tren bang chu), khong chay `CreateSchema_Refactor.sql`. Quy trinh dung la backup + restore rehearsal, chay `Database/SqlServer/VerifyPkToId_Preflight.sql`, chay `Database/SqlServer/MigratePkToId_20260715.sql`, roi chay `Database/SqlServer/VerifyPkToId_Postflight.sql`. Ba script nay khong tu `USE` database; bat buoc chon target ro rang bang `sqlcmd -d`, nhờ vay cung mot artifact co the rehearsal tren DB clone.
+
+```powershell
+sqlcmd -S "<server>" -d "<restored-clone-or-runtime-db>" -E -C -b -i Database\SqlServer\VerifyPkToId_Preflight.sql
+sqlcmd -S "<server>" -d "<restored-clone-or-runtime-db>" -E -C -b -i Database\SqlServer\MigratePkToId_20260715.sql
+sqlcmd -S "<server>" -d "<restored-clone-or-runtime-db>" -E -C -b -i Database\SqlServer\VerifyPkToId_Postflight.sql
+```
 
 Tai khoan seed (mat khau **`Password123`**, login bang username hoac email):
 
@@ -376,20 +384,20 @@ Build project:
 dotnet build
 ```
 
-Chay Phase 6 verification:
+Chay source gate PK-to-id va clean-seed database verification:
 
 ```powershell
-dotnet run --project Phase6Verification\Phase6Verification.csproj
+powershell -NoProfile -ExecutionPolicy Bypass -File Database\SqlServer\VerifyPkToId_Source.ps1
+sqlcmd -S "<server>" -E -C -b -d "CustomKeyboard_Refactor" -i Database\SqlServer\VerifyRefactor.sql
 ```
 
-Verification (18 checks, ky vong `Passed: 18`) bao gom:
+Clean-seed verification bao gom:
 
-- Unit-style checks cho `BuildService`, `RequestService` (state machine, seller scoping T08/T09, chan seller unverified, realtime best-effort), `ChatService` (participant + admin-seller), `AccountService` (validate email/phone + login dung/sai/banned T01/T02), `AdminService` (audit log), `StatsService` (role/active guard), va Buyer dashboard switch filtering.
-- SQL integration: tao build tam/gui request/tao chat roi cleanup; analytics aggregates seller/buyer/admin; **seed accounts login `Password123`** (admin/buyer/seller) + banned seed account bi chan.
-- DB invariant checks tu `VerifyRefactor.sql`: total snapshot, switch quantity, exactly-one-FK, seller verified, conversation XOR, FK orphan, requested build/request, chat sender participant, password hash format.
-- UI smoke manual/automation da kiem buyer/seller/admin login khong con popup `Loi (UI thread)`.
+- Source gate doi chieu 21 PK, 33 FK, 21 lenh rename, schema version/startup guard va cac owner-PK pattern nguy hiem trong repository.
+- DB invariant checks tu `VerifyRefactor.sql`: schema version, 21 PK `id`, dung chinh xac 33 FK enabled/trusted, total snapshot, switch quantity, exactly-one-FK, seller verified, conversation XOR, FK orphan, QC fixture, requested build/request, chat sender participant, password hash format.
+- Migration giu du lieu dung bo `VerifyPkToId_Preflight.sql` / `MigratePkToId_20260715.sql` / `VerifyPkToId_Postflight.sql`, khong dung row count clean seed lam baseline runtime.
 
-Ma tran test T01-T16: `Documents_Refactor/Phase9_Test_Matrix.md`. Kich ban demo 3 role: `Documents_Refactor/Phase9_Demo_Script.md`.
+Khi chay migration tren DB co du lieu, luu output preflight/postflight va smoke test thu cong cac luong Buyer/Seller/Admin nhu trong bao cao audit PK-to-id.
 
 ## Ghi Chu Thiet Ke
 

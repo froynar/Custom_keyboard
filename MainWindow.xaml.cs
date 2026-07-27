@@ -12,11 +12,35 @@ namespace Custom_keyboard
 {
     public partial class MainWindow : Window
     {
+        private bool _isInitialized;
+
         public MainWindow()
         {
             InitializeComponent();
+            Loaded += OnLoaded;
+        }
+
+        private async void OnLoaded(object sender, RoutedEventArgs e)
+        {
+            if (_isInitialized)
+            {
+                return;
+            }
+
+            _isInitialized = true;
+            Loaded -= OnLoaded;
 
             var connectionFactory = new SqlConnectionFactory();
+            if (!await EnsureDatabaseSchemaAsync(connectionFactory))
+            {
+                return;
+            }
+
+            InitializeApplication(connectionFactory);
+        }
+
+        private void InitializeApplication(ISqlConnectionFactory connectionFactory)
+        {
             var userRepository = new SqlUserRepository(connectionFactory);
             var sellerRepository = new SqlSellerRepository(connectionFactory);
             var componentRepository = new SqlComponentRepository(connectionFactory);
@@ -112,6 +136,27 @@ namespace Custom_keyboard
 
                 await realtimeService.DisposeAsync();
             };
+        }
+
+        private static async Task<bool> EnsureDatabaseSchemaAsync(
+            ISqlConnectionFactory connectionFactory)
+        {
+            try
+            {
+                await new SqlServerHealthCheck(connectionFactory)
+                    .EnsureCompatibleSchemaAsync();
+                return true;
+            }
+            catch (Exception ex)
+            {
+                MessageBox.Show(
+                    ex.Message,
+                    "Database schema mismatch",
+                    MessageBoxButton.OK,
+                    MessageBoxImage.Error);
+                Application.Current.Shutdown();
+                return false;
+            }
         }
     }
 }

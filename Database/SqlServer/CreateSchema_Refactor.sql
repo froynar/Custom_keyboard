@@ -2,12 +2,17 @@
 -- Source of truth: Documents_Refactor/Custom_Keyboard_ERD_Realistic_Kit_Shop_Proposal.dbml
 -- Scope: 21 tables / 33 relationships (incl. 3 device QC tables). No cases/pcbs/plates, no compatibility_rules,
 --        no seller_inventory, no legacy switch-mod columns (lube_type/is_filmed/spring_weight_g).
--- Target: dedicated refactor test database (CustomKeyboard_Refactor). Does NOT touch the legacy runtime DB.
+-- Target: clean/disposable CustomKeyboard_Refactor database.
+-- WARNING: destructive clean-install script. Re-running it drops the 21 business tables
+-- and resets dbo.schema_migrations.
+-- Do not run this on a database that must preserve runtime data; use MigratePkToId_20260715.sql instead.
 -- Order: roles -> users -> seller_profiles -> seller_applications -> brands -> layouts -> keyboard_kits
 --        -> switches -> keycap_sets -> stabilizers -> accessories -> builds -> build_items -> build_mods
 --        -> build_requests -> devices -> device_test_sessions -> device_key_test_results
 --        -> audit_log -> chat_conversations -> chat_messages
--- This script is idempotent: it drops the 21 tables (reverse FK order) and recreates them.
+-- This script is idempotent: it drops the 21 tables (reverse FK order), resets schema
+-- migration history, and recreates the clean schema.
+-- Clean installs and upgraded databases both record schema version 2026.07.15-pk-id.
 
 IF DB_ID(N'CustomKeyboard_Refactor') IS NULL
 BEGIN
@@ -25,6 +30,7 @@ GO
 -- ---------------------------------------------------------------------------
 -- Drop in reverse FK-dependency order so a re-run starts from a clean slate.
 -- ---------------------------------------------------------------------------
+DROP TABLE IF EXISTS dbo.schema_migrations;
 DROP TABLE IF EXISTS device_key_test_results;
 DROP TABLE IF EXISTS device_test_sessions;
 DROP TABLE IF EXISTS devices;
@@ -52,7 +58,7 @@ GO
 -- 1. roles
 -- ===========================================================================
 CREATE TABLE roles (
-    role_id INT IDENTITY(1,1) PRIMARY KEY,
+    id INT IDENTITY(1,1) PRIMARY KEY,
     role_name VARCHAR(50) NOT NULL UNIQUE,           -- Buyer, Seller, Admin
     permissions VARCHAR(MAX) NULL
 );
@@ -62,14 +68,14 @@ GO
 -- 2. users
 -- ===========================================================================
 CREATE TABLE users (
-    user_id INT IDENTITY(1,1) PRIMARY KEY,
+    id INT IDENTITY(1,1) PRIMARY KEY,
     role_id INT NOT NULL,
     username VARCHAR(100) NOT NULL UNIQUE,
     email VARCHAR(255) NOT NULL UNIQUE,
     phone VARCHAR(30) NOT NULL UNIQUE,
     password_hash VARCHAR(255) NOT NULL,
     is_active BIT NOT NULL DEFAULT 1,
-    CONSTRAINT FK_users_roles FOREIGN KEY (role_id) REFERENCES roles(role_id)
+    CONSTRAINT FK_users_roles FOREIGN KEY (role_id) REFERENCES roles(id)
 );
 GO
 
@@ -77,14 +83,14 @@ GO
 -- 3. seller_profiles
 -- ===========================================================================
 CREATE TABLE seller_profiles (
-    seller_profile_id INT IDENTITY(1,1) PRIMARY KEY,
+    id INT IDENTITY(1,1) PRIMARY KEY,
     user_id INT NOT NULL UNIQUE,
     shop_name VARCHAR(255) NOT NULL,
     phone VARCHAR(30) NOT NULL,
     address VARCHAR(500) NOT NULL,
     is_verified BIT NOT NULL DEFAULT 0,
     verified_at DATETIME2 NULL,
-    CONSTRAINT FK_seller_profiles_user FOREIGN KEY (user_id) REFERENCES users(user_id)
+    CONSTRAINT FK_seller_profiles_user FOREIGN KEY (user_id) REFERENCES users(id)
 );
 GO
 
@@ -92,7 +98,7 @@ GO
 -- 3b. seller_applications  (buyer -> seller upgrade requests, reviewed by admin)
 -- ===========================================================================
 CREATE TABLE seller_applications (
-    application_id INT IDENTITY(1,1) PRIMARY KEY,
+    id INT IDENTITY(1,1) PRIMARY KEY,
     buyer_user_id INT NOT NULL,
     shop_name VARCHAR(255) NOT NULL,
     phone VARCHAR(30) NOT NULL,
@@ -103,8 +109,8 @@ CREATE TABLE seller_applications (
     created_at DATETIME2 NOT NULL DEFAULT SYSUTCDATETIME(),
     reviewed_at DATETIME2 NULL,
     reviewed_by INT NULL,
-    CONSTRAINT FK_seller_applications_buyer FOREIGN KEY (buyer_user_id) REFERENCES users(user_id),
-    CONSTRAINT FK_seller_applications_reviewer FOREIGN KEY (reviewed_by) REFERENCES users(user_id),
+    CONSTRAINT FK_seller_applications_buyer FOREIGN KEY (buyer_user_id) REFERENCES users(id),
+    CONSTRAINT FK_seller_applications_reviewer FOREIGN KEY (reviewed_by) REFERENCES users(id),
     CONSTRAINT CK_seller_applications_status CHECK (status IN ('Pending', 'Approved', 'Rejected'))
 );
 GO
@@ -113,7 +119,7 @@ GO
 -- 4. brands
 -- ===========================================================================
 CREATE TABLE brands (
-    brand_id INT IDENTITY(1,1) PRIMARY KEY,
+    id INT IDENTITY(1,1) PRIMARY KEY,
     brand_name VARCHAR(255) NOT NULL UNIQUE,
     country VARCHAR(100) NULL
 );
@@ -123,7 +129,7 @@ GO
 -- 5. layouts
 -- ===========================================================================
 CREATE TABLE layouts (
-    layout_id VARCHAR(50) PRIMARY KEY,
+    id VARCHAR(50) PRIMARY KEY,
     layout_name VARCHAR(100) NOT NULL,
     form_factor VARCHAR(100) NOT NULL,               -- 60, 65, 75, TKL, 100, Alice...
     key_count INT NOT NULL
@@ -134,7 +140,7 @@ GO
 -- 6. keyboard_kits  (gop case/PCB/plate/foam/cable qua included_parts)
 -- ===========================================================================
 CREATE TABLE keyboard_kits (
-    kit_id VARCHAR(50) PRIMARY KEY,
+    id VARCHAR(50) PRIMARY KEY,
     brand_id INT NOT NULL,
     layout_id VARCHAR(50) NOT NULL,
     kit_name VARCHAR(255) NOT NULL,
@@ -144,8 +150,8 @@ CREATE TABLE keyboard_kits (
     included_parts VARCHAR(500) NULL,                -- case, PCB, plate, foam, cable...
     price_usd DECIMAL(10,2) NOT NULL,
     is_available BIT NOT NULL DEFAULT 1,
-    CONSTRAINT FK_keyboard_kits_brands FOREIGN KEY (brand_id) REFERENCES brands(brand_id),
-    CONSTRAINT FK_keyboard_kits_layouts FOREIGN KEY (layout_id) REFERENCES layouts(layout_id),
+    CONSTRAINT FK_keyboard_kits_brands FOREIGN KEY (brand_id) REFERENCES brands(id),
+    CONSTRAINT FK_keyboard_kits_layouts FOREIGN KEY (layout_id) REFERENCES layouts(id),
     CONSTRAINT CK_keyboard_kits_price CHECK (price_usd >= 0),
     CONSTRAINT CK_keyboard_kits_switch_qty CHECK (required_switch_quantity > 0)
 );
@@ -155,7 +161,7 @@ GO
 -- 7. switches  (unit price per switch)
 -- ===========================================================================
 CREATE TABLE switches (
-    switch_id VARCHAR(50) PRIMARY KEY,
+    id VARCHAR(50) PRIMARY KEY,
     brand_id INT NOT NULL,
     switch_name VARCHAR(255) NOT NULL,
     switch_technology VARCHAR(50) NOT NULL,          -- Mechanical, HE, Topre, Optical
@@ -164,7 +170,7 @@ CREATE TABLE switches (
     actuation_force_g INT NULL,
     price_usd DECIMAL(10,2) NOT NULL,
     is_available BIT NOT NULL DEFAULT 1,
-    CONSTRAINT FK_switches_brands FOREIGN KEY (brand_id) REFERENCES brands(brand_id),
+    CONSTRAINT FK_switches_brands FOREIGN KEY (brand_id) REFERENCES brands(id),
     CONSTRAINT CK_switches_price CHECK (price_usd >= 0)
 );
 GO
@@ -173,7 +179,7 @@ GO
 -- 8. keycap_sets
 -- ===========================================================================
 CREATE TABLE keycap_sets (
-    keycap_id VARCHAR(50) PRIMARY KEY,
+    id VARCHAR(50) PRIMARY KEY,
     brand_id INT NOT NULL,
     keycap_name VARCHAR(255) NOT NULL,
     supported_form_factor VARCHAR(255) NOT NULL,     -- 60/65/75/TKL/100/universal notes
@@ -181,7 +187,7 @@ CREATE TABLE keycap_sets (
     material VARCHAR(100) NULL,
     price_usd DECIMAL(10,2) NOT NULL,
     is_available BIT NOT NULL DEFAULT 1,
-    CONSTRAINT FK_keycap_sets_brands FOREIGN KEY (brand_id) REFERENCES brands(brand_id),
+    CONSTRAINT FK_keycap_sets_brands FOREIGN KEY (brand_id) REFERENCES brands(id),
     CONSTRAINT CK_keycap_sets_price CHECK (price_usd >= 0)
 );
 GO
@@ -190,13 +196,13 @@ GO
 -- 9. stabilizers  (goi stabilizer co ban theo layout)
 -- ===========================================================================
 CREATE TABLE stabilizers (
-    stab_id VARCHAR(50) PRIMARY KEY,
+    id VARCHAR(50) PRIMARY KEY,
     brand_id INT NOT NULL,
     stab_name VARCHAR(255) NOT NULL,
     supported_layouts VARCHAR(255) NOT NULL,         -- 60/65/75/TKL/100 or universal
     price_usd DECIMAL(10,2) NOT NULL,
     is_available BIT NOT NULL DEFAULT 1,
-    CONSTRAINT FK_stabilizers_brands FOREIGN KEY (brand_id) REFERENCES brands(brand_id),
+    CONSTRAINT FK_stabilizers_brands FOREIGN KEY (brand_id) REFERENCES brands(id),
     CONSTRAINT CK_stabilizers_price CHECK (price_usd >= 0)
 );
 GO
@@ -205,7 +211,7 @@ GO
 -- 10. accessories  (lube, film, cable, foam, tool...)
 -- ===========================================================================
 CREATE TABLE accessories (
-    accessory_id VARCHAR(50) PRIMARY KEY,
+    id VARCHAR(50) PRIMARY KEY,
     accessory_type VARCHAR(100) NOT NULL,            -- Lube, Spring, Film, Foam, Cable, Tool
     accessory_name VARCHAR(255) NOT NULL,
     target_component VARCHAR(100) NULL,              -- Switch, Stabilizer, Kit, General
@@ -219,7 +225,7 @@ GO
 -- 11. builds  (chi giu kit, buyer, status, tong snapshot)
 -- ===========================================================================
 CREATE TABLE builds (
-    build_id VARCHAR(50) PRIMARY KEY,
+    id VARCHAR(50) PRIMARY KEY,
     buyer_id INT NOT NULL,
     kit_id VARCHAR(50) NOT NULL,
     name VARCHAR(255) NOT NULL,
@@ -229,8 +235,8 @@ CREATE TABLE builds (
     total_cost_snapshot DECIMAL(10,2) NOT NULL,
     created_at DATETIME2 NOT NULL DEFAULT SYSUTCDATETIME(),
     updated_at DATETIME2 NULL,
-    CONSTRAINT FK_builds_buyer FOREIGN KEY (buyer_id) REFERENCES users(user_id),
-    CONSTRAINT FK_builds_kit FOREIGN KEY (kit_id) REFERENCES keyboard_kits(kit_id),
+    CONSTRAINT FK_builds_buyer FOREIGN KEY (buyer_id) REFERENCES users(id),
+    CONSTRAINT FK_builds_kit FOREIGN KEY (kit_id) REFERENCES keyboard_kits(id),
     CONSTRAINT CK_builds_noise_requirement CHECK (noise_requirement IN ('Normal','Quiet','Silent')),
     CONSTRAINT CK_builds_status CHECK (status IN ('Draft', 'Saved', 'Requested', 'Archived')),
     CONSTRAINT CK_builds_total CHECK (total_cost_snapshot >= 0)
@@ -241,7 +247,7 @@ GO
 -- 12. build_items  (moi dong dung 1 FK san pham: switch/keycap/stab/accessory)
 -- ===========================================================================
 CREATE TABLE build_items (
-    build_item_id INT IDENTITY(1,1) PRIMARY KEY,
+    id INT IDENTITY(1,1) PRIMARY KEY,
     build_id VARCHAR(50) NOT NULL,
     switch_id VARCHAR(50) NULL,
     keycap_id VARCHAR(50) NULL,
@@ -250,11 +256,11 @@ CREATE TABLE build_items (
     quantity INT NOT NULL,
     unit_price_snapshot DECIMAL(10,2) NOT NULL,
     notes VARCHAR(500) NULL,
-    CONSTRAINT FK_build_items_build FOREIGN KEY (build_id) REFERENCES builds(build_id),
-    CONSTRAINT FK_build_items_switch FOREIGN KEY (switch_id) REFERENCES switches(switch_id),
-    CONSTRAINT FK_build_items_keycap FOREIGN KEY (keycap_id) REFERENCES keycap_sets(keycap_id),
-    CONSTRAINT FK_build_items_stab FOREIGN KEY (stab_id) REFERENCES stabilizers(stab_id),
-    CONSTRAINT FK_build_items_accessory FOREIGN KEY (accessory_id) REFERENCES accessories(accessory_id),
+    CONSTRAINT FK_build_items_build FOREIGN KEY (build_id) REFERENCES builds(id),
+    CONSTRAINT FK_build_items_switch FOREIGN KEY (switch_id) REFERENCES switches(id),
+    CONSTRAINT FK_build_items_keycap FOREIGN KEY (keycap_id) REFERENCES keycap_sets(id),
+    CONSTRAINT FK_build_items_stab FOREIGN KEY (stab_id) REFERENCES stabilizers(id),
+    CONSTRAINT FK_build_items_accessory FOREIGN KEY (accessory_id) REFERENCES accessories(id),
     CONSTRAINT CK_build_items_quantity CHECK (quantity > 0),
     CONSTRAINT CK_build_items_unit_price CHECK (unit_price_snapshot >= 0),
     -- Exactly one product FK must be set.
@@ -271,12 +277,12 @@ GO
 -- 13. build_mods  (Lube, Film, Spring_swap, Tape_mod, Foam_mod...)
 -- ===========================================================================
 CREATE TABLE build_mods (
-    mod_id INT IDENTITY(1,1) PRIMARY KEY,
+    id INT IDENTITY(1,1) PRIMARY KEY,
     build_id VARCHAR(50) NOT NULL,
     mod_type VARCHAR(100) NOT NULL,                  -- Lube, Film, Spring_swap, Tape_mod, Foam_mod
     target_component VARCHAR(100) NOT NULL,          -- Switch, Stabilizer, Kit, Build
     notes VARCHAR(500) NULL,
-    CONSTRAINT FK_build_mods_build FOREIGN KEY (build_id) REFERENCES builds(build_id)
+    CONSTRAINT FK_build_mods_build FOREIGN KEY (build_id) REFERENCES builds(id)
 );
 GO
 
@@ -284,7 +290,7 @@ GO
 -- 14. build_requests  (buyer gui cho seller; snapshot payload JSON)
 -- ===========================================================================
 CREATE TABLE build_requests (
-    request_id VARCHAR(50) PRIMARY KEY,
+    id VARCHAR(50) PRIMARY KEY,
     build_id VARCHAR(50) NOT NULL,
     seller_user_id INT NOT NULL,
     request_payload_json NVARCHAR(MAX) NOT NULL,
@@ -294,8 +300,8 @@ CREATE TABLE build_requests (
     accepted_at DATETIME2 NULL,
     completed_at DATETIME2 NULL,
     updated_at DATETIME2 NULL,
-    CONSTRAINT FK_build_requests_build FOREIGN KEY (build_id) REFERENCES builds(build_id),
-    CONSTRAINT FK_build_requests_seller FOREIGN KEY (seller_user_id) REFERENCES users(user_id),
+    CONSTRAINT FK_build_requests_build FOREIGN KEY (build_id) REFERENCES builds(id),
+    CONSTRAINT FK_build_requests_seller FOREIGN KEY (seller_user_id) REFERENCES users(id),
     CONSTRAINT CK_build_requests_status CHECK (status IN ('Pending', 'Accepted', 'In_progress', 'Completed', 'Cancelled'))
 );
 GO
@@ -304,14 +310,14 @@ GO
 -- 14a. devices  (tram QC cua seller)
 -- ===========================================================================
 CREATE TABLE devices (
-    device_id        VARCHAR(50)  PRIMARY KEY,        -- vd DEV_{Guid:N} hoac 'QC-STATION-01'
+    id               VARCHAR(50)  PRIMARY KEY,        -- vd DEV_{Guid:N} hoac 'QC-STATION-01'
     seller_user_id   INT          NOT NULL,
     device_name      NVARCHAR(100) NOT NULL,
     device_type      VARCHAR(50)  NOT NULL,           -- QC_STATION (gop) / KEY_SIGNAL_TESTER / LATENCY_TESTER / NOISE_SENSOR
     is_active        BIT          NOT NULL DEFAULT 1,
     last_seen_at     DATETIME2    NULL,
     created_at       DATETIME2    NOT NULL DEFAULT SYSUTCDATETIME(),
-    CONSTRAINT FK_devices_seller FOREIGN KEY (seller_user_id) REFERENCES users(user_id),
+    CONSTRAINT FK_devices_seller FOREIGN KEY (seller_user_id) REFERENCES users(id),
     CONSTRAINT CK_devices_type CHECK (device_type IN ('QC_STATION','KEY_SIGNAL_TESTER','LATENCY_TESTER','NOISE_SENSOR'))
 );
 GO
@@ -320,7 +326,7 @@ GO
 -- 14b. device_test_sessions  (mot phien QC cho mot request)
 -- ===========================================================================
 CREATE TABLE device_test_sessions (
-    session_id         VARCHAR(50) PRIMARY KEY,        -- vd QCSESS_{Guid:N}
+    id                 VARCHAR(50) PRIMARY KEY,        -- vd QCSESS_{Guid:N}
     request_id         VARCHAR(50) NOT NULL,
     device_id          VARCHAR(50) NOT NULL,
     seller_user_id     INT         NOT NULL,
@@ -338,9 +344,9 @@ CREATE TABLE device_test_sessions (
     status             VARCHAR(20) NOT NULL,           -- Running / Passed / Warning / Failed
     started_at         DATETIME2   NOT NULL DEFAULT SYSUTCDATETIME(),
     completed_at       DATETIME2   NULL,
-    CONSTRAINT FK_dts_request FOREIGN KEY (request_id) REFERENCES build_requests(request_id),
-    CONSTRAINT FK_dts_device  FOREIGN KEY (device_id)  REFERENCES devices(device_id),
-    CONSTRAINT FK_dts_seller  FOREIGN KEY (seller_user_id) REFERENCES users(user_id),
+    CONSTRAINT FK_dts_request FOREIGN KEY (request_id) REFERENCES build_requests(id),
+    CONSTRAINT FK_dts_device  FOREIGN KEY (device_id)  REFERENCES devices(id),
+    CONSTRAINT FK_dts_seller  FOREIGN KEY (seller_user_id) REFERENCES users(id),
     CONSTRAINT CK_dts_noise_requirement CHECK (noise_requirement IN ('Normal','Quiet','Silent')),
     CONSTRAINT CK_dts_status CHECK (status IN ('Running','Passed','Warning','Failed'))
 );
@@ -350,7 +356,7 @@ GO
 -- 14c. device_key_test_results  (ket qua tung phim -- bang chi tiet chinh)
 -- ===========================================================================
 CREATE TABLE device_key_test_results (
-    key_test_id             BIGINT IDENTITY(1,1) PRIMARY KEY,
+    id                      BIGINT IDENTITY(1,1) PRIMARY KEY,
     session_id              VARCHAR(50) NOT NULL,
     request_id              VARCHAR(50) NOT NULL,
     device_id               VARCHAR(50) NOT NULL,
@@ -370,9 +376,9 @@ CREATE TABLE device_key_test_results (
     failure_type            VARCHAR(30) NULL,           -- NoSignal / WrongKey / Chatter / StuckKey / HighLatency / TooNoisy
     failure_reason          NVARCHAR(255) NULL,
     recorded_at             DATETIME2   NOT NULL DEFAULT SYSUTCDATETIME(),
-    CONSTRAINT FK_dktr_session FOREIGN KEY (session_id) REFERENCES device_test_sessions(session_id),
-    CONSTRAINT FK_dktr_request FOREIGN KEY (request_id) REFERENCES build_requests(request_id),
-    CONSTRAINT FK_dktr_device  FOREIGN KEY (device_id)  REFERENCES devices(device_id),
+    CONSTRAINT FK_dktr_session FOREIGN KEY (session_id) REFERENCES device_test_sessions(id),
+    CONSTRAINT FK_dktr_request FOREIGN KEY (request_id) REFERENCES build_requests(id),
+    CONSTRAINT FK_dktr_device  FOREIGN KEY (device_id)  REFERENCES devices(id),
     CONSTRAINT CK_dktr_result CHECK (result IN ('Pass','Warning','Fail')),
     CONSTRAINT CK_dktr_failure_type CHECK (
         failure_type IS NULL
@@ -385,7 +391,7 @@ GO
 -- 15. audit_log
 -- ===========================================================================
 CREATE TABLE audit_log (
-    log_id INT IDENTITY(1,1) PRIMARY KEY,
+    id INT IDENTITY(1,1) PRIMARY KEY,
     user_id INT NOT NULL,
     table_name VARCHAR(100) NOT NULL,
     record_id VARCHAR(100) NOT NULL,
@@ -393,7 +399,7 @@ CREATE TABLE audit_log (
     old_value_json NVARCHAR(MAX) NULL,
     new_value_json NVARCHAR(MAX) NULL,
     changed_at DATETIME2 NOT NULL DEFAULT SYSUTCDATETIME(),
-    CONSTRAINT FK_audit_log_user FOREIGN KEY (user_id) REFERENCES users(user_id)
+    CONSTRAINT FK_audit_log_user FOREIGN KEY (user_id) REFERENCES users(id)
 );
 GO
 
@@ -401,17 +407,17 @@ GO
 -- 16. chat_conversations  (seller-buyer hoac seller-admin)
 -- ===========================================================================
 CREATE TABLE chat_conversations (
-    conversation_id VARCHAR(50) PRIMARY KEY,
+    id VARCHAR(50) PRIMARY KEY,
     seller_user_id INT NOT NULL,
     buyer_id INT NULL,
     admin_user_id INT NULL,
     build_request_id VARCHAR(50) NULL,
     created_at DATETIME2 NOT NULL DEFAULT SYSUTCDATETIME(),
     updated_at DATETIME2 NULL,
-    CONSTRAINT FK_chat_conversations_seller FOREIGN KEY (seller_user_id) REFERENCES users(user_id),
-    CONSTRAINT FK_chat_conversations_buyer FOREIGN KEY (buyer_id) REFERENCES users(user_id),
-    CONSTRAINT FK_chat_conversations_admin FOREIGN KEY (admin_user_id) REFERENCES users(user_id),
-    CONSTRAINT FK_chat_conversations_request FOREIGN KEY (build_request_id) REFERENCES build_requests(request_id),
+    CONSTRAINT FK_chat_conversations_seller FOREIGN KEY (seller_user_id) REFERENCES users(id),
+    CONSTRAINT FK_chat_conversations_buyer FOREIGN KEY (buyer_id) REFERENCES users(id),
+    CONSTRAINT FK_chat_conversations_admin FOREIGN KEY (admin_user_id) REFERENCES users(id),
+    CONSTRAINT FK_chat_conversations_request FOREIGN KEY (build_request_id) REFERENCES build_requests(id),
     -- Exactly one of buyer_id or admin_user_id must be set (buyer-admin direct chat not allowed).
     CONSTRAINT CK_chat_conversations_participant CHECK (
         (CASE WHEN buyer_id      IS NULL THEN 0 ELSE 1 END) +
@@ -424,13 +430,13 @@ GO
 -- 17. chat_messages
 -- ===========================================================================
 CREATE TABLE chat_messages (
-    message_id VARCHAR(50) PRIMARY KEY,
+    id VARCHAR(50) PRIMARY KEY,
     conversation_id VARCHAR(50) NOT NULL,
     sender_user_id INT NOT NULL,
     message_text NVARCHAR(MAX) NOT NULL,
     sent_at DATETIME2 NOT NULL DEFAULT SYSUTCDATETIME(),
-    CONSTRAINT FK_chat_messages_conversation FOREIGN KEY (conversation_id) REFERENCES chat_conversations(conversation_id),
-    CONSTRAINT FK_chat_messages_sender FOREIGN KEY (sender_user_id) REFERENCES users(user_id)
+    CONSTRAINT FK_chat_messages_conversation FOREIGN KEY (conversation_id) REFERENCES chat_conversations(id),
+    CONSTRAINT FK_chat_messages_sender FOREIGN KEY (sender_user_id) REFERENCES users(id)
 );
 GO
 
@@ -493,4 +499,23 @@ CREATE INDEX IX_dts_seller_status ON device_test_sessions(seller_user_id, status
 CREATE INDEX IX_dktr_session ON device_key_test_results(session_id);
 CREATE INDEX IX_dktr_request ON device_key_test_results(request_id);
 CREATE UNIQUE INDEX UX_dktr_session_key_code ON device_key_test_results(session_id, key_code);
+GO
+
+-- ===========================================================================
+-- Schema version contract used by application startup guard and migration tools.
+-- ===========================================================================
+CREATE TABLE dbo.schema_migrations (
+    version VARCHAR(64) NOT NULL CONSTRAINT PK_schema_migrations PRIMARY KEY,
+    description VARCHAR(255) NOT NULL,
+    applied_at DATETIME2 NOT NULL CONSTRAINT DF_schema_migrations_applied_at DEFAULT SYSUTCDATETIME(),
+    succeeded BIT NOT NULL CONSTRAINT DF_schema_migrations_succeeded DEFAULT 1
+);
+
+INSERT INTO dbo.schema_migrations (version, description, applied_at, succeeded)
+VALUES (
+    '2026.07.15-pk-id',
+    'Clean schema with 21 business-table primary keys named id',
+    SYSUTCDATETIME(),
+    1
+);
 GO
