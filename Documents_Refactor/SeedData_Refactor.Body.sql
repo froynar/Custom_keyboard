@@ -413,8 +413,15 @@ WHEN NOT MATCHED THEN
 
 MERGE device_test_sessions AS target
 USING (VALUES
-    ('QCSESS_REF_QK65', 'REQ_REF_QK65_COMPLETED', 'DEV_REF_QC_01', 'Mechanical', 'Normal', 3, 'Warning')
-) AS source (session_id, request_id, device_id, switch_technology, noise_requirement, total_keys, status)
+    (
+        'QCSESS_REF_QK65', 'REQ_REF_QK65_COMPLETED', 'DEV_REF_QC_01',
+        'Mechanical', 'Normal', 3, 'Warning',
+        CAST('2026-06-06T14:32:00' AS datetime2)
+    )
+) AS source (
+    session_id, request_id, device_id, switch_technology,
+    noise_requirement, total_keys, status, completed_at
+)
 ON target.id = source.session_id
 WHEN MATCHED THEN
     UPDATE SET
@@ -423,12 +430,16 @@ WHEN MATCHED THEN
         switch_technology = source.switch_technology,
         noise_requirement = source.noise_requirement,
         total_keys = source.total_keys,
-        status = source.status
+        status = source.status,
+        completed_at = source.completed_at
 WHEN NOT MATCHED THEN
-    INSERT (id, request_id, device_id, switch_technology, noise_requirement, total_keys, status)
+    INSERT (
+        id, request_id, device_id, switch_technology,
+        noise_requirement, total_keys, status, completed_at
+    )
     VALUES (
         source.session_id, source.request_id, source.device_id, source.switch_technology,
-        source.noise_requirement, source.total_keys, source.status
+        source.noise_requirement, source.total_keys, source.status, source.completed_at
     );
 
 MERGE device_key_test_results AS target

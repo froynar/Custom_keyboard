@@ -165,14 +165,14 @@ sequenceDiagram
         DeviceSvc->>DB: INSERT device_key_test_results
     end
     Device->>DeviceSvc: CompleteSessionAsync
-    DeviceSvc->>DB: UPDATE device_test_sessions summary
+    DeviceSvc->>DB: UPDATE device_test_sessions status + completed_at
     DeviceSvc-->>SellerVM: QC summary + key results
 
     Buyer->>BuyerVM: Track request and QC summary
     BuyerVM->>Request: GetBuyerRequestsAsync
     Request->>DB: SELECT buyer requests
     BuyerVM->>DeviceSvc: GetLatestSessionByRequestAsync
-    DeviceSvc->>DB: SELECT latest device_test_sessions
+    DeviceSvc->>DB: SELECT views.Last_QC by request
     DB-->>BuyerVM: Request status + QC summary
     BuyerVM-->>Buyer: Show progress and QC result
 
@@ -383,7 +383,7 @@ sequenceDiagram
     end
 
     Device->>DeviceService: CompleteSessionAsync
-    DeviceService->>DB: UPDATE device_test_sessions summary/status
+    DeviceService->>DB: UPDATE device_test_sessions status + completed_at
     DB-->>DeviceService: QC completed
     DeviceService-->>App: QC session summary
     App-->>Seller: Hien thi bang ket qua tung phim

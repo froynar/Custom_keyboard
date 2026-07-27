@@ -232,7 +232,11 @@ public sealed class SellerDashboardViewModel : RoleDashboardViewModel
         StatusSeries = ChartFactory.StatusDonut(_stats.StatusBreakdown);
     }
 
-    protected override void OnLanguageChangedCore() => RebuildCharts();
+    protected override void OnLanguageChangedCore()
+    {
+        OnPropertyChanged(nameof(SelectedRequestPayload));
+        RebuildCharts();
+    }
 
     /// <summary>Reload requests in response to a realtime "new request" event.</summary>
     public Task ReloadRequestsAsync()

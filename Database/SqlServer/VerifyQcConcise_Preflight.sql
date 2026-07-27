@@ -27,6 +27,21 @@ BEGIN
     THROW 51102, 'Required QC tables are missing.', 1;
 END;
 
+IF NOT EXISTS (
+    SELECT 1
+    FROM sys.columns AS column_info
+    INNER JOIN sys.types AS type_info
+        ON type_info.user_type_id = column_info.user_type_id
+    WHERE column_info.object_id = OBJECT_ID(N'dbo.device_test_sessions')
+      AND column_info.name = N'completed_at'
+      AND type_info.name = N'datetime2'
+      AND column_info.scale = 7
+      AND column_info.is_nullable = 1
+)
+BEGIN
+    THROW 51107, 'Legacy completed_at is missing or incompatible; concise migration would be lossy.', 1;
+END;
+
 IF COL_LENGTH(N'dbo.device_key_test_results', N'latency_ms') IS NULL
    OR COL_LENGTH(N'dbo.device_key_test_results', N'press_event_count') IS NULL
    OR COL_LENGTH(N'dbo.device_key_test_results', N'release_signal_detected') IS NULL
@@ -94,6 +109,6 @@ SELECT
     (SELECT COUNT(*) FROM dbo.device_key_test_results) AS key_result_rows,
     (SELECT COUNT(*) FROM dbo.device_key_test_results WHERE failure_type IS NOT NULL) AS archived_failure_type_candidates,
     (SELECT COUNT(*) FROM dbo.device_key_test_results WHERE failure_reason IS NOT NULL) AS archived_failure_reason_candidates,
-    (SELECT COUNT(*) FROM dbo.device_test_sessions WHERE completed_at IS NOT NULL) AS archived_completion_time_candidates;
+    (SELECT COUNT(*) FROM dbo.device_test_sessions WHERE completed_at IS NOT NULL) AS preserved_completion_time_rows;
 
-PRINT 'Concise QC preflight passed. Take and restore-test a full backup before running the migration.';
+PRINT 'Concise QC preflight passed. completed_at will be preserved. Take and restore-test a full backup before migration.';

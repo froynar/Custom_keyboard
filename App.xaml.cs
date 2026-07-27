@@ -10,6 +10,8 @@ namespace Custom_keyboard
 
         protected override void OnStartup(StartupEventArgs e)
         {
+            AppLog.Initialize();
+
             // Surface unhandled exceptions instead of letting the process die silently.
             DispatcherUnhandledException += OnDispatcherUnhandledException;
             AppDomain.CurrentDomain.UnhandledException += OnDomainUnhandledException;

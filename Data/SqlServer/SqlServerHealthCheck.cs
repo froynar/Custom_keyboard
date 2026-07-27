@@ -5,11 +5,12 @@ namespace Custom_keyboard.Data.SqlServer;
 
 public sealed class SqlServerHealthCheck
 {
-    public const string ExpectedSchemaVersion = "2026.07.27-build-device-hardening";
+    public const string ExpectedSchemaVersion = "2026.07.27-simplified-read-views";
 
     private const int ExpectedPrimaryKeyCount = 21;
     private const int ExpectedForeignKeyCount = 30;
-    private const int ExpectedQcColumnCount = 19;
+    private const int ExpectedQcColumnCount = 20;
+    private const int ExpectedReadViewCount = 4;
 
     private readonly ISqlConnectionFactory _connectionFactory;
 
@@ -34,7 +35,21 @@ public sealed class SqlServerHealthCheck
 
         if (!await HasExpectedSchemaVersionAsync(connection, cancellationToken))
         {
-            issues.Add($"missing schema migration version {ExpectedSchemaVersion}");
+            throw new InvalidOperationException(
+                "Database schema is not compatible with this application build. "
+                + "Run the ordered database migrations and postflight verification first. Details: "
+                + $"missing schema migration version {ExpectedSchemaVersion}.");
+        }
+
+        var readViewState = await ReadReadViewStateAsync(connection, cancellationToken);
+        if (readViewState.ViewCount != ExpectedReadViewCount)
+        {
+            issues.Add($"{readViewState.ViewCount}/{ExpectedReadViewCount} required read views are present");
+        }
+
+        if (readViewState.InvalidContractCount > 0)
+        {
+            issues.Add($"{readViewState.InvalidContractCount} read-view contract check(s) failed");
         }
 
         var primaryKeyState = await ReadPrimaryKeyStateAsync(connection, cancellationToken);
@@ -119,6 +134,12 @@ public sealed class SqlServerHealthCheck
         if (hardeningState.InvalidCheckConstraintCount > 0)
         {
             issues.Add($"{hardeningState.InvalidCheckConstraintCount} build/device check constraint(s) are missing or untrusted");
+        }
+
+        if (hardeningState.InvalidCompletedRequestCount > 0)
+        {
+            issues.Add(
+                $"{hardeningState.InvalidCompletedRequestCount} completed request(s) do not have a complete Passed/Warning QC result");
         }
 
         if (issues.Count > 0)
@@ -221,6 +242,113 @@ public sealed class SqlServerHealthCheck
         command.Parameters.Add("@version", SqlDbType.VarChar, 64).Value = ExpectedSchemaVersion;
 
         return Convert.ToInt32(await command.ExecuteScalarAsync(cancellationToken)) == 1;
+    }
+
+    private static async Task<ReadViewState> ReadReadViewStateAsync(
+        SqlConnection connection,
+        CancellationToken cancellationToken)
+    {
+        await using var command = connection.CreateCommand();
+        command.CommandText = """
+            WITH expected_views AS (
+                SELECT *
+                FROM (VALUES
+                    (
+                        N'Last_QC',
+                        N'session_id,request_id,device_id,switch_technology,noise_requirement,total_keys,status,completed_at,tested_keys,passed_keys,warning_keys,failed_keys,average_latency_ms,max_latency_ms,average_noise_db,max_noise_db,last_recorded_at,is_complete,is_acceptable'
+                    ),
+                    (
+                        N'Catalog_Comps',
+                        N'component_type,component_id,name,brand_id,brand_name,price_usd,is_available'
+                    ),
+                    (
+                        N'Build_items',
+                        N'build_item_id,build_id,switch_id,keycap_id,stab_id,accessory_id,component_type,component_id,component_name,brand_id,brand_name,quantity,unit_price_snapshot,line_total_snapshot,current_price_usd,is_available,notes'
+                    ),
+                    (
+                        N'Req_view',
+                        N'request_id,build_id,seller_user_id,seller_shop_name,request_payload_json,status,note,requested_at,accepted_at,completed_at,updated_at,buyer_id,total_cost_snapshot,kit_id,kit_name'
+                    )
+                ) AS value_list(view_name, expected_columns)
+            ),
+            actual_views AS (
+                SELECT
+                    view_info.name AS view_name,
+                    view_info.object_id,
+                    STRING_AGG(CONVERT(nvarchar(max), column_info.name), N',')
+                        WITHIN GROUP (ORDER BY column_info.column_id) AS actual_columns
+                FROM sys.views AS view_info
+                INNER JOIN sys.schemas AS schema_info
+                    ON schema_info.schema_id = view_info.schema_id
+                INNER JOIN sys.columns AS column_info
+                    ON column_info.object_id = view_info.object_id
+                WHERE schema_info.name = N'views'
+                  AND view_info.name IN (N'Last_QC', N'Catalog_Comps', N'Build_items', N'Req_view')
+                GROUP BY view_info.name, view_info.object_id
+            ),
+            expected_critical_columns AS (
+                SELECT *
+                FROM (VALUES
+                    (N'Last_QC', N'completed_at', N'datetime2', 8, 27, 7, 1),
+                    (N'Last_QC', N'is_acceptable', N'bit', 1, 1, 0, 1),
+                    (N'Catalog_Comps', N'component_id', N'varchar', 50, 0, 0, 0),
+                    (N'Catalog_Comps', N'price_usd', N'decimal', 9, 10, 2, 0),
+                    (N'Build_items', N'unit_price_snapshot', N'decimal', 9, 10, 2, 0),
+                    (N'Build_items', N'line_total_snapshot', N'decimal', 13, 28, 2, 1),
+                    (N'Build_items', N'current_price_usd', N'decimal', 9, 10, 2, 0),
+                    (N'Req_view', N'request_payload_json', N'nvarchar', -1, 0, 0, 0),
+                    (N'Req_view', N'completed_at', N'datetime2', 8, 27, 7, 1)
+                ) AS value_list(
+                    view_name,
+                    column_name,
+                    type_name,
+                    max_length,
+                    precision,
+                    scale,
+                    is_nullable
+                )
+            )
+            SELECT
+                COUNT(actual_views.object_id) AS view_count,
+                SUM(
+                    CASE
+                        WHEN actual_views.object_id IS NULL
+                          OR actual_views.actual_columns <> expected_views.expected_columns
+                            THEN 1
+                        ELSE 0
+                    END
+                ) + (
+                    SELECT COUNT(*)
+                    FROM expected_critical_columns AS expected_column
+                    LEFT JOIN sys.schemas AS schema_info
+                        ON schema_info.name = N'views'
+                    LEFT JOIN sys.views AS view_info
+                        ON view_info.schema_id = schema_info.schema_id
+                       AND view_info.name = expected_column.view_name
+                    LEFT JOIN sys.columns AS column_info
+                        ON column_info.object_id = view_info.object_id
+                       AND column_info.name = expected_column.column_name
+                    LEFT JOIN sys.types AS type_info
+                        ON type_info.user_type_id = column_info.user_type_id
+                    WHERE column_info.object_id IS NULL
+                       OR type_info.name <> expected_column.type_name
+                       OR column_info.max_length <> expected_column.max_length
+                       OR column_info.precision <> expected_column.precision
+                       OR column_info.scale <> expected_column.scale
+                       OR column_info.is_nullable <> expected_column.is_nullable
+                ) AS invalid_contract_count
+            FROM expected_views
+            LEFT JOIN actual_views
+                ON actual_views.view_name = expected_views.view_name;
+            """;
+
+        await using var reader = await command.ExecuteReaderAsync(cancellationToken);
+        if (!await reader.ReadAsync(cancellationToken))
+        {
+            return new ReadViewState(0, ExpectedReadViewCount);
+        }
+
+        return new ReadViewState(reader.GetInt32(0), reader.GetInt32(1));
     }
 
     private static async Task<PrimaryKeyState> ReadPrimaryKeyStateAsync(
@@ -479,6 +607,7 @@ public sealed class SqlServerHealthCheck
                     (N'device_test_sessions', N'noise_requirement', N'varchar', 20, NULL, NULL, 0, 0),
                     (N'device_test_sessions', N'total_keys', N'int', 4, NULL, NULL, 0, 0),
                     (N'device_test_sessions', N'status', N'varchar', 20, NULL, NULL, 0, 0),
+                    (N'device_test_sessions', N'completed_at', N'datetime2', 8, NULL, 7, 1, 0),
                     (N'device_key_test_results', N'id', N'bigint', 8, NULL, NULL, 0, 1),
                     (N'device_key_test_results', N'session_id', N'varchar', 50, NULL, NULL, 0, 0),
                     (N'device_key_test_results', N'key_code', N'varchar', 30, NULL, NULL, 0, 0),
@@ -603,6 +732,7 @@ public sealed class SqlServerHealthCheck
                     (N'CK_devices_name_not_blank'),
                     (N'CK_dts_switch_technology_not_blank'),
                     (N'CK_dts_total_keys'),
+                    (N'CK_dts_completed_at'),
                     (N'CK_dktr_key_code_not_blank'),
                     (N'CK_dktr_press_count'),
                     (N'CK_dktr_latency'),
@@ -645,19 +775,63 @@ public sealed class SqlServerHealthCheck
                     WHERE check_info.object_id IS NULL
                        OR check_info.is_disabled <> 0
                        OR check_info.is_not_trusted <> 0
-                ) AS invalid_check_constraint_count;
+                ) AS invalid_check_constraint_count,
+                (
+                    SELECT COUNT(*)
+                    FROM dbo.build_requests AS request_row
+                    OUTER APPLY (
+                        SELECT TOP (1)
+                            session_row.status,
+                            session_row.total_keys,
+                            result_summary.tested_keys,
+                            result_summary.failed_keys,
+                            result_summary.warning_keys
+                        FROM dbo.device_test_sessions AS session_row
+                        OUTER APPLY (
+                            SELECT
+                                COUNT(result_row.id) AS tested_keys,
+                                SUM(CASE WHEN result_row.result = 'Fail' THEN 1 ELSE 0 END) AS failed_keys,
+                                SUM(CASE WHEN result_row.result = 'Warning' THEN 1 ELSE 0 END) AS warning_keys,
+                                MAX(result_row.recorded_at) AS last_recorded_at
+                            FROM dbo.device_key_test_results AS result_row
+                            WHERE result_row.session_id = session_row.id
+                        ) AS result_summary
+                        WHERE session_row.request_id = request_row.id
+                        ORDER BY
+                            CASE WHEN session_row.status = 'Running' THEN 0 ELSE 1 END,
+                            session_row.completed_at DESC,
+                            result_summary.last_recorded_at DESC,
+                            session_row.id DESC
+                    ) AS latest_qc
+                    WHERE request_row.status = 'Completed'
+                      AND (
+                          latest_qc.status NOT IN ('Passed', 'Warning')
+                          OR latest_qc.status IS NULL
+                          OR latest_qc.tested_keys <> latest_qc.total_keys
+                          OR COALESCE(latest_qc.failed_keys, 0) > 0
+                          OR (
+                              latest_qc.status = 'Passed'
+                              AND COALESCE(latest_qc.warning_keys, 0) > 0
+                          )
+                          OR (
+                              latest_qc.status = 'Warning'
+                              AND COALESCE(latest_qc.warning_keys, 0) = 0
+                          )
+                      )
+                ) AS invalid_completed_request_count;
             """;
 
         await using var reader = await command.ExecuteReaderAsync(cancellationToken);
         if (!await reader.ReadAsync(cancellationToken))
         {
-            return new BuildDeviceHardeningState(7, 3, 9);
+            return new BuildDeviceHardeningState(7, 3, 10, 1);
         }
 
         return new BuildDeviceHardeningState(
             reader.GetInt32(0),
             reader.GetInt32(1),
-            reader.GetInt32(2));
+            reader.GetInt32(2),
+            reader.GetInt32(3));
     }
 
     private sealed record PrimaryKeyState(
@@ -679,8 +853,13 @@ public sealed class SqlServerHealthCheck
         int UnexpectedColumnCount,
         int WrongShapeCount);
 
+    private sealed record ReadViewState(
+        int ViewCount,
+        int InvalidContractCount);
+
     private sealed record BuildDeviceHardeningState(
         int InvalidUnicodeColumnCount,
         int InvalidIndexCount,
-        int InvalidCheckConstraintCount);
+        int InvalidCheckConstraintCount,
+        int InvalidCompletedRequestCount);
 }

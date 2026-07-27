@@ -125,7 +125,8 @@ public sealed class DeviceService : IDeviceService
             SwitchTechnology = normalizedSwitchTechnology,
             NoiseRequirement = noiseRequirement,
             TotalKeys = totalKeys,
-            Status = TestSessionStatus.Running
+            Status = TestSessionStatus.Running,
+            CompletedAt = null
         };
 
         // INSERT the Running row first (generates the session id) so per-key FK session_id always holds.
@@ -221,6 +222,7 @@ public sealed class DeviceService : IDeviceService
         if (keyResults.Count < session.TotalKeys)
         {
             session.Status = TestSessionStatus.Running;
+            session.CompletedAt = null;
             return await _sessionRepository.SaveAsync(session, cancellationToken);
         }
 
@@ -255,6 +257,7 @@ public sealed class DeviceService : IDeviceService
             : session.WarningKeys > 0
                 ? TestSessionStatus.Warning
                 : TestSessionStatus.Passed;
+        session.CompletedAt = DateTime.UtcNow;
         return await _sessionRepository.SaveAsync(session, cancellationToken);
     }
 

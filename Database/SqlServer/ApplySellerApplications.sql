@@ -1,7 +1,7 @@
 -- ===========================================================================
 -- ApplySellerApplications.sql
 -- Idempotent add of the seller_applications table to an EXISTING (already-seeded)
--- CustomKeyboard_Refactor database that has already been migrated to PK id,
+-- CKDB database that has already been migrated to PK id,
 -- without dropping/recreating other tables.
 -- (CreateSchema_Refactor.sql already contains this table for clean-machine setups;
 --  this apply script is for databases created before the table was introduced.)
@@ -12,7 +12,7 @@
 SET NOCOUNT ON;
 SET XACT_ABORT ON;
 
-IF DB_NAME() <> N'CustomKeyboard_Refactor'
+IF DB_NAME() <> N'CKDB'
 BEGIN
     THROW 51000, 'Unexpected database context for ApplySellerApplications.sql.', 1;
 END;

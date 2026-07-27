@@ -144,12 +144,14 @@
                             <ItemsControl ItemsSource="{Binding QuickLoginAccounts}">
                                 <ItemsControl.ItemTemplate>
                                     <DataTemplate>
-                                        <Button Content="{Binding Label}"
-                                                Command="{Binding DataContext.QuickLoginCommand, RelativeSource={RelativeSource AncestorType=UserControl}}"
+                                        <Button Command="{Binding DataContext.QuickLoginCommand, RelativeSource={RelativeSource AncestorType=UserControl}}"
                                                 CommandParameter="{Binding Username}"
+                                                AutomationProperties.Name="{Binding Label}"
                                                 Style="{StaticResource SecondaryButton}"
                                                 HorizontalAlignment="Stretch"
-                                                Margin="0,0,0,8"/>
+                                                Margin="0,0,0,8">
+                                            <TextBlock Text="{Binding Label}"/>
+                                        </Button>
                                     </DataTemplate>
                                 </ItemsControl.ItemTemplate>
                             </ItemsControl>

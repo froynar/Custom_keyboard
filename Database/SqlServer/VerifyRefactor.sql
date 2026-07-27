@@ -2,23 +2,23 @@
 -- Source: Custom_Keyboard_Project_Refactor_Summary.md section 14.
 -- Run AFTER CreateSchema_Refactor.sql + SeedData_Refactor.sql on the test DB.
 -- This is the clean-seed fixture verifier. For preserving an existing runtime
--- database, run both ordered migration preflight/postflight pairs documented in README.md.
+-- database, run every ordered migration preflight/postflight pair documented in README.md.
 -- Every CHECK query below must return 0 error rows. Row counts are clean-seed
 -- expectations, not a runtime-data migration baseline.
 
-USE CustomKeyboard_Refactor;
+USE CKDB_Clean;
 GO
 
 SET NOCOUNT ON;
 GO
 
-DECLARE @ExpectedSchemaVersion varchar(64) = '2026.07.27-build-device-hardening';
+DECLARE @ExpectedSchemaVersion varchar(64) = '2026.07.27-simplified-read-views';
 
 DECLARE @SchemaMigrationsObjectId int = OBJECT_ID(N'dbo.schema_migrations', N'U');
 
 IF @SchemaMigrationsObjectId IS NULL
 BEGIN
-    THROW 51000, 'VerifyRefactor.sql requires clean schema version 2026.07.27-build-device-hardening.', 1;
+    THROW 51000, 'VerifyRefactor.sql requires clean schema version 2026.07.27-simplified-read-views.', 1;
 END;
 
 IF (
@@ -72,7 +72,42 @@ EXEC sys.sp_executesql
 
 IF @SchemaVersionFound = 0
 BEGIN
-    THROW 51000, 'VerifyRefactor.sql requires clean schema version 2026.07.27-build-device-hardening.', 1;
+    THROW 51000, 'VerifyRefactor.sql requires clean schema version 2026.07.27-simplified-read-views.', 1;
+END;
+
+IF OBJECT_ID(N'views.Last_QC', N'V') IS NULL
+   OR OBJECT_ID(N'views.Catalog_Comps', N'V') IS NULL
+   OR OBJECT_ID(N'views.Build_items', N'V') IS NULL
+   OR OBJECT_ID(N'views.Req_view', N'V') IS NULL
+BEGIN
+    THROW 51000, 'VerifyRefactor.sql requires all four read views.', 1;
+END;
+
+IF NOT EXISTS (
+    SELECT 1
+    FROM sys.columns AS column_info
+    INNER JOIN sys.types AS type_info
+        ON type_info.user_type_id = column_info.user_type_id
+    WHERE column_info.object_id = OBJECT_ID(N'dbo.device_test_sessions')
+      AND column_info.name = N'completed_at'
+      AND type_info.name = N'datetime2'
+      AND column_info.scale = 7
+      AND column_info.is_nullable = 1
+)
+BEGIN
+    THROW 51000, 'VerifyRefactor.sql requires nullable device_test_sessions.completed_at.', 1;
+END;
+
+IF NOT EXISTS (
+    SELECT 1
+    FROM sys.check_constraints
+    WHERE parent_object_id = OBJECT_ID(N'dbo.device_test_sessions')
+      AND name = N'CK_dts_completed_at'
+      AND is_disabled = 0
+      AND is_not_trusted = 0
+)
+BEGIN
+    THROW 51000, 'VerifyRefactor.sql requires trusted CK_dts_completed_at.', 1;
 END;
 
 DECLARE @ExpectedPrimaryKey TABLE (
@@ -511,6 +546,18 @@ FROM device_test_sessions dts
 INNER JOIN build_requests br ON br.id = dts.request_id
 INNER JOIN devices d ON d.id = dts.device_id
 WHERE br.seller_user_id <> d.seller_user_id;
+GO
+
+PRINT '================================================================';
+PRINT ' Extra B4 Completed requests agree with the latest complete QC session';
+PRINT '          Expected: 0 rows.';
+PRINT '================================================================';
+SELECT br.id AS request_id
+FROM build_requests AS br
+LEFT JOIN views.Last_QC AS latest_qc
+    ON latest_qc.request_id = br.id
+WHERE br.status = 'Completed'
+  AND COALESCE(latest_qc.is_acceptable, 0) = 0;
 GO
 
 PRINT '================================================================';

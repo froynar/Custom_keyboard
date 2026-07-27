@@ -9,8 +9,12 @@ namespace Custom_keyboard.Realtime;
 /// </summary>
 public sealed class MqttSettings
 {
-    /// <summary>Turn the realtime layer on/off. When off, nothing connects.</summary>
-    public bool Enabled { get; set; } = true;
+    /// <summary>
+    /// Turn the optional realtime layer on/off. It is disabled unless
+    /// CUSTOM_KEYBOARD_MQTT_ENABLED is explicitly set to true/1/yes/on, so a normal
+    /// DB-only installation never churns against a broker that was not installed.
+    /// </summary>
+    public bool Enabled { get; set; } = ReadEnabledFromEnvironment();
 
     public string Host { get; set; } = "localhost";
 
@@ -32,4 +36,10 @@ public sealed class MqttSettings
     public string DeviceTelemetrySecret { get; set; } =
         Environment.GetEnvironmentVariable("CUSTOM_KEYBOARD_DEVICE_TELEMETRY_SECRET")
         ?? Convert.ToHexString(RandomNumberGenerator.GetBytes(32));
+
+    private static bool ReadEnabledFromEnvironment()
+    {
+        var value = Environment.GetEnvironmentVariable("CUSTOM_KEYBOARD_MQTT_ENABLED");
+        return value?.Trim().ToLowerInvariant() is "true" or "1" or "yes" or "on";
+    }
 }

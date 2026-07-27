@@ -50,7 +50,7 @@ Result: every ERD table has seed coverage. No extra old table is used.
 | Seller request targets active, verified seller users | Pass |
 | Buyer-seller chat may link to a request; admin-seller chat does not require a request | Pass |
 | Chat conversation has exactly one of `buyer_id` or `admin_user_id` | Pass |
-| QC session/result rows use exactly the concise 7/12-column contract | Pass |
+| QC session/result rows use the final 8/12-column contract, including session `completed_at` | Pass |
 
 ## Build Total Checks
 

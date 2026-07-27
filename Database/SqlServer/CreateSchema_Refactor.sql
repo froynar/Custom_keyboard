@@ -2,25 +2,28 @@
 -- Source of truth: Documents/Custom_Keyboard_ERD_Final.dbml
 -- Scope: 21 tables / 30 relationships (incl. 3 device QC tables). No cases/pcbs/plates, no compatibility_rules,
 --        no seller_inventory, no legacy switch-mod columns (lube_type/is_filmed/spring_weight_g).
--- Target: clean/disposable CustomKeyboard_Refactor database.
+-- Target: clean/disposable CKDB_Clean database.
 -- WARNING: destructive clean-install script. Re-running it drops the 21 business tables
 -- and resets dbo.schema_migrations.
--- Do not run this on a database that must preserve runtime data; use the ordered migration scripts instead.
+-- CKDB and CustomKeyboard_Refactor are intentionally not targeted by this script.
+-- For a database that must preserve runtime data, use the ordered migration scripts instead.
 -- Order: roles -> users -> seller_profiles -> seller_applications -> brands -> layouts -> keyboard_kits
 --        -> switches -> keycap_sets -> stabilizers -> accessories -> builds -> build_items -> build_mods
 --        -> build_requests -> devices -> device_test_sessions -> device_key_test_results
 --        -> audit_log -> chat_conversations -> chat_messages
 -- This script is idempotent: it drops the 21 tables (reverse FK order), resets schema
 -- migration history, and recreates the clean schema.
--- Clean installs record both the concise QC and build/device hardening schema versions.
+-- Clean installs record the concise QC, build/device hardening,
+-- Completed/QC reconciliation, read-view, QC/view hardening, and simplified
+-- read-view schema versions.
 
-IF DB_ID(N'CustomKeyboard_Refactor') IS NULL
+IF DB_ID(N'CKDB_Clean') IS NULL
 BEGIN
-    CREATE DATABASE CustomKeyboard_Refactor;
+    CREATE DATABASE CKDB_Clean;
 END
 GO
 
-USE CustomKeyboard_Refactor;
+USE CKDB_Clean;
 GO
 
 SET XACT_ABORT ON;
@@ -36,6 +39,10 @@ GO
 -- ---------------------------------------------------------------------------
 -- Drop in reverse FK-dependency order so a re-run starts from a clean slate.
 -- ---------------------------------------------------------------------------
+DROP VIEW IF EXISTS views.Req_view;
+DROP VIEW IF EXISTS views.Build_items;
+DROP VIEW IF EXISTS views.Catalog_Comps;
+DROP VIEW IF EXISTS views.Last_QC;
 DROP TABLE IF EXISTS dbo.schema_migrations;
 DROP TABLE IF EXISTS device_key_test_results;
 DROP TABLE IF EXISTS device_test_sessions;
@@ -341,10 +348,15 @@ CREATE TABLE device_test_sessions (
     noise_requirement  VARCHAR(20) NOT NULL DEFAULT 'Normal', -- Normal / Quiet / Silent (buyer expectation)
     total_keys         INT         NOT NULL,
     status             VARCHAR(20) NOT NULL,           -- Running / Passed / Warning / Failed
+    completed_at       DATETIME2   NULL,               -- set once when QC leaves Running
     CONSTRAINT FK_dts_request FOREIGN KEY (request_id) REFERENCES build_requests(id),
     CONSTRAINT FK_dts_device  FOREIGN KEY (device_id)  REFERENCES devices(id),
     CONSTRAINT CK_dts_noise_requirement CHECK (noise_requirement IN ('Normal','Quiet','Silent')),
     CONSTRAINT CK_dts_status CHECK (status IN ('Running','Passed','Warning','Failed')),
+    CONSTRAINT CK_dts_completed_at CHECK (
+        (status = 'Running' AND completed_at IS NULL)
+        OR (status IN ('Passed','Warning','Failed') AND completed_at IS NOT NULL)
+    ),
     CONSTRAINT CK_dts_total_keys CHECK (total_keys BETWEEN 1 AND 256),
     CONSTRAINT CK_dts_switch_technology_not_blank CHECK (LEN(LTRIM(RTRIM(switch_technology))) > 0)
 );
@@ -498,6 +510,21 @@ CREATE UNIQUE INDEX UX_dktr_session_key_code ON device_key_test_results(session_
 GO
 
 -- ===========================================================================
+-- Read-only repository projections.
+-- Run CreateSchema_Refactor.sql from the repository root in sqlcmd mode.
+-- ===========================================================================
+:r Database\SqlServer\ReadViews.sql
+
+IF OBJECT_ID(N'views.Last_QC', N'V') IS NULL
+   OR OBJECT_ID(N'views.Catalog_Comps', N'V') IS NULL
+   OR OBJECT_ID(N'views.Build_items', N'V') IS NULL
+   OR OBJECT_ID(N'views.Req_view', N'V') IS NULL
+BEGIN
+    THROW 51000, 'Clean schema creation did not create all four read views.', 1;
+END;
+GO
+
+-- ===========================================================================
 -- Schema version contract used by application startup guard and migration tools.
 -- ===========================================================================
 CREATE TABLE dbo.schema_migrations (
@@ -519,6 +546,38 @@ INSERT INTO dbo.schema_migrations (version, description, applied_at, succeeded)
 VALUES (
     '2026.07.27-build-device-hardening',
     'Atomic build requests, Unicode text, and hardened device QC invariants',
+    SYSUTCDATETIME(),
+    1
+);
+
+INSERT INTO dbo.schema_migrations (version, description, applied_at, succeeded)
+VALUES (
+    '2026.07.27-completed-qc-reconciliation',
+    'Reconcile historical Completed requests with latest complete QC truth',
+    SYSUTCDATETIME(),
+    1
+);
+
+INSERT INTO dbo.schema_migrations (version, description, applied_at, succeeded)
+VALUES (
+    '2026.07.27-read-views',
+    'Add Last_QC, Catalog_Comps, Build_items, and Req_view read projections',
+    SYSUTCDATETIME(),
+    1
+);
+
+INSERT INTO dbo.schema_migrations (version, description, applied_at, succeeded)
+VALUES (
+    '2026.07.27-qc-view-hardening',
+    'Add QC completion time and harden read-view contracts',
+    SYSUTCDATETIME(),
+    1
+);
+
+INSERT INTO dbo.schema_migrations (version, description, applied_at, succeeded)
+VALUES (
+    '2026.07.27-simplified-read-views',
+    'Simplify the four read-view contracts without changing application behavior',
     SYSUTCDATETIME(),
     1
 );

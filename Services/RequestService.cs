@@ -186,7 +186,12 @@ public sealed class RequestService : IRequestService
     private async Task EnsureQcAllowsCompletionAsync(string requestId, CancellationToken cancellationToken)
     {
         var latestSession = await _deviceService.GetLatestSessionByRequestAsync(requestId, cancellationToken);
-        if (latestSession?.Status is not (TestSessionStatus.Passed or TestSessionStatus.Warning))
+        if (latestSession is null
+            || latestSession.Status is not (TestSessionStatus.Passed or TestSessionStatus.Warning)
+            || latestSession.TestedKeys != latestSession.TotalKeys
+            || latestSession.FailedKeys > 0
+            || (latestSession.Status == TestSessionStatus.Passed && latestSession.WarningKeys > 0)
+            || (latestSession.Status == TestSessionStatus.Warning && latestSession.WarningKeys == 0))
         {
             throw new InvalidOperationException(Loc.Instance["Service_QcRequiredBeforeComplete"]);
         }
@@ -291,34 +296,45 @@ public sealed class RequestService : IRequestService
 
     private async Task<ItemSnapshot> CreateItemSnapshotAsync(BuildItem item, CancellationToken cancellationToken)
     {
+        if (HasPersistedCatalogProjection(item))
+        {
+            return new ItemSnapshot(
+                NormalizeSnapshotItemType(item.ComponentType),
+                item.ComponentId,
+                item.ComponentName,
+                item.Quantity,
+                item.UnitPriceSnapshot,
+                item.LineTotalSnapshot,
+                item.Notes);
+        }
+
         string productType;
         string productId;
         string productName;
-        decimal unitPrice;
 
         if (item.SwitchId is not null)
         {
             var product = await _catalogService.GetSwitchByIdAsync(item.SwitchId, cancellationToken);
-            (productType, productId, productName, unitPrice) =
-                ("Switch", item.SwitchId, product?.SwitchName ?? item.SwitchId, product?.PriceUsd ?? item.UnitPriceSnapshot);
+            (productType, productId, productName) =
+                ("Switch", item.SwitchId, product?.SwitchName ?? item.SwitchId);
         }
         else if (item.KeycapId is not null)
         {
             var product = await _catalogService.GetKeycapSetByIdAsync(item.KeycapId, cancellationToken);
-            (productType, productId, productName, unitPrice) =
-                ("Keycap", item.KeycapId, product?.KeycapName ?? item.KeycapId, product?.PriceUsd ?? item.UnitPriceSnapshot);
+            (productType, productId, productName) =
+                ("Keycap", item.KeycapId, product?.KeycapName ?? item.KeycapId);
         }
         else if (item.StabilizerId is not null)
         {
             var product = await _catalogService.GetStabilizerByIdAsync(item.StabilizerId, cancellationToken);
-            (productType, productId, productName, unitPrice) =
-                ("Stabilizer", item.StabilizerId, product?.StabilizerName ?? item.StabilizerId, product?.PriceUsd ?? item.UnitPriceSnapshot);
+            (productType, productId, productName) =
+                ("Stabilizer", item.StabilizerId, product?.StabilizerName ?? item.StabilizerId);
         }
         else
         {
             var product = await _catalogService.GetAccessoryByIdAsync(item.AccessoryId!, cancellationToken);
-            (productType, productId, productName, unitPrice) =
-                ("Accessory", item.AccessoryId!, product?.AccessoryName ?? item.AccessoryId!, product?.PriceUsd ?? item.UnitPriceSnapshot);
+            (productType, productId, productName) =
+                ("Accessory", item.AccessoryId!, product?.AccessoryName ?? item.AccessoryId!);
         }
 
         return new ItemSnapshot(
@@ -326,10 +342,24 @@ public sealed class RequestService : IRequestService
             productId,
             productName,
             item.Quantity,
-            unitPrice,
-            Math.Round(item.Quantity * unitPrice, 2, MidpointRounding.AwayFromZero),
+            item.UnitPriceSnapshot,
+            CalculateLineTotalSnapshot(item.Quantity, item.UnitPriceSnapshot),
             item.Notes);
     }
+
+    private static bool HasPersistedCatalogProjection(BuildItem item)
+        => item.BuildItemId > 0
+           && !string.IsNullOrWhiteSpace(item.ComponentType)
+           && !string.IsNullOrWhiteSpace(item.ComponentId)
+           && !string.IsNullOrWhiteSpace(item.ComponentName);
+
+    private static string NormalizeSnapshotItemType(string componentType)
+        => string.Equals(componentType.Trim(), "KeycapSet", StringComparison.OrdinalIgnoreCase)
+            ? "Keycap"
+            : componentType.Trim();
+
+    private static decimal CalculateLineTotalSnapshot(int quantity, decimal unitPriceSnapshot)
+        => Math.Round(quantity * unitPriceSnapshot, 2, MidpointRounding.AwayFromZero);
 
     private static string? NormalizeNullable(string? value)
         => string.IsNullOrWhiteSpace(value) ? null : value.Trim();

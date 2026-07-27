@@ -2,8 +2,8 @@
 // FINAL DESIGN: 21 tables / 30 foreign keys.
 //
 // The QC layer intentionally keeps only the two compact physical tables shown
-// in the project diagram. Session timestamps, summary views, duplicated context,
-// detailed fault diagnostics, and derived aggregate columns are omitted.
+// in the project diagram. completed_at is the single authoritative finish time;
+// start timestamps, duplicated summaries/context, and stored fault derivations are omitted.
 
 Enum UserRole {
   Buyer
@@ -244,8 +244,9 @@ Table device_test_sessions {
   noise_requirement NoiseRequirement [not null]
   total_keys int [not null]
   status TestSessionStatus [not null]
+  completed_at datetime
 
-  Note: 'Compact QC session. Seller context is resolved through request_id and device_id. At most one Running session per request.'
+  Note: 'Compact QC session. completed_at is null only while Running and is set once when QC finishes. Seller context is resolved through request_id and device_id. At most one Running session per request.'
 }
 
 Table device_key_test_results {

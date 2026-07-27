@@ -215,18 +215,26 @@ public sealed class SqlBuildRepository : IBuildRepository
         command.Transaction = transaction;
         command.CommandText = """
             SELECT
-                id AS build_item_id,
+                build_item_id,
                 build_id,
                 switch_id,
                 keycap_id,
                 stab_id,
                 accessory_id,
+                component_type,
+                component_id,
+                component_name,
+                brand_id,
+                brand_name,
                 quantity,
                 unit_price_snapshot,
+                line_total_snapshot,
+                current_price_usd,
+                is_available,
                 notes
-            FROM build_items
+            FROM views.Build_items
             WHERE build_id = @build_id
-            ORDER BY id;
+            ORDER BY build_item_id;
             """;
         command.AddParameter("@build_id", SqlDbType.VarChar, buildId, 50);
 
@@ -392,8 +400,16 @@ public sealed class SqlBuildRepository : IBuildRepository
             KeycapId = reader.GetNullableStringValue("keycap_id"),
             StabilizerId = reader.GetNullableStringValue("stab_id"),
             AccessoryId = reader.GetNullableStringValue("accessory_id"),
+            ComponentType = reader.GetStringValue("component_type"),
+            ComponentId = reader.GetStringValue("component_id"),
+            ComponentName = reader.GetStringValue("component_name"),
+            BrandId = reader.GetIntValue("brand_id"),
+            BrandName = reader.GetStringValue("brand_name"),
             Quantity = reader.GetIntValue("quantity"),
             UnitPriceSnapshot = reader.GetDecimalValue("unit_price_snapshot"),
+            LineTotalSnapshot = reader.GetDecimalValue("line_total_snapshot"),
+            CurrentPriceUsd = reader.GetDecimalValue("current_price_usd"),
+            IsAvailable = reader.GetBoolValue("is_available"),
             Notes = reader.GetNullableStringValue("notes")
         };
     }

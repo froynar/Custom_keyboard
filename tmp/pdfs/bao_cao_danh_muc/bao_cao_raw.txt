@@ -1,0 +1,1303 @@
+1
+ĐẠI HỌC BÁCH KHOA HÀ NỘI TRƯỜNG
+ĐIỆN - ĐIỆN TỬ
+BÁO CÁO BÀI TẬP LỚN HỌC PHẦN KỸ THUẬT
+PHẦN MỀM ỨNG DỤNG
+Đề tài: Xây dựng hệ thống Custom Keyboard
+Builder
+GVHD:
+Mã lớp:
+Vũ Song Tùng
+169195
+Nhóm sinh viên
+thực hiện:
+1. Trần Việt Khoa MSSV: 202414192
+2. Nguyễn Thế Tuấn Hải MSSV: 202414096
+3. Lê Việt Hoàng MSSV: 202414132
+Hà Nội, 7/2026
+2
+MỤC LỤC
+MỞ ĐẦU.................................................................................................................................... 7
+1. Giới thiệu và lý do chọn đề tài............................................................................................ 7
+2. Mục đích và nhiệm vụ của đề tài ........................................................................................ 7
+3. Phân công nhiệm vụ của nhóm........................................................................................... 8
+4. Nội dung sơ lược của báo cáo............................................................................................. 8
+CHƯƠNG 1. TỔNG QUAN HỆ THỐNG CUSTOM KEYBOARD BUILDER ................ 9
+1.1. Bối cảnh và vấn đề cần giải quyết.................................................................................... 9
+1.2. Yêu cầu về dữ liệu ........................................................................................................... 9
+1.3. Mục tiêu và phạm vi hệ thống ....................................................................................... 10
+1.4. Tác nhân và yêu cầu chức năng ..................................................................................... 10
+1.5. Yêu cầu phi chức năng................................................................................................... 11
+1.6. Công nghệ và môi trường phát triển.............................................................................. 11
+1.6.1. Ngôn ngữ C# và nền tảng .NET 10 ...................................................................... 11
+1.6.2. WPF và XAML..................................................................................................... 12
+1.6.3. Microsoft SQL Server Express và SSMS............................................................. 12
+1.6.4. Microsoft Visual Studio........................................................................................ 12
+1.6.5. Keyboard kit và phạm vi phần cứng..................................................................... 12
+1.7. Thư viện và thành phần kỹ thuật.................................................................................... 13
+1.7.1. Microsoft.Data.SqlClient 6.1.1............................................................................. 13
+1.7.2. LiveChartsCore.SkiaSharpView.WPF 2.0.4......................................................... 13
+1.7.3. MQTTnet 4.3.7.1207 ............................................................................................ 13
+1.7.4. Bảo mật mật khẩu và đa ngôn ngữ........................................................................ 13
+1.8. Kiến trúc phần mềm....................................................................................................... 13
+1.8.1. Mô hình Model-View-ViewModel....................................................................... 13
+1.8.2. Lớp Service........................................................................................................... 14
+1.8.3. Lớp Repository ..................................................................................................... 14
+1.8.4. Hạ tầng Data/Realtime và DeviceSimulator ......................................................... 14
+1.8.5. Composition root và điều hướng theo vai trò ....................................................... 14
+1.9. Kết luận chương............................................................................................................. 14
+CHƯƠNG 2. PHÂN TÍCH THIẾT KẾ HỆ THỐNG.......................................................... 15
+2.1. Use Case Diagram ......................................................................................................... 15
+2.2. Activity Diagram ........................................................................................................... 17
+2.3. Sequence Diagram ......................................................................................................... 16
+2.4. Entity-Relationship Diagram (ERD).............................................................................. 17
+2.4.1. Sơ đồ ERD tổng quát............................................................................................ 18
+2.4.2. Sơ đồ ERD chi tiết................................................................................................ 19
+2.5. Đối chiếu diagram với thành phần triển khai................................................................. 19
+2.6. Kết luận chương............................................................................................................. 20
+CHƯƠNG 3. TRIỂN KHAI VÀ KIỂM THỬ...................................................................... 21
+3.1. Triển khai cơ sở dữ liệu SQL Server ............................................................................. 21
+3
+3.1.1. Nhóm tài khoản và phân quyền ............................................................................ 21
+3.1.2. Nhóm danh mục linh kiện..................................................................................... 22
+3.1.3. Nhóm build và request.......................................................................................... 24
+3.1.4. Nhóm thiết bị và kiểm tra QC............................................................................... 25
+3.1.5. Nhóm audit và chat............................................................................................... 26
+3.2. Triển khai giao diện tiêu biểu ........................................................................................ 27
+3.3. Kiểm thử và xác minh.................................................................................................... 33
+3.4. Đánh giá mức độ hoàn thành......................................................................................... 34
+3.5. Kết luận chương............................................................................................................. 34
+KẾT LUẬN.............................................................................................................................. 35
+1. Mức độ hoàn thành nhiệm vụ........................................................................................... 35
+2. Mức độ phù hợp với mục đích đề tài................................................................................ 35
+3. Hạn chế còn tồn tại ........................................................................................................... 35
+4. Hướng phát triển............................................................................................................... 35
+4
+DANH MỤC HÌNH VẼ
+Hình 2.1. Sơ đồ Use Case tổng hợp của hệ thống Custom Keyboard Builder.................................15
+Hình 2.2. Sơ đồ Activity tổng hợp của các luồng nghiệp vụ chính .................................................16
+Hình 2.3. Sơ đồ Sequence tổng hợp của các luồng tương tác chính................................................17
+Hình 2.4. Sơ đồ ERD tổng quát của hệ thống Custom Keyboard Builder.......................................18
+Hình 2.5. Sơ đồ ERD chi tiết gồm 21 bảng và 33 khóa ngoại.........................................................19
+Hình 3.1. Giao diện đăng nhập của ứng dụng..................................................................................28
+Hình 3.2. Giao diện đăng ký tài khoản Buyer..................................................................................28
+Hình 3.3. Giao diện Buyer Dashboard và khu vực cấu hình build ..................................................30
+Hình 3.4. Giao diện Seller Dashboard và xử lý yêu cầu lắp ráp......................................................30
+Hình 3.5. Giao diện Admin Dashboard và quản trị hệ thống ..........................................................31
+Hình 3.6. Giao diện trao đổi tin nhắn theo vai trò ...........................................................................31
+Hình 3.7. Giao diện hồ sơ và menu người dùng..............................................................................32
+5
+DANH MỤC BẢNG BIỂU
+Bảng 0.1. Phân công nhiệm vụ nhóm ................................................................................................8
+Bảng 1.1. Yêu cầu về dữ liệu.............................................................................................................9
+Bảng 1.2. Tác nhân và mục tiêu sử dụng hệ thống..........................................................................10
+Bảng 1.3. Yêu cầu chức năng chính ................................................................................................10
+Bảng 1.4. Yêu cầu phi chức năng ....................................................................................................11
+Bảng 2.1. Nhóm bảng trong cơ sở dữ liệu.......................................................................................17
+Bảng 2.2. Đối chiếu bốn loại diagram với artifact nguồn................................................................19
+Bảng 3.1. Thứ tự triển khai 21 bảng theo nhóm phụ thuộc .............................................................21
+Bảng 3.2. Đối chiếu giao diện với mã nguồn...................................................................................27
+Bảng 3.3. Kết quả build và xác minh tại thời điểm lập báo cáo.......................................................33
+Bảng 3.4. Đánh giá mức độ hoàn thành theo mục tiêu ....................................................................34
+6
+DANH MỤC KÝ HIỆU VÀ CHỮ VIẾT TẮT
+• CSDL: Cơ sở dữ liệu.
+• DBML: Database Markup Language - ngôn ngữ mô tả mô hình cơ sở dữ liệu.
+• ERD: Entity Relationship Diagram - sơ đồ thực thể quan hệ.
+• FK: Foreign Key - khóa ngoại.
+• GUI: Graphical User Interface - giao diện người dùng.
+• MQTT: Message Queuing Telemetry Transport - giao thức truyền thông
+publish/subscribe.
+• MVVM: Model-View-ViewModel - mẫu kiến trúc giao diện.
+• PK: Primary Key - khóa chính.
+• QC: Quality Control - kiểm tra chất lượng.
+• SQL: Structured Query Language - ngôn ngữ truy vấn có cấu trúc.
+• SSMS: SQL Server Management Studio.
+• WPF: Windows Presentation Foundation.
+• XAML: Extensible Application Markup Language.
+• ADO.NET: Tập API truy cập dữ liệu của nền tảng .NET.
+• IDE: Integrated Development Environment - môi trường phát triển tích hợp.
+• PBKDF2: Password-Based Key Derivation Function 2 - hàm dẫn xuất khóa dùng
+để băm mật khẩu.
+7
+MỞ ĐẦU
+1. Giới thiệu và lý do chọn đề tài
+Hiện nay, việc sử dụng bàn phím cơ tự xây dựng, cá nhân hóa đang ngày càng trở nên
+phổ biến với những người sử dụng máy tính nhiều, một bàn phím cơ tự xây dựng có thể
+đáp ứng những nhu cầu riêng biệt cho từng người dùng như coder, dân văn phòng, gamer
+hoặc người dùng phổ thông,…
+Tuy nhiên, việc tự tìm hiểu cũng như mua lẻ từng linh kiện thường gây trở ngại cho
+người dùng khi sự đa dạng trong lĩnh vực bàn phím là rất lớn hoặc tương thích công
+nghệ, để đưa ra giải pháp mà hiện nay chưa có được ở các shop bán hàng trực tuyến, dự
+án này nhằm thỏa mãn yêu cầu của người dùng trong việc tiện ích khi mua bán bàn
+phím.
+Dự án Custom Keyboard Builder được xây dựng nhằm số hóa quá trình xây dựng thủ
+công bàn phím, gửi yêu cầu chi tiết sản phẩm cho người bán, theo dõi trạng thái đơn
+hàng, kiểm tra lỗi bàn phím (QC), tập trung dữ liệu sử dụng SQL Server, giao diện
+destop WPF hỗ trợ cho 3 người dùng là người mua (Buyer), người bán (Seller) và quản
+trị viên (Admin).
+2. Mục đích của đề tài
+Mục đích của đề tài là xây dựng ứng dụng quản lý cấu hình bàn phím tùy chỉnh theo mô
+hình dựa trên kit bàn phím (kit-based), hệ thống sẽ kiểm tra tính tương thích giữa các
+linh kiện, cập nhật giá sản phẩm snapshot, gửi yêu cầu đến người bán và hỗ trợ quản trị
+viên quản trị hệ thống.
+3. Phân công nhiệm vụ của nhóm
+Phân công nhiệm vụ nhóm được thể hiện tại Bảng 0.1
+Bảng 0.1. Phân công nhiệm vụ nhóm
+Thành viên Nhiệm vụ được phân công Sản phẩm/tiêu chí hoàn thành
+8
+4. Nội dung sơ lược của báo cáo
+Báo cáo gồm 35 trang, 3 chương chính, 12 hình vẽ, 11 bảng biểu và 25 khối mã nguồn:
+• Chương 1 Tổng quan hệ thống: trình bày bối cảnh, mục tiêu, phạm vi, yêu cầu,
+công nghệ, thư viện và kiến trúc phần mềm.
+• Chương 2 Phân tích thiết kế hệ thống: tập trung phân tích năm sơ đồ Use Case,
+Activity, Sequence, ERD tổng quát và ERD chi tiết.
+• Chương 3 Triển khai và kiểm thử: trình bày cơ sở dữ liệu, giao diện và mã nguồn
+tiêu biểu, kết quả kiểm thử và đánh giá mức độ hoàn thành.
+9
+CHƯƠNG 1. TỔNG QUAN HỆ THỐNG CUSTOM
+KEYBOARD BUILDER
+Chương này trình bày bối cảnh hình thành, mục tiêu, phạm vi và các yêu cầu chính
+của hệ thống.
+1.1. Bối cảnh và vấn đề cần giải quyết
+Một bộ bàn phím custom yêu cầu nhiều linh kiện cũng như tính tương thích giữa
+chúng, gây cản trở khó khăn cho những người mới, người mua phổ thông, vì vậy dự
+án này nhằm hỗ trợ người mua có thể xây dựng cho mình một bộ bàn phím cá nhân
+hóa, đảm bảo tính hợp lệ, giúp tiết kiệm thời gian.
+Mô hình hiện tại lấy keyboard kit làm nền tảng. Một bộ Kit bao gồm case, PCB, plate
+và các phần đi kèm khác; Buyer tiếp tục chọn switch, keycap, stabilizer, accessory và
+ghi chú mod. Mẫu build_items cho phép mỗi dòng hướng đến đúng một loại sản
+phẩm, còn snapshot pricing hiển thị giá thành của đơn hàng tại thời điểm đó.
+1.2. Yêu cầu về dữ liệu
+Dữ liệu của hệ thống cần được lưu tập trung trên SQL Server, sử dụng SQL Server
+Management Studio (SSMS)
+Các nhóm dữ liệu cần quản lý được tổng hợp tại Bảng 1.1.
+Bảng 1.1. Yêu cầu về dữ liệu
+STT Nhóm dữ liệu Dữ liệu cần lưu Yêu cầu/ràng buộc
+1
+Tài khoản, phân
+quyền và Seller
+Vai trò, tên đăng nhập, email, số
+điện thoại, mật khẩu đã băm, trạng
+thái tài khoản, hồ sơ Seller và đơn
+đăng ký Seller.
+Đảm bảo tính duy nhất (Unique
+constraint) đối với các thông tin định
+danh. Hệ thống phải chặn quyền xác
+thực (đăng nhập) đối với các tài
+khoản không ở trạng thái kích hoạt.
+2
+Danh mục linh
+kiện
+Thương hiệu, layout, keyboard kit,
+switch, keycap, stabilizer, phụ
+kiện, giá và trạng thái khả dụng.
+Giá không được âm; số switch yêu
+cầu của kit phải lớn hơn số switch
+yêu cầu tối thiểu. Dữ liệu phải hỗ trợ
+lọc và kiểm tra tương thích cơ bản.
+3
+Cấu hình và yêu
+cầu lắp ráp
+Build, linh kiện đã chọn, mod, số
+lượng, giá snapshot, Seller tiếp
+nhận, nội dung JSON, trạng thái
+và thời điểm xử lý request.
+Mỗi build item chỉ tham chiếu một
+loại sản phẩm. Giá và cấu hình tại
+thời điểm gửi request phải được giữ
+nguyên; trạng thái chuyển đúng
+luồng nghiệp vụ.
+4
+Kiểm tra chất
+lượng
+Thiết bị kiểm tra, phiên QC, kết
+quả từng phím, độ trễ, độ ồn và
+kết luận đạt/cảnh báo/không đạt.
+Request chỉ được hoàn thành khi
+phiên QC gần nhất có kết quả đạt
+hoặc cảnh báo.
+10
+5 Đoạn hội thoại
+Hội thoại, tin nhắn, người gửi,
+thời điểm gửi, request liên quan và
+lịch sử thay đổi trước/sau.
+Chỉ hỗ trợ trao đổi Buyer-Seller và
+Admin-Seller.
+Những yêu cầu này là cơ sở để xây dựng ERD tổng quát, ERD chi tiết và các bảng
+SQL được trình bày ở các chương sau.
+1.3. Mục tiêu và phạm vi hệ thống
+Ba tác nhân chính và mục tiêu sử dụng được tổng hợp tại Bảng 1.2.
+Bảng 1.2. Tác nhân và mục tiêu sử dụng hệ thống
+Tác nhân Mục tiêu
+Buyer Tạo/chỉnh sửa cấu hình và đặt hàng
+Seller Tiếp nhận và xử lý request được gán.
+Admin Quản trị người dùng và dữ liệu nền.
+1.4. Tác nhân và yêu cầu chức năng
+Các yêu cầu chức năng cốt lõi được liệt kê tại Bảng 1.3.
+Bảng 1.3. Yêu cầu chức năng chính
+Nhóm chức năng Yêu cầu Vai trò
+Tài khoản
+Đăng ký làm Buyer, đăng nhập bằng username/email,
+xem hồ sơ, đăng xuất.
+Guest và Buyer
+Cấu hình build
+Chọn kit, switch, keycap, stabilizer, accessory, mod;
+xem snapshot price và lưu build.
+Buyer
+Request
+Chọn Seller, tạo JSON snapshot, gửi và theo dõi
+request.
+Buyer
+Xử lý Request
+Chuyển trạng thái Pending -> Accepted -> In_progress
+-> Completed hoặc Cancelled. Seller
+Quản trị hệ thống Quản lý Buyer, Seller, đơn Seller, catalog Admin
+Chat
+Chỉ cho phép Buyer-Seller và Admin-Seller; lưu tin
+nhắn trong SQL Server.
+Buyer, Seller và Admin
+QC
+Tạo session, mô phỏng từng phím, đánh giá
+latency/noise và tổng hợp pass/warning/fail.
+Seller và device layer
+1.5. Yêu cầu phi chức năng
+11
+Các yêu cầu chất lượng và vận hành được trình bày tại Bảng 1.4.
+Bảng 1.4. Yêu cầu phi chức năng
+Nhóm yêu cầu Yêu cầu áp dụng
+Tính hợp lệ
+Switch technology/mount phù hợp kit; tổng số switch ít nhất bằng
+required_switch_quantity.
+Bảo mật Mật khẩu lưu dạng PBKDF2-SHA256 hash.
+Khả dụng Ứng dụng hoạt động theo chế độ DB-only khi MQTT broker không khả dụng.
+Dễ bảo trì
+Tách View, ViewModel, Service, Repository; resource theme và localization
+được tổ chức riêng.
+Khả năng truy vết
+Thao tác quản trị quan trọng được ghi audit_log; request lưu payload JSON
+snapshot.
+1.6. Công nghệ và môi trường phát triển
+Dự án được triển khai dưới dạng một phần mềm desktop hoạt động hoàn toàn trên môi
+trường Windows. Định hướng cốt lõi trong việc lựa chọn công nghệ là đảm bảo tính
+liền mạch khi tích hợp cùng WPF, SQL Server và hệ sinh thái .NET nói chung. Hơn
+nữa, những nền tảng này tương thích tuyệt đối với kiến trúc phân lớp mà mã nguồn
+đang áp dụng.
+1.6.1. Ngôn ngữ C# và nền tảng .NET 10
+Ngôn ngữ lập trình chính là C#. Đây là một ngôn ngữ thuần hướng đối tượng với hệ
+thống kiểu dữ liệu được kiểm soát vô cùng chặt chẽ. Đóng gói, đa hình hay generic là
+những tính năng cơ bản; tuy nhiên, ưu điểm nổi bật nhất khiến C# được lựa chọn nằm
+ở khả năng xử lý bất đồng bộ thông qua async/await. Cơ chế này đóng vai trò quyết
+định trong việc duy trì hiệu suất phản hồi của giao diện mỗi khi hệ thống thực hiện các
+truy vấn dữ liệu phức tạp. Toàn bộ mã nguồn hiện được biên dịch dựa trên target
+framework net10.0-windows (thuộc .NET 10). Không chỉ thụ hưởng các tiện ích về
+runtime và quản lý bộ nhớ từ .NET, hậu tố windows còn là điều kiện bắt buộc nhằm
+kích hoạt thư viện WPF cùng hàng loạt API đặc thù khác của hệ điều hành.
+Dự án sử dụng target framework net10.0-windows của .NET 10. Nền tảng .NET cung
+cấp runtime, thư viện cơ sở, cơ chế quản lý bộ nhớ và hệ thống package NuGet; hậu tố
+windows cho phép sử dụng WPF và các API giao diện đặc thù của Windows.
+1.6.2. WPF và XAML
+Giải pháp xây dựng giao diện cho hệ thống được giao phó hoàn toàn cho Windows
+Presentation Foundation (WPF). Lợi thế cạnh tranh của WPF nằm ở cơ chế data
+12
+binding linh hoạt, đi kèm hệ thống resource và command độc lập. Nhờ đó, việc chia
+tách rõ rệt giữa mảng hiển thị và khối logic xử lý (theo đúng tư tưởng MVVM) trở nên
+thực sự khả thi.
+Để cụ thể hóa thiết kế, ngôn ngữ XAML được ứng dụng để định nghĩa bố cục toàn
+màn hình. Từ giao diện đăng nhập, trình đơn điều hướng cho đến các trang quản trị
+chuyên biệt (Dashboard) của Admin, Buyer hay Seller đều được khai báo qua hệ
+thống thẻ XAML. Mặt khác, phần mã C# ẩn bên dưới (ViewModel) sẽ đảm nhận
+nhiệm vụ cung ứng khối dữ liệu thô. Mối liên kết giữa hai thành phần này hoàn toàn
+tự động nhờ tính năng binding; giao diện lập tức phản ánh mọi biến động về trạng thái
+(state) mà không yêu cầu lập trình viên phải chủ động chèn dữ liệu bằng lệnh gán
+thông thường.
+1.6.3. Microsoft SQL Server Express và SSMS
+Nền tảng lưu trữ trung tâm của phần mềm là Microsoft SQL Server. Nhiệm vụ của hệ
+quản trị này bao trùm toàn bộ các bản ghi quan trọng: thông tin tài khoản, danh mục
+vật tư, lịch sử đơn hàng, log hệ thống, cho đến kết quả kiểm định chất lượng (QC).
+Trong môi trường phát triển hiện tại, chuỗi kết nối đang hướng đến máy chủ
+KHOADZS1VN\SQLEXPRESS với cơ sở dữ liệu mang tên
+CustomKeyboard_Refactor. Tuy vậy, để đảm bảo tính di động khi triển khai thực tế,
+các thông số về định danh máy chủ hoàn toàn không bị mã hóa cứng (hard-code) vào
+hệ thống.
+Quá trình thao tác can thiệp dữ liệu được thực hiện thông qua SQL Server
+Management Studio (SSMS). Đây là công cụ hỗ trợ thiết yếu để thực thi các tệp lệnh
+DDL, khởi tạo dữ liệu mẫu (seed data) cũng như đánh giá kết quả của các truy vấn.
+Cần làm rõ rằng, SSMS thuần túy đóng vai trò phần mềm giao tiếp quản trị, trong khi
+máy chủ SQL Server bên dưới mới thực sự là nơi lưu giữ dữ liệu vật lý.
+1.6.4. Microsoft Visual Studio
+Xuyên suốt vòng đời phát triển, Microsoft Visual Studio được sử dụng làm môi
+trường tích hợp (IDE) chủ đạo. Công cụ này cung cấp nền tảng toàn diện để soạn thảo
+mã lệnh (C# và XAML), quản trị cấu trúc dự án chuẩn SDK-style, đồng thời tự động
+hóa khâu phục hồi (restore) các gói NuGet. Điểm đáng chú ý là quá trình gỡ lỗi
+(debugging) được hệ thống tối ưu hóa rất tốt. Mặc dù vậy, ứng dụng không bị phụ
+thuộc chết vào IDE này; việc biên dịch dự án vẫn có thể tiến hành độc lập thông qua
+giao diện dòng lệnh dotnet nếu hệ thống đã cấu hình .NET SDK hợp lệ.
+1.6.5. Keyboard kit và phạm vi phần cứng
+Khái niệm keyboard kit trong đề tài là bộ sản phẩm nền gồm case, PCB, plate và các
+13
+phụ kiện khác. Buyer lựa chọn kit từ catalog rồi bổ sung switch, keycap, stabilizer,
+accessory và mod để tạo build.
+Hiện tại dự án không sử dụng ESP32, Arduino hoặc thiết bị nhúng thật, Quá trình
+kiểm tra từng phím được mô phỏng bằng DeviceSimulator, các số liệu QC thu được
+đều được sinh ngẫu nhiên.
+1.7. Thư viện và thành phần kỹ thuật
+Bên cạnh các thư viện cốt lõi, dự án tích hợp thêm một số gói NuGet bổ trợ. Sự mở
+rộng này nhằm trực tiếp giải quyết các bài toán đặc thù về truy xuất bản ghi, trực quan
+hóa số liệu, xử lý truyền thông thời gian thực và đảm bảo an toàn thông tin.
+1.7.1. Microsoft.Data.SqlClient 6.1.1
+Đóng vai trò là cầu nối ADO.NET, thư viện này đảm trách toàn bộ các giao tiếp với
+SQL Server. Các lớp đối tượng cơ bản bao gồm SqlConnection, SqlCommand, hay
+SqlDataReader đều được khai thác triệt để. Xuyên suốt các lớp Repository, nguyên tắc
+bất di bất dịch là bắt buộc phải sử dụng truy vấn truyền tham số (SqlParameter). Biện
+pháp này nhằm triệt tiêu hoàn toàn rủi ro tấn công SQL Injection trước khi hệ thống
+tiến hành ánh xạ các bản ghi thành dữ liệu có cấu trúc (Model).
+1.7.2. LiveChartsCore.SkiaSharpView.WPF 2.0.4
+Để giao diện dashboard trực quan hơn, nhóm em đã quyết định tích hợp thư viện
+LiveChartsCore kết hợp cùng SkiaSharp và WPF để hiển thị biểu đồ KPI, doanh thu,
+trạng thái request và dữ liệu phân tích trên dashboard. Dữ liệu biểu đồ được
+ViewModel nhận từ StatsService thay vì được truy vấn trực tiếp trong View.
+1.7.3. MQTTnet 4.3.7.1207
+Một yêu cầu kỹ thuật đáng lưu tâm của hệ thống là khả năng phản hồi thông báo tức
+thời. Giao thức MQTT được triển khai qua thư viện MQTTnet theo đúng nguyên lý
+publish/subscribe. Chức năng chính của nó là phát tín hiệu cập nhật khi xuất hiện yêu
+cầu mới, hoặc luân chuyển chuỗi dữ liệu telemetry trong suốt quá trình kiểm thử phần
+cứng (thông qua broker vận hành tại localhost:1883). Kiến trúc này được thiết lập theo
+cơ chế "best-effort". Nói cách khác, giả sử broker gặp sự cố sập nguồn, luồng nghiệp
+vụ không hề bị gián đoạn mà sẽ tự động thoái lui về phương thức đồng bộ truyền
+thống qua cơ sở dữ liệu.
+1.7.4. Bảo mật mật khẩu và đa ngôn ngữ
+Yêu cầu an toàn thông tin quy định nghiêm ngặt rằng mật khẩu nguyên bản tuyệt đối
+không được tồn tại trên máy chủ lưu trữ. Do đó, kỹ thuật băm mã PBKDF2-SHA256
+(được tích hợp sẵn trong .NET) đã được ứng dụng. Thuật toán hoạt động với tham số
+14
+100.000 vòng lặp, đi kèm 16 byte "salt" ngẫu nhiên nhằm sinh ra đoạn mã băm 32
+byte. Ở phương diện trải nghiệm người dùng, phần mềm hỗ trợ cơ chế bản địa hóa
+(localization) thông qua hệ thống resource, cho phép chuyển đổi giao diện linh hoạt
+giữa hai ngôn ngữ: Tiếng Việt và Tiếng Anh.
+1.8. Kiến trúc phần mềm
+Để hệ thống dễ bảo trì và mở rộng, ứng dụng được thiết kế tuân ngặt theo kiến trúc
+MVVM, giúp phân tách rõ ràng giữa giao diện (View), cấu trúc dữ liệu (Model) và
+logic điều khiển (ViewModel). Ở tầng dữ liệu, các lớp Repository được xây dựng để
+chuyên biệt hóa việc tương tác với SQL Server, nhường phần xử lý các quy tắc nghiệp
+vụ lõi cho các lớp Service. Toàn bộ luồng khởi tạo được tập trung tại MainWindow –
+đóng vai trò như một trung tâm kết nối (Composition Root). Tại đây, các thành phần
+cốt lõi như Repository, Service, module MQTT, bộ mô phỏng thiết bị và
+MainShellViewModel được khởi tạo và tiêm (inject) vào nhau.
+Về luồng người dùng, ngay khi đăng nhập thành công, MainShellViewModel sẽ đứng
+ra đánh giá phân quyền, từ đó linh hoạt điều hướng giao diện (Dashboard) tương ứng
+cho Buyer, Seller hoặc Admin. Trong khi SQL Server đóng vai trò lưu trữ dữ liệu, hệ
+thống tích hợp thêm giao thức MQTT để giải quyết bài toán đẩy thông báo và dữ liệu
+QC theo thời gian gần thực (near real-time).
+1.8.1. Mô hình Model-View-ViewModel (MVVM)
+- Lớp Model: Cư trú tại thư mục Models/**/*.cs. Lớp này đảm nhận việc mô phỏng
+mọi đối tượng thực thể: từ thông tin người dùng, chi tiết đơn đặt hàng, cho đến các
+báo cáo kiểm định. Các Model này khởi nguồn từ Repository sau quá trình truy xuất
+dữ liệu, đi qua bộ lọc logic tại Service, rồi mới được cấp phát cho ViewModel sử
+dụng.
+- Lớp View: Tập trung tại Views/*.xaml. Nhiệm vụ duy nhất của thành phần này là
+quản lý định dạng hiển thị, bố trí Control và biểu diễn dữ liệu qua DataGrid. Tuyệt đối
+không có bất kỳ lệnh gọi SQL hay quy tắc rẽ nhánh nghiệp vụ nào được phép tồn tại
+bên trong code-behind của View.
+- Lớp ViewModel: Định vị ở ViewModels/*ViewModel.cs. Đây là trung tâm quản lý
+trạng thái giao diện. Các mệnh lệnh (command) do người dùng thao tác sẽ được đón
+nhận bằng phương thức bất đồng bộ, từ đó kích hoạt các hàm tương ứng xuống tầng
+Service. Mọi sự suy chuyển về giá trị bên trong ViewModel sẽ ngay lập tức được phản
+ánh lên màn hình nhờ cơ chế binding.
+1.8.2. Lớp Service
+15
+Thư mục Services/*.cs chính là nơi đóng gói toàn bộ quy chuẩn nghiệp vụ. Mọi luồng
+xử lý dữ liệu trước khi lưu trữ đều phải vượt qua chốt chặn này. Service có trách
+nhiệm xác thực tính toàn vẹn của dữ liệu đầu vào, đối chiếu mức độ tương thích của
+thiết bị phần cứng, đánh giá phân quyền và kiểm soát chặt chẽ trạng thái vòng đời
+(state machine) của từng tác vụ.
+1.8.3. Lớp Repository
+Nhằm tránh sự phụ thuộc vào một hệ quản trị duy nhất, thao tác truy xuất được trừu
+tượng hóa qua các Interface tại tầng Repository, sau đó được hiện thực hóa ở thư mục
+Repositories/SqlServer. Vai trò của Repository rất cụ thể: khởi tạo kết nối, đính kèm
+tham số vào truy vấn, quản lý quy trình transaction khi cần thiết và cuối cùng là ép
+kiểu dữ liệu trả về thành các đối tượng Model. Theo thiết kế này, cả Service lẫn
+ViewModel đều được cách ly hoàn toàn khỏi chi tiết kỹ thuật của mã lệnh SQL.
+1.8.4. Hạ tầng Data/Realtime và DeviceSimulator
+Khía cạnh hạ tầng kỹ thuật bao gồm phân hệ Data/SqlServer chuyên phụ trách việc
+thẩm định cấu trúc bảng (schema) và quản lý chuỗi kết nối. Đối với các tác vụ yêu cầu
+độ trễ thấp, module Realtime dựa trên MQTT sẽ gánh vác việc đẩy thông báo. Điểm
+đặc thù của dự án là sự xuất hiện của khối DeviceSimulator – một tiến trình nền đóng
+vai trò giả lập tín hiệu kiểm tra chất lượng. Ngay cả trong kịch bản mất kết nối mạng
+cục bộ MQTT, tín hiệu từ Simulator vẫn được định tuyến an toàn thông qua SQL
+Server.
+1.8.5. Composition root và điều hướng theo vai trò
+Ứng dụng nguyên lý Tiêm phụ thuộc (Dependency Injection), lớp MainWindow được
+chọn làm điểm khởi chạy gốc (Composition Root). Tại tọa độ này, hệ thống sẽ tiến
+hành lắp ráp mọi cấu phần: từ factory kết nối, Service, Repository, broker MQTT cho
+tới khối giả lập thiết bị. Dù vậy, MainWindow chỉ cấu hình các phụ thuộc chứ không
+trực tiếp thực thi bất kỳ logic luồng nào.
+Về quy trình điều hướng, ngay sau bước xác thực hệ thống, lớp MainShellViewModel
+sẽ tiến hành phân giải quyền hạn (Role) để định tuyến người dùng tới các bảng điều
+khiển tương ứng. Chuỗi vận hành chuẩn luôn tuần tự đi từ View, qua ViewModel,
+xuống Service, truyền tới Repository và kết thúc tại SQL Server; trong khi đó, giao
+thức MQTT chỉ đóng vai trò kênh phụ trợ giám sát tín hiệu ngoài luồng.
+1.9. Kết luận chương
+Chương 1 đã xác định bối cảnh, mục tiêu, phạm vi, yêu cầu, công nghệ, thư viện và
+kiến trúc của hệ thống. Dụa trên cơ sở đó, Chương 2 sẽ tiếp tục chuyển các yêu cầu
+16
+thành thiết kế kỹ thuật.
+17
+CHƯƠNG 2. PHÂN TÍCH THIẾT KẾ HỆ THỐNG
+Chương này trình bày về năm sơ đồ thiết kế kỹ thuật Use Case - Activity - Sequence -
+ERD tổng quát - ERD chi tiết.
+2.1. Use Case Diagram // tiếp
+Hệ thống Custom Keyboard Builder xác định ba tác nhân (Actors) chính tham gia vào
+quy trình cấu hình và đặt lắp ráp bàn phím:
+• Buyer: Đăng nhập, đăng xuất và quản lý tài khoản; lựa chọn keyboard kit,
+switch, keycap, stabilizer và phụ kiện; tạo, lưu cấu hình bàn phím; gửi yêu cầu
+lắp ráp cho Seller; theo dõi trạng thái và trao đổi thông tin qua chức năng chat.
+• Seller: Tiếp nhận và xử lý các yêu cầu lắp ráp được phân công; cập nhật trạng
+thái xử lý; thực hiện quy trình kiểm tra chất lượng bằng dữ liệu mô phỏng; lưu
+kết quả kiểm tra và trao đổi với Buyer.
+• Admin: Quản trị tài khoản và phân quyền người dùng; xét duyệt đơn đăng ký
+Seller; quản lý danh mục linh kiện; theo dõi số liệu tổng hợp, lịch sử thao tác và
+tình trạng hoạt động của hệ thống.
+Hình 2.1.1 Sơ đồ Use Cases Buyer
+18
+Hình 2.1.2 Sơ đồ Use Cases Seller
+Hình 2.1.3 Sơ đồ Use Cases Admin
+2.2. Activity Diagram
+19
+Activity Diagram mô hình hóa các bước xử lý và nhánh quyết định của sáu nhóm hoạt
+động: tài khoản, tạo build/request, Seller xử lý request, Admin quản trị, chat và kiểm tra
+Device/QC.
+Hình 2.2.1 Sơ đồ quản lí tài khoản
+20
+Hình 2.2.2 Sơ đồ tạo build/request
+21
+Hình 2.2.3 Sơ đồ Seller xử lý request
+22
+Hình 2.2.4 Sơ đồ Admin quản trị
+23
+Hình 2.2.5 Sơ đồ Chat
+24
+Hình 2.2.6 Sơ đồ Activity
+2.3. Sequence Diagram
+Sequence Diagram mô tả thứ tự thông điệp giữa người dùng, View/ViewModel, Service,
+Repository, SQL Server và thành phần realtime. Sáu luồng lõi bao phủ tài khoản, build
+request, Seller/QC, quản trị, duyệt đơn Seller và chat.
+Sơ đồ cần tổng hợp trình tự giữa View/ViewModel, Service, Repository, SQL Server
+và thành phần realtime trong sáu luồng lõi.
+25
+Hình 2.3.1: Định tuyến tài khoản và vai trò
+Hình 2.3.2: Người mua tạo build và gửi yêu cầu
+26
+Hình 2.3.3: Quy trình của người bán và tóm tắt QC
+27
+Hình 2.3.4: Quản lý quản trị
+28
+Hình 2.3.5: Phê duyệt đơn đăng ký của người mua thành người bán
+29
+Hình 2.3.6: Trò chuyện giữa những người dùng
+30
+2.4. Entity-Relationship Diagram (ERD)
+ERD gồm 21 bảng nghiệp vụ, 21 khóa chính đều tên id và 33 khóa ngoại.
+Các nhóm bảng được tổng hợp tại Bảng 2.1.
+Bảng 2.1. Nhóm bảng trong cơ sở dữ liệu
+Nhóm Bảng Mục đích
+Tài khoản
+roles, users, seller_profiles,
+seller_applications
+Role, tài khoản, hồ sơ Seller và quy trình
+nâng cấp Buyer thành Seller.
+Catalog
+brands, layouts, keyboard_kits, switches,
+keycap_sets, stabilizers, accessories
+Danh mục kit-based và thông tin tương
+thích cơ bản.
+Build/Request
+builds, build_items, build_mods,
+build_requests
+Cấu hình, giá snapshot, mod note và yêu
+cầu gửi Seller.
+Device/QC
+devices, device_test_sessions,
+device_key_test_results
+Trạm QC, phiên kiểm tra và kết quả từng
+phím.
+Hỗ trợ
+audit_log, chat_conversations,
+chat_messages
+Truy vết và trao đổi theo role.
+2.4.1. Sơ đồ ERD tổng quát
+Sơ đồ cần thể hiện năm vùng dữ liệu: tài khoản, danh mục, build/request, Device/QC và
+audit/chat cùng các quan hệ chính. Vị trí chèn thủ công được đánh dấu tại Hình 2.4.
+Hình 2.4 Sơ đồ ERD tổng quát của hệ thống Custom Keyboard Builder
+31
+2.4.2. Sơ đồ ERD chi tiết
+Sơ đồ cần hiển thị cột, kiểu dữ liệu, khóa chính id, khóa ngoại, UNIQUE, CHECK và
+hai filtered/unique index có ý nghĩa nghiệp vụ. Vị trí chèn thủ công được đánh dấu tại
+Hình 2.5.
+Hình 2.5. Sơ đồ ERD chi tiết gồm 21 bảng và 33 khóa ngoại
+2.5. Kết luận chương
+Chương 2 đã mô hình hóa phạm vi chức năng, luồng nghiệp vụ, thứ tự tương tác và cấu
+trúc dữ liệu thông qua năm sơ đồ. ERD chi tiết là cơ sở trực tiếp để triển khai 21 bảng
+SQL Server; các sơ đồ còn lại định hướng việc hiện thực giao diện và nghiệp vụ được
+trình bày ở Chương 3.
+32
+CHƯƠNG 3. TRIỂN KHAI VÀ KIỂM THỬ
+Chương này trình bày DDL của từng bảng theo ERD, giao diện và mã nguồn tiêu biểu,
+kết quả cùng với đánh giá mức độ hoàn thành của dự án.
+3.1. Triển khai cơ sở dữ liệu SQL Server
+Thứ tự phụ thuộc của các nhóm bảng được tóm tắt tại Bảng 3.1.
+Bảng 3.1. Thứ tự triển khai 21 bảng theo nhóm phụ thuộc
+Thứ tự Nhóm Bảng
+Số
+bảng
+1 Tài khoản roles, users, seller_profiles, seller_applications 4
+2 Catalog
+brands, layouts, keyboard_kits, switches, keycap_sets, stabilizers,
+accessories
+7
+3 Build/Request builds, build_items, build_mods, build_requests 4
+4 Device/QC devices, device_test_sessions, device_key_test_results 3
+5 Audit/Chat audit_log, chat_conversations, chat_messages 3
+3.1.1. Nhóm tài khoản
+Mã SQL 3.1.1.1 - Tạo bảng roles
+CREATE TABLE roles (
+id INT IDENTITY(1,1) PRIMARY KEY,
+role_name VARCHAR(50) NOT NULL UNIQUE,
+permissions VARCHAR(MAX) NULL
+);
+Mã SQL 3.1.1.2 - Tạo bảng users
+CREATE TABLE users (
+id INT IDENTITY(1,1) PRIMARY KEY,
+role_id INT NOT NULL,
+username VARCHAR(100) NOT NULL UNIQUE,
+email VARCHAR(255) NOT NULL UNIQUE,
+phone VARCHAR(30) NOT NULL UNIQUE,
+password_hash VARCHAR(255) NOT NULL,
+is_active BIT NOT NULL DEFAULT 1,
+CONSTRAINT FK_users_roles FOREIGN KEY (role_id) REFERENCES roles(id)
+);
+Mã SQL 3.1.1.3 - Tạo bảng seller_profiles
+CREATE TABLE seller_profiles (
+id INT IDENTITY(1,1) PRIMARY KEY,
+user_id INT NOT NULL UNIQUE,
+shop_name VARCHAR(255) NOT NULL,
+phone VARCHAR(30) NOT NULL,
+address VARCHAR(500) NOT NULL,
+is_verified BIT NOT NULL DEFAULT 0,
+verified_at DATETIME2 NULL,
+CONSTRAINT FK_seller_profiles_user FOREIGN KEY (user_id) REFERENCES users(id)
+);
+Mã SQL 3.1.1.4 - Tạo bảng seller_applications
+33
+CREATE TABLE seller_applications (
+id INT IDENTITY(1,1) PRIMARY KEY,
+buyer_user_id INT NOT NULL,
+shop_name VARCHAR(255) NOT NULL,
+phone VARCHAR(30) NOT NULL,
+address VARCHAR(500) NOT NULL,
+note VARCHAR(500) NULL,
+status VARCHAR(50) NOT NULL DEFAULT 'Pending',
+review_note VARCHAR(500) NULL,
+created_at DATETIME2 NOT NULL DEFAULT SYSUTCDATETIME(),
+reviewed_at DATETIME2 NULL,
+reviewed_by INT NULL,
+CONSTRAINT FK_seller_applications_buyer FOREIGN KEY (buyer_user_id) REFERENCES users(id),
+CONSTRAINT FK_seller_applications_reviewer FOREIGN KEY (reviewed_by) REFERENCES users(id),
+CONSTRAINT CK_seller_applications_status CHECK (status IN ('Pending', 'Approved', 'Rejected'))
+);
+3.1.2. Nhóm danh mục linh kiện (Catalog)
+Mã SQL 3.1.2.1 - Tạo bảng brands
+CREATE TABLE brands (
+id INT IDENTITY(1,1) PRIMARY KEY,
+brand_name VARCHAR(255) NOT NULL UNIQUE,
+country VARCHAR(100) NULL
+);
+Mã SQL 3.1.2.2 - Tạo bảng layouts
+CREATE TABLE layouts (
+id VARCHAR(50) PRIMARY KEY,
+layout_name VARCHAR(100) NOT NULL,
+form_factor VARCHAR(100) NOT NULL,
+key_count INT NOT NULL
+);
+Mã SQL 3.1.2.3 - Tạo bảng keyboard_kits
+CREATE TABLE keyboard_kits (
+id VARCHAR(50) PRIMARY KEY,
+brand_id INT NOT NULL,
+layout_id VARCHAR(50) NOT NULL,
+kit_name VARCHAR(255) NOT NULL,
+pcb_technology VARCHAR(50) NOT NULL,
+switch_mount VARCHAR(100) NOT NULL,
+required_switch_quantity INT NOT NULL,
+included_parts VARCHAR(500) NULL,
+price_usd DECIMAL(10,2) NOT NULL,
+is_available BIT NOT NULL DEFAULT 1,
+CONSTRAINT FK_keyboard_kits_brands FOREIGN KEY (brand_id) REFERENCES brands(id),
+CONSTRAINT FK_keyboard_kits_layouts FOREIGN KEY (layout_id) REFERENCES layouts(id),
+CONSTRAINT CK_keyboard_kits_price CHECK (price_usd >= 0),
+CONSTRAINT CK_keyboard_kits_switch_qty CHECK (required_switch_quantity > 0)
+);
+34
+Mã SQL 3.1.2.4 - Tạo bảng switches
+CREATE TABLE switches (
+id VARCHAR(50) PRIMARY KEY,
+brand_id INT NOT NULL,
+switch_name VARCHAR(255) NOT NULL,
+switch_technology VARCHAR(50) NOT NULL,
+mount_type VARCHAR(100) NOT NULL,
+switch_type VARCHAR(100) NULL,
+actuation_force_g INT NULL,
+price_usd DECIMAL(10,2) NOT NULL,
+is_available BIT NOT NULL DEFAULT 1,
+CONSTRAINT FK_switches_brands FOREIGN KEY (brand_id) REFERENCES brands(id),
+CONSTRAINT CK_switches_price CHECK (price_usd >= 0)
+);
+Mã SQL 3.1.2.5 - Tạo bảng keycap_sets
+CREATE TABLE keycap_sets (
+id VARCHAR(50) PRIMARY KEY,
+brand_id INT NOT NULL,
+keycap_name VARCHAR(255) NOT NULL,
+supported_form_factor VARCHAR(255) NOT NULL,
+profile VARCHAR(100) NULL,
+material VARCHAR(100) NULL,
+price_usd DECIMAL(10,2) NOT NULL,
+is_available BIT NOT NULL DEFAULT 1,
+CONSTRAINT FK_keycap_sets_brands FOREIGN KEY (brand_id) REFERENCES brands(id),
+CONSTRAINT CK_keycap_sets_price CHECK (price_usd >= 0)
+);
+Mã SQL 3.1.1.2.6 - Tạo bảng stabilizers
+CREATE TABLE stabilizers (
+id VARCHAR(50) PRIMARY KEY,
+brand_id INT NOT NULL,
+stab_name VARCHAR(255) NOT NULL,
+supported_layouts VARCHAR(255) NOT NULL,
+price_usd DECIMAL(10,2) NOT NULL,
+is_available BIT NOT NULL DEFAULT 1,
+CONSTRAINT FK_stabilizers_brands FOREIGN KEY (brand_id) REFERENCES brands(id),
+CONSTRAINT CK_stabilizers_price CHECK (price_usd >= 0)
+);
+Mã SQL 3.1.2.7 - Tạo bảng accessories
+CREATE TABLE accessories (
+id VARCHAR(50) PRIMARY KEY,
+accessory_type VARCHAR(100) NOT NULL,
+accessory_name VARCHAR(255) NOT NULL,
+target_component VARCHAR(100) NULL,
+price_usd DECIMAL(10,2) NOT NULL,
+is_available BIT NOT NULL DEFAULT 1,
+CONSTRAINT CK_accessories_price CHECK (price_usd >= 0)
+);
+35
+3.1.3. Nhóm build và request
+Mã SQL 3.1.3.1 - Tạo bảng builds
+CREATE TABLE builds (
+id VARCHAR(50) PRIMARY KEY,
+buyer_id INT NOT NULL,
+kit_id VARCHAR(50) NOT NULL,
+name NVARCHAR(255) NOT NULL,
+notes NVARCHAR(500) NULL,
+noise_requirement VARCHAR(20) NOT NULL DEFAULT 'Normal',
+status VARCHAR(50) NOT NULL,
+total_cost_snapshot DECIMAL(10,2) NOT NULL,
+created_at DATETIME2 NOT NULL DEFAULT SYSUTCDATETIME(),
+updated_at DATETIME2 NULL,
+CONSTRAINT FK_builds_buyer FOREIGN KEY (buyer_id) REFERENCES users(id),
+CONSTRAINT FK_builds_kit FOREIGN KEY (kit_id) REFERENCES keyboard_kits(id),
+CONSTRAINT CK_builds_noise_requirement CHECK (noise_requirement IN ('Normal','Quiet','Silent')),
+CONSTRAINT CK_builds_status CHECK (status IN ('Draft', 'Saved', 'Requested', 'Archived')),
+CONSTRAINT CK_builds_total CHECK (total_cost_snapshot >= 0),
+CONSTRAINT CK_builds_name_not_blank CHECK (LEN(LTRIM(RTRIM(name))) > 0)
+);
+Mã SQL 3.1.3.2 - Tạo bảng build_items
+CREATE TABLE build_items (
+id INT IDENTITY(1,1) PRIMARY KEY,
+build_id VARCHAR(50) NOT NULL,
+switch_id VARCHAR(50) NULL,
+keycap_id VARCHAR(50) NULL,
+stab_id VARCHAR(50) NULL,
+accessory_id VARCHAR(50) NULL,
+quantity INT NOT NULL,
+unit_price_snapshot DECIMAL(10,2) NOT NULL,
+notes NVARCHAR(500) NULL,
+CONSTRAINT FK_build_items_build FOREIGN KEY (build_id) REFERENCES builds(id),
+CONSTRAINT FK_build_items_switch FOREIGN KEY (switch_id) REFERENCES switches(id),
+CONSTRAINT FK_build_items_keycap FOREIGN KEY (keycap_id) REFERENCES keycap_sets(id),
+CONSTRAINT FK_build_items_stab FOREIGN KEY (stab_id) REFERENCES stabilizers(id),
+CONSTRAINT FK_build_items_accessory FOREIGN KEY (accessory_id) REFERENCES accessories(id),
+CONSTRAINT CK_build_items_quantity CHECK (quantity > 0),
+CONSTRAINT CK_build_items_unit_price CHECK (unit_price_snapshot >= 0),
+CONSTRAINT CK_build_items_exactly_one_fk CHECK (
+(CASE WHEN switch_id IS NULL THEN 0 ELSE 1 END) +
+(CASE WHEN keycap_id IS NULL THEN 0 ELSE 1 END) +
+(CASE WHEN stab_id IS NULL THEN 0 ELSE 1 END) +
+(CASE WHEN accessory_id IS NULL THEN 0 ELSE 1 END) = 1
+)
+);
+Mã SQL 3.1.3.3 - Tạo bảng build_mods
+CREATE TABLE build_mods (
+id INT IDENTITY(1,1) PRIMARY KEY,
+build_id VARCHAR(50) NOT NULL,
+mod_type NVARCHAR(100) NOT NULL,
+target_component NVARCHAR(100) NOT NULL,
+notes NVARCHAR(500) NULL,
+CONSTRAINT FK_build_mods_build FOREIGN KEY (build_id) REFERENCES builds(id)
+);
+36
+Mã SQL 3.1.3.4 - Tạo bảng build_requests
+CREATE TABLE build_requests (
+id VARCHAR(50) PRIMARY KEY,
+build_id VARCHAR(50) NOT NULL,
+seller_user_id INT NOT NULL,
+request_payload_json NVARCHAR(MAX) NOT NULL,
+status VARCHAR(50) NOT NULL,
+note NVARCHAR(500) NULL,
+requested_at DATETIME2 NOT NULL DEFAULT SYSUTCDATETIME(),
+accepted_at DATETIME2 NULL,
+completed_at DATETIME2 NULL,
+updated_at DATETIME2 NULL,
+CONSTRAINT FK_build_requests_build FOREIGN KEY (build_id) REFERENCES builds(id),
+CONSTRAINT FK_build_requests_seller FOREIGN KEY (seller_user_id) REFERENCES users(id),
+CONSTRAINT CK_build_requests_status CHECK (status IN ('Pending', 'Accepted', 'In_progress', 'Completed',
+'Cancelled'))
+);
+3.1.4. Nhóm thiết bị và kiểm tra QC (Device/QC)
+Mã SQL 3.1.4.1 - Tạo bảng devices
+CREATE TABLE devices (
+id VARCHAR(50) PRIMARY KEY,
+seller_user_id INT NOT NULL,
+device_name NVARCHAR(100) NOT NULL,
+device_type VARCHAR(50) NOT NULL,
+is_active BIT NOT NULL DEFAULT 1,
+last_seen_at DATETIME2 NULL,
+created_at DATETIME2 NOT NULL DEFAULT SYSUTCDATETIME(),
+CONSTRAINT FK_devices_seller FOREIGN KEY (seller_user_id) REFERENCES users(id),
+CONSTRAINT CK_devices_type CHECK (device_type IN
+('QC_STATION','KEY_SIGNAL_TESTER','LATENCY_TESTER','NOISE_SENSOR')),
+CONSTRAINT CK_devices_name_not_blank CHECK (LEN(LTRIM(RTRIM(device_name))) > 0)
+);
+Mã SQL 3.1.4.2 - Tạo bảng device_test_sessions
+CREATE TABLE device_test_sessions (
+id VARCHAR(50) PRIMARY KEY,
+request_id VARCHAR(50) NOT NULL,
+device_id VARCHAR(50) NOT NULL,
+switch_technology VARCHAR(50) NOT NULL,
+noise_requirement VARCHAR(20) NOT NULL DEFAULT 'Normal',
+total_keys INT NOT NULL,
+status VARCHAR(20) NOT NULL,
+completed_at DATETIME2 NULL,
+CONSTRAINT FK_dts_request FOREIGN KEY (request_id) REFERENCES build_requests(id),
+CONSTRAINT FK_dts_device FOREIGN KEY (device_id) REFERENCES devices(id),
+CONSTRAINT CK_dts_noise_requirement CHECK (noise_requirement IN ('Normal','Quiet','Silent')),
+CONSTRAINT CK_dts_status CHECK (status IN ('Running','Passed','Warning','Failed')),
+CONSTRAINT CK_dts_completed_at CHECK (
+(status = 'Running' AND completed_at IS NULL)
+OR (status IN ('Passed','Warning','Failed') AND completed_at IS NOT NULL)
+),
+CONSTRAINT CK_dts_total_keys CHECK (total_keys BETWEEN 1 AND 256),
+CONSTRAINT CK_dts_switch_technology_not_blank CHECK (LEN(LTRIM(RTRIM(switch_technology))) > 0)
+);
+37
+Mã SQL 3.1.4.3 - Tạo bảng device_key_test_results
+CREATE TABLE device_key_test_results (
+id BIGINT IDENTITY(1,1) PRIMARY KEY,
+session_id VARCHAR(50) NOT NULL,
+key_code VARCHAR(30) NOT NULL,
+received_key VARCHAR(30) NULL,
+press_signal_detected BIT NOT NULL,
+latency DECIMAL(8,2) NULL,
+press_count INT NOT NULL,
+release_signal BIT NOT NULL,
+hold_duration INT NULL,
+noise DECIMAL(8,2) NULL,
+result VARCHAR(20) NOT NULL,
+recorded_at DATETIME2 NOT NULL DEFAULT SYSUTCDATETIME(),
+CONSTRAINT FK_dktr_session FOREIGN KEY (session_id) REFERENCES device_test_sessions(id),
+CONSTRAINT CK_dktr_result CHECK (result IN ('Pass','Warning','Fail')),
+CONSTRAINT CK_dktr_press_count CHECK (press_count BETWEEN 0 AND 100),
+CONSTRAINT CK_dktr_latency CHECK (latency IS NULL OR latency BETWEEN 0 AND 10000),
+CONSTRAINT CK_dktr_hold_duration CHECK (hold_duration IS NULL OR hold_duration BETWEEN 0 AND 3600000),
+CONSTRAINT CK_dktr_noise CHECK (noise IS NULL OR noise BETWEEN 0 AND 200),
+CONSTRAINT CK_dktr_key_code_not_blank CHECK (LEN(LTRIM(RTRIM(key_code))) > 0)
+);
+3.1.5. Nhóm audit và chat (Audit/Chat)
+Mã SQL 3.1.5.1 - Tạo bảng audit_log
+CREATE TABLE audit_log (
+id INT IDENTITY(1,1) PRIMARY KEY,
+user_id INT NOT NULL,
+table_name VARCHAR(100) NOT NULL,
+record_id VARCHAR(100) NOT NULL,
+action VARCHAR(100) NOT NULL,
+old_value_json NVARCHAR(MAX) NULL,
+new_value_json NVARCHAR(MAX) NULL,
+changed_at DATETIME2 NOT NULL DEFAULT SYSUTCDATETIME(),
+CONSTRAINT FK_audit_log_user FOREIGN KEY (user_id) REFERENCES users(id)
+);
+Mã SQL 3.1.5.2 - Tạo bảng chat_conversations
+CREATE TABLE chat_conversations (
+id VARCHAR(50) PRIMARY KEY,
+seller_user_id INT NOT NULL,
+buyer_id INT NULL,
+admin_user_id INT NULL,
+build_request_id VARCHAR(50) NULL,
+created_at DATETIME2 NOT NULL DEFAULT SYSUTCDATETIME(),
+updated_at DATETIME2 NULL,
+CONSTRAINT FK_chat_conversations_seller FOREIGN KEY (seller_user_id) REFERENCES users(id),
+CONSTRAINT FK_chat_conversations_buyer FOREIGN KEY (buyer_id) REFERENCES users(id),
+CONSTRAINT FK_chat_conversations_admin FOREIGN KEY (admin_user_id) REFERENCES users(id),
+CONSTRAINT FK_chat_conversations_request FOREIGN KEY (build_request_id) REFERENCES build_requests(id),
+CONSTRAINT CK_chat_conversations_participant CHECK (
+(CASE WHEN buyer_id IS NULL THEN 0 ELSE 1 END) +
+(CASE WHEN admin_user_id IS NULL THEN 0 ELSE 1 END) = 1
+)
+);
+Mã SQL 3.1.5.3 - Tạo bảng chat_messages
+CREATE TABLE chat_messages (
+id VARCHAR(50) PRIMARY KEY,
+conversation_id VARCHAR(50) NOT NULL,
+sender_user_id INT NOT NULL, message_text
+NVARCHAR(MAX) NOT NULL,
+sent_at DATETIME2 NOT NULL DEFAULT SYSUTCDATETIME(),
+CONSTRAINT FK_chat_messages_conversation FOREIGN KEY (conversation_id) REFERENCES chat_conversations(id), CONSTRAINT
+FK_chat_messages_sender FOREIGN KEY (sender_user_id) REFERENCES users(id)
+);
+38
+3.1.6. Tạo View
+Mã SQL 3.1.6.1 - Tạo view Last_QC
+CREATE VIEW views.Last_QC
+AS
+WITH latest_session AS (
+SELECT
+session_row.*,
+ROW_NUMBER() OVER (
+PARTITION BY session_row.request_id
+ORDER BY
+CASE WHEN session_row.status = 'Running' THEN 0 ELSE 1 END,
+session_row.completed_at DESC,
+session_row.id DESC
+) AS latest_rank
+FROM dbo.device_test_sessions AS session_row
+)
+SELECT
+session_row.id AS session_id,
+session_row.request_id,
+session_row.device_id,
+session_row.switch_technology,
+session_row.noise_requirement,
+session_row.total_keys,
+session_row.status,
+session_row.completed_at,
+result_summary.tested_keys,
+result_summary.passed_keys,
+result_summary.warning_keys,
+result_summary.failed_keys,
+result_summary.average_latency_ms,
+result_summary.max_latency_ms,
+result_summary.average_noise_db,
+result_summary.max_noise_db,
+result_summary.last_recorded_at,
+CAST(
+CASE
+WHEN session_row.status <> 'Running'
+AND result_summary.tested_keys = session_row.total_keys
+THEN 1
+ELSE 0
+END
+AS bit
+) AS is_complete,
+CAST(
+CASE
+WHEN session_row.status IN ('Passed', 'Warning')
+AND result_summary.tested_keys = session_row.total_keys
+AND result_summary.failed_keys = 0
+AND (
+(session_row.status = 'Passed' AND result_summary.warning_keys = 0)
+OR (session_row.status = 'Warning' AND result_summary.warning_keys > 0)
+)
+THEN 1
+ELSE 0
+END
+AS bit
+) AS is_acceptable
+FROM latest_session AS session_row
+OUTER APPLY (
+SELECT
+COUNT(result_row.id) AS tested_keys,
+COALESCE(SUM(CASE WHEN result_row.result = 'Pass' THEN 1 ELSE 0 END), 0) AS passed_keys,
+COALESCE(SUM(CASE WHEN result_row.result = 'Warning' THEN 1 ELSE 0 END), 0) AS warning_keys,
+COALESCE(SUM(CASE WHEN result_row.result = 'Fail' THEN 1 ELSE 0 END), 0) AS failed_keys,
+CAST(AVG(CAST(result_row.latency AS decimal(18,4))) AS decimal(8,2)) AS average_latency_ms,
+MAX(result_row.latency) AS max_latency_ms,
+CAST(AVG(CAST(result_row.noise AS decimal(18,4))) AS decimal(8,2)) AS average_noise_db,
+MAX(result_row.noise) AS max_noise_db,
+MAX(result_row.recorded_at) AS last_recorded_at
+FROM dbo.device_key_test_results AS result_row
+WHERE result_row.session_id = session_row.id
+) AS result_summary
+WHERE session_row.latest_rank = 1;
+GO
+39
+Mã SQL 3.1.6.2 - Tạo view Catalog_Comps
+CREATE VIEW views.Catalog_Comps
+AS
+SELECT
+CAST('Kit' AS varchar(20)) AS component_type,
+kit_row.id AS component_id,
+kit_row.kit_name AS name,
+kit_row.brand_id,
+brand_row.brand_name,
+kit_row.price_usd,
+kit_row.is_available
+FROM dbo.keyboard_kits AS kit_row
+INNER JOIN dbo.brands AS brand_row ON brand_row.id = kit_row.brand_id
+UNION ALL
+SELECT
+'Switch',
+switch_row.id,
+switch_row.switch_name,
+switch_row.brand_id,
+brand_row.brand_name,
+switch_row.price_usd,
+switch_row.is_available
+FROM dbo.switches AS switch_row
+INNER JOIN dbo.brands AS brand_row ON brand_row.id = switch_row.brand_id
+UNION ALL
+SELECT
+'KeycapSet',
+keycap_row.id,
+keycap_row.keycap_name,
+keycap_row.brand_id,
+brand_row.brand_name,
+keycap_row.price_usd,
+keycap_row.is_available
+FROM dbo.keycap_sets AS keycap_row
+INNER JOIN dbo.brands AS brand_row ON brand_row.id = keycap_row.brand_id
+UNION ALL
+SELECT
+'Stabilizer',
+stabilizer_row.id,
+stabilizer_row.stab_name,
+stabilizer_row.brand_id,
+brand_row.brand_name,
+stabilizer_row.price_usd,
+stabilizer_row.is_available
+FROM dbo.stabilizers AS stabilizer_row
+INNER JOIN dbo.brands AS brand_row ON brand_row.id = stabilizer_row.brand_id
+UNION ALL
+SELECT
+'Accessory',
+accessory_row.id,
+accessory_row.accessory_name,
+CAST(0 AS int),
+CAST('' AS varchar(255)),
+accessory_row.price_usd,
+accessory_row.is_available
+FROM dbo.accessories AS accessory_row;
+GO
+Mã SQL 3.1.6.3 - Tạo view Build_items
+CREATE VIEW views.Build_items
+AS
+SELECT
+item_row.id AS build_item_id,
+item_row.build_id,
+item_row.switch_id,
+item_row.keycap_id,
+item_row.stab_id,
+item_row.accessory_id,
+catalog_row.component_type,
+catalog_row.component_id,
+catalog_row.name AS component_name,
+40
+catalog_row.brand_id,
+catalog_row.brand_name,
+item_row.quantity,
+item_row.unit_price_snapshot,
+CAST(
+CAST(item_row.quantity AS decimal(18,0))
+* CAST(item_row.unit_price_snapshot AS decimal(18,2))
+AS decimal(28,2)
+) AS line_total_snapshot,
+catalog_row.price_usd AS current_price_usd,
+catalog_row.is_available,
+item_row.notes
+FROM dbo.build_items AS item_row
+INNER JOIN views.Catalog_Comps AS catalog_row
+ON catalog_row.component_type =
+CASE
+WHEN item_row.switch_id IS NOT NULL THEN 'Switch'
+WHEN item_row.keycap_id IS NOT NULL THEN 'KeycapSet'
+WHEN item_row.stab_id IS NOT NULL THEN 'Stabilizer'
+ELSE 'Accessory'
+END
+AND catalog_row.component_id =
+COALESCE(item_row.switch_id, item_row.keycap_id, item_row.stab_id, item_row.accessory_id);
+GO
+Mã SQL 3.1.6.4 - Tạo view Req_view
+CREATE VIEW views.Req_view
+AS
+SELECT
+request_row.id AS request_id,
+request_row.build_id,
+request_row.seller_user_id,
+COALESCE(
+NULLIF(LTRIM(RTRIM(seller_profile.shop_name)), ''),
+seller_user.username,
+CONVERT(varchar(20), request_row.seller_user_id)
+) AS seller_shop_name,
+request_row.request_payload_json,
+request_row.status,
+request_row.note,
+request_row.requested_at,
+request_row.accepted_at,
+request_row.completed_at,
+request_row.updated_at,
+build_row.buyer_id,
+build_row.total_cost_snapshot,
+build_row.kit_id,
+kit_row.kit_name
+FROM dbo.build_requests AS request_row
+INNER JOIN dbo.builds AS build_row ON build_row.id = request_row.build_id
+INNER JOIN dbo.keyboard_kits AS kit_row ON kit_row.id = build_row.kit_id
+LEFT JOIN dbo.users AS seller_user ON seller_user.id = request_row.seller_user_id
+LEFT JOIN dbo.seller_profiles AS seller_profile ON seller_profile.user_id = request_row.seller_user_id;
+GO
+3.2. Triển khai giao diện tiêu biểu
+Mối liên hệ giữa giao diện và mã nguồn được tổng hợp tại Bảng 3.2.
+Bảng 3.2. Đối chiếu giao diện với mã nguồn
+Giao diện View ViewModel/Service Nội dung minh họa
+Đăng nhập Views/LoginView.xaml
+LoginViewModel;
+AccountService
+Nhập thông tin, xác thực,
+báo lỗi và điều hướng theo
+role.
+Đăng ký Views/RegisterView.xaml
+RegisterViewModel;
+AccountService
+Đăng ký Buyer và kiểm tra
+dữ liệu đầu vào.
+Buyer
+Dashboard
+Views/
+BuyerDashboard
+View.xaml
+BuyerDashboardViewModel;
+BuildService; RequestService
+Cấu hình build, tính giá,
+validation và gửi request.
+41
+Seller
+Dashboard
+Views/
+SellerDashboard
+View.xaml
+SellerDashboardViewModel;
+RequestService;
+DeviceService
+Xử lý request, trạng thái và
+QC mô phỏng.
+Admin
+Dashboard
+Views/
+AdminDashboard
+View.xaml
+AdminDashboardViewModel;
+AdminService; StatsService
+KPI, user, Seller, catalog,
+application và audit.
+Chat Views/ChatView.xaml ChatViewModel; ChatService
+Hội thoại Buyer-Seller và
+Admin-Seller có kiểm tra
+quyền.
+User Menu
+Views/
+UserMenuView.xaml
+MainShellViewModel
+Hồ sơ, ngôn ngữ và đăng
+xuất.
+Dưới đây là hình ảnh giao diện UX/UI chi tiết của hệ thống, thể hiện trực quan các luồng thao tác và
+chức năng chính của người dùng.
+42
+Hình 3.1. Giao diện đăng nhập của ứng dụng
+Hình 3.2. Giao diện đăng ký tài khoản Buyer
+43
+Hình 3.3. Giao diện danh sách Build và trạng thái request
+Hình 3.4. Giao diện Buyer Dashboard và khu vực cấu hình build
+44
+Hình 3.5. Giao diện danh sách Request đã gửi và theo dõi trạng thái
+Hình 3.6. Giao diện màn hình Buyer chat với Seller
+45
+Hình 3.7. Giao diện đăng ký trở thành Seller
+Hình 3.8. Giao diện Seller Dashboard và xử lý yêu cầu lắp ráp
+46
+Hình 3.9. Giao diện kiểm tra QC bàn phím
+Hình 3.10. Giao diện phân tích doanh thu và số đơn của Seller
+47
+Hình 3.11. Giao diện Admin Dashboard và quản trị hệ thống
+Hình 3.12. Giao diện quản lý người dùng của Admin
+48
+Hình 3.13. Giao diện quản lý Seller của Admin
+Hình 3.14. Giao diện xử lý đơn xin làm Seller của Admin
+49
+Hình 3.15. Giao diện quản lý Brand bàn phím
+Hình 3.16. Giao diện quản lý linh kiện cho từng build
+50
+Hình 3.17. Giao diện quản lý Audit log người dùng
+Hình 3.18. Giao diện Admin chat với Seller
+51
+3.4. Đánh giá mức độ hoàn thành
+Mức độ hoàn thành theo từng mục tiêu được tổng hợp tại Bảng 3.4.
+Bảng 3.4. Đánh giá mức độ hoàn thành theo mục tiêu
+Mục tiêu Trạng thái Đánh giá
+Phân tích thiết kế Đạt
+Có ERD, Use Case, Sequence diagram, Activity
+diagram và mapping artifact.
+Giao diện và nghiệp vụ ba vai
+trò
+Đạt
+View/ViewModel/Service/Repository cho Buyer,
+Seller, Admin đã được triển khai.
+Vận hành hệ thống với cơ sở dữ
+liệu thực (Production)
+Chưa đạt
+Hệ thống chưa sẵn sàng chạy trên môi trường thực
+tế. Cần phải thực hiện chuỗi quy trình an toàn bao
+gồm: sao lưu (backup), diễn tập phục hồi (restore
+rehearsal), chuyển đổi dữ liệu (migration) và kiểm
+thử diện rộng (smoke test).
+QC phần cứng Chưa triển khai
+Hiện tại mới chỉ sử dụng công cụ mô phỏng
+(DeviceSimulator) để giả lập dữ liệu. Chưa thực
+hiện kết nối và lấy dữ liệu từ các thiết bị phần cứng
+thật.
+Chat realtime SignalR Chưa triển khai
+Hệ thống mới dừng ở việc lưu trữ tin nhắn xuống
+Database. Chưa tích hợp công nghệ SignalR để
+đồng bộ luồng tin nhắn trực tuyến (real-time) giữa
+các người dùng.
+52
+3.5. Nhược điểm và hạn chế
+Mặc dù đã đáp ứng được các chức năng chính về cấu hình bàn phím, gửi yêu cầu lắp
+ráp, quản lý người dùng và kiểm tra chất lượng, phiên bản hiện tại vẫn tồn tại một số
+nhược điểm ảnh hưởng trực tiếp đến phạm vi sử dụng, trải nghiệm người dùng và khả
+năng triển khai thực tế.
+• Giới hạn sử dụng trên destop Window: ứng dụng được xây dựng bằng WPF nên
+phải cài đặt và chạy trực tiếp trên hệ điều hành Windows. Hệ thống chưa thể sử
+dụng bằng trình duyệt, điện thoại hoặc máy tính dùng hệ điều hành khác, làm hạn
+chế khả năng tiếp cận của người dùng.
+• Khả năng truy cập qua mạng còn hạn chế: ứng dụng hiện kết nối trực tiếp tới
+SQL Server và chưa có lớp Web API trung gian. Việc sử dụng từ nhiều địa điểm
+phụ thuộc vào cấu hình mạng, chuỗi kết nối và quyền truy cập cơ sở dữ liệu. Kiến
+trúc này chưa phù hợp để công khai hệ thống trên Internet hoặc phục vụ số lượng
+lớn người dùng đồng thời.
+• Chức năng nhắn tin chưa hoàn thiện: tin nhắn được lưu trong SQL Server nhưng
+SignalR hoặc WebSocket chưa được triển khai, dẫn đến việc khi nhắn tin, nội
+dung có thể không tải ngay lập tức khi có dữ liệu tải lên database. Hơn nữa, các
+tính năng nên có trong một đoạn hội thoại trực tiếp như “đã xem”, “đang online”,
+“đang nhắn”, “thông báo” vẫn chưa có.
+• Kiểm tra chất lượng mới ở mức mô phỏng: DeviceSimulator tạo dữ liệu giả lập
+về phím, độ trễ và độ ồn để kiểm tra luồng nghiệp vụ.
+• Quy trình đặt hàng chưa hoàn chỉnh: hệ thống mới tập trung vào cấu hình build
+và gửi yêu cầu lắp ráp cho Seller. Các chức năng thường có trong một nền tảng
+thương mại điện tử như giỏ hàng, quản lý tồn kho, thanh toán trực tuyến, vận
+chuyển, theo dõi đơn hàng, hóa đơn và đánh giá sau mua chưa được triển khai.
+3.6. Hướng phát triển
+Trong giai đoạn tiếp theo, hệ thống có thể được phát triển theo hướng hoạt động trực
+tuyến, hỗ trợ trao đổi tức thời và hoàn thiện toàn bộ quy trình từ cấu hình bàn phím đến
+thanh toán, lắp ráp, kiểm tra và giao hàng.
+• Phát triển chat trực tiếp theo thời gian thực: SignalR hoặc WebSocket có thể
+được sử dụng để Buyer, Seller và Admin nhận tin nhắn ngay lập tức mà không cần
+tải lại giao diện. Chức năng chat nên bổ sung trạng thái online, đang nhập, đã
+nhận, đã đọc, thông báo tin nhắn mới, gửi hình ảnh hoặc tệp và lưu đầy đủ lịch sử
+hội thoại.
+53
+• Xây dựng phiên bản web hoạt động qua Internet: các nghiệp vụ hiện có có thể
+được cung cấp thông qua ASP.NET Core Web API và một giao diện web. Người
+dùng chỉ cần truy cập tên miền bằng trình duyệt để đăng nhập, cấu hình bàn phím,
+xử lý request hoặc quản trị hệ thống mà không phải cài đặt ứng dụng WPF trên
+từng máy.
+• Hỗ trợ thiết bị di động: giao diện web có thể được tối ưu cho điện thoại và máy
+tính bảng hoặc phát triển app điện thoại có thể tải về máy. Buyer có thể theo dõi
+trạng thái lắp ráp, nhận thông báo và trao đổi với Seller ở bất kỳ đâu; Seller cũng
+có thể cập nhật tiến độ trực tiếp tại khu vực lắp ráp hoặc kiểm tra QC.
+• Hoàn thiện quy trình mua bán trực tuyến: hệ thống có thể bổ sung giỏ hàng, tồn
+kho, báo giá, mã giảm giá, thanh toán trực tuyến, lựa chọn đơn vị vận chuyển, theo
+dõi hành trình đơn hàng, xuất hóa đơn và đánh giá Seller,... Khi đó, request lắp ráp
+sẽ trở thành một phần của quy trình đơn hàng hoàn chỉnh.
+• Kết nối trạm QC và thiết bị IoT: ESP32, bộ kiểm tra ma trận bàn phím và cảm
+biến đo độ trễ hoặc độ ồn có thể được kết nối với hệ thống thông qua MQTT. Kết
+quả đo thực tế được gửi về máy chủ, lưu trong SQL Server và hiển thị trực tiếp
+trên dashboard để Buyer, Seller và Admin theo dõi.
+• Triển khai hệ thống trên hạ tầng trực tuyến: Web API, cơ sở dữ liệu và MQTT
+broker có thể được triển khai trên máy chủ hoặc nền tảng điện toán đám mây với
+HTTPS, sao lưu định kỳ, quản lý bí mật, ghi log tập trung, health check và cảnh
+báo. Quy trình CI/CD giúp tự động build, kiểm thử và cập nhật phiên bản mới an
+toàn hơn.
+• Bổ sung gợi ý cấu hình thông minh: dựa trên ngân sách, layout, công nghệ
+switch, nhu cầu gõ và mức độ tiếng ồn mong muốn, hệ thống có thể đề xuất
+keyboard kit và linh kiện tương thích. Dữ liệu lịch sử cũng có thể được sử dụng để
+phân tích xu hướng, dự đoán nhu cầu và hỗ trợ Seller chuẩn bị linh kiện.
+Các hướng phát triển trên giúp khắc phục giới hạn của phiên bản desktop hiện tại, đồng
+thời chuyển hệ thống thành một nền tảng trực tuyến có khả năng phục vụ nhiều người
+dùng, hỗ trợ giao tiếp tức thời và kết nối với thiết bị kiểm tra phần cứng.
+54
+KẾT LUẬN
+Sau một thời gian nghiên cứu cùng với kinh nghiệm cá nhân về dự án, nhóm đã thực
+hiện đề tài “Custom Keyboard Build” và hoàn thành được các mục tiêu cơ bản đề ra,
+thành thạo kiến thức bộ môn Kỹ thuật phần mềm ứng dụng, bao gồm: Quy trình lên kế
+hoạch, phân tích, thiết kế hệ thống, kỹ năng thiết kế. quản lý cơ sở dữ liệu SQL thông
+qua SSMS, kỹ năng lập trình, sử dụng và vận dụng WPF với ngôn ngữ C#.
+1. Mức độ hoàn thành nhiệm vụ
+Các nhiệm vụ phân tích và thiết kế đã được hoàn thành thông qua việc xác định ba tác
+nhân Buyer, Seller và Admin; xây dựng yêu cầu chức năng, yêu cầu phi chức năng và năm
+sơ đồ gồm Use Case, Activity, Sequence, ERD tổng quát và ERD chi tiết. Cơ sở dữ liệu
+SQL Server được thiết kế theo 21 bảng nghiệp vụ, thể hiện các nhóm dữ liệu.
+Ở mức triển khai, ứng dụng desktop WPF trên nền tảng .NET 10 đã được tổ chức theo
+MVVM kết hợp Service, Repository và Data/Realtime. Các chức năng cốt lõi đã có
+thành phần hiện thực tương ứng, bao gồm đăng ký và đăng nhập, phân quyền theo vai
+trò, lựa chọn linh kiện, lưu cấu hình, gửi và xử lý yêu cầu lắp ráp, quản lý Seller, chat
+lưu trong cơ sở dữ liệu, thống kê dashboard, ghi lịch sử thao tác và kiểm tra chất lượng
+bằng DeviceSimulator.
+Từ các kết quả trên, nhiệm vụ có thể được đánh giá là đã hoàn thành ở mức xây dựng
+mô hình, mã nguồn và minh họa được các luồng nghiệp vụ chính. Tuy nhiên, hệ thống
+chưa đạt mức sản phẩm vận hành hoàn chỉnh do cơ sở dữ liệu chưa hoàn thiện dựa trên
+thị trường, một số chức năng cần được nâng cấp nhằm ổn định quá trình sử dụng, triển
+khai app.
+2. Mức độ phù hợp với mục đích đề tài
+Kết quả đạt được phù hợp với mục đích số hóa quy trình cấu hình và đặt lắp ráp bàn
+phím tùy chỉnh. Có khả năng kiểm tra tính tương thích cấu hình, hiển thị giá snapshot
+pricing; người bán có thể quản lý các đơn hàng, kiểm tra chéo sản phẩm với QC; quản
+trị viên có thể quản trị hệ thống, quản trị người dùng ở mức độ cơ bản.
+Việc lưu trữ dữ liệu trên SQL Server giúp Buyer theo dõi cấu hình và trạng thái
+request, Seller quản lý quá trình tiếp nhận, lắp ráp và QC, còn Admin có thể quản trị
+người dùng, danh mục và lịch sử hoạt động. Vì vậy, hệ thống đã giải quyết được phần
+chính của bài toán đặt ra và tạo nền tảng để tiếp tục phát triển thành một dịch vụ trực
+tuyến hoàn chỉnh.
+55
+3. Những hạn chế chính
+Phiên bản hiện tại chỉ hoạt động dưới dạng ứng dụng WPF trên Windows, phải cài đặt
+trên từng máy và chưa thể truy cập thuận tiện bằng trình duyệt hoặc thiết bị di động.
+Ứng dụng kết nối trực tiếp tới SQL Server, chưa có Web API trung gian nên khả năng
+triển khai qua Internet, phục vụ nhiều người dùng đồng thời và mở rộng trên hạ tầng
+đám mây còn hạn chế.
+Chức năng chat mới lưu tin nhắn trong cơ sở dữ liệu, chưa hỗ trợ trao đổi tức thời
+bằng SignalR hoặc WebSocket. Ngoài ra, các chức năng giỏ hàng, tồn kho, thanh toán,
+vận chuyển, theo dõi đơn hàng, giám sát hệ thống và kiểm thử tự động đầy đủ vẫn
+chưa được hoàn thiện.
+4. Hướng phát triển
+Trong tương lai, chức năng chat có thể được phát triển theo thời gian thực để hỗ trợ
+trạng thái online, đang nhập, đã nhận, đã đọc, gửi hình ảnh hoặc tệp và thông báo tin
+nhắn mới. Phiên bản web hoạt động qua Internet có thể được xây dựng bằng ASP.NET
+Core Web API kết hợp giao diện responsive, cho phép Buyer, Seller và Admin sử
+dụng hệ thống trên trình duyệt, điện thoại hoặc máy tính bảng mà không cần cài đặt
+ứng dụng WPF.
+Quy trình nghiệp vụ có thể được mở rộng với quản lý tồn kho, giỏ hàng, thanh toán
+trực tuyến, vận chuyển và theo dõi đơn hàng. Các dữ liệu từ QC hay DeviceSimulator
+có thể được triển khai sử dụng ESP32 thực tế, gửi dữ liệu thực phản ánh chất lượng
+bàn phím. Đồng thời, việc triển khai trên máy chủ hoặc nền tảng điện toán đám mây,
+bổ sung HTTPS, sao lưu, logging, health check, cảnh báo và CI/CD sẽ giúp hệ thống
+hoạt động ổn định hơn.
+Nhìn chung, đề tài đã hình thành được một nền tảng phần mềm phù hợp với mục tiêu
+quản lý cấu hình và yêu cầu lắp ráp bàn phím tùy chỉnh. Kết quả hiện tại đáp ứng yêu
+cầu học tập, thể hiện được quá trình phân tích, thiết kế và triển khai hệ thống; đồng
+thời để lại hướng mở rõ ràng để phát triển thành một nền tảng trực tuyến có khả năng
+giao tiếp thời gian thực, phục vụ nhiều người dùng và kết nối với thiết bị kiểm tra phần
+cứng.
+

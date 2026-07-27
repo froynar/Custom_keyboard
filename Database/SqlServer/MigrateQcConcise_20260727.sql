@@ -1,7 +1,8 @@
 :ON ERROR EXIT
 -- Preserving migration from the legacy QC schema to Documents/Custom_Keyboard_ERD_Final.dbml.
 -- Run VerifyQcConcise_Preflight.sql first against a restored clone.
--- This migration intentionally removes historical failure text and session timestamps.
+-- This migration removes redundant summary/start fields but preserves the authoritative
+-- completed_at timestamp for every historical QC session.
 
 SET NOCOUNT ON;
 SET XACT_ABORT ON;
@@ -35,6 +36,21 @@ IF NOT EXISTS (
 )
 BEGIN
     THROW 51202, 'Migration requires completed schema version 2026.07.15-pk-id.', 1;
+END;
+
+IF NOT EXISTS (
+    SELECT 1
+    FROM sys.columns AS column_info
+    INNER JOIN sys.types AS type_info
+        ON type_info.user_type_id = column_info.user_type_id
+    WHERE column_info.object_id = OBJECT_ID(N'dbo.device_test_sessions')
+      AND column_info.name = N'completed_at'
+      AND type_info.name = N'datetime2'
+      AND column_info.scale = 7
+      AND column_info.is_nullable = 1
+)
+BEGIN
+    THROW 51206, 'Legacy device_test_sessions.completed_at is missing or incompatible; refusing a lossy migration.', 1;
 END;
 
 DECLARE @SessionRowsBefore bigint = (SELECT COUNT_BIG(*) FROM dbo.device_test_sessions);
@@ -146,8 +162,7 @@ BEGIN TRY
         max_latency_ms,
         average_noise_db,
         max_noise_db,
-        started_at,
-        completed_at;
+        started_at;
 
     -- The renamed columns are resolved at execution time. Static ALTER statements
     -- in this batch would be compiled against their legacy names before sp_rename runs.
@@ -173,7 +188,7 @@ BEGIN TRY
     INSERT INTO dbo.schema_migrations (version, description, applied_at, succeeded)
     VALUES (
         '2026.07.27-qc-concise',
-        'Normalize QC storage to 7 session columns, 12 per-key columns, and 30 foreign keys',
+        'Normalize QC storage to 8 session columns, 12 per-key columns, and 30 foreign keys while preserving completed_at',
         SYSUTCDATETIME(),
         1
     );

@@ -45,11 +45,14 @@ internal static class BuildRequestSnapshotFormatter
             return;
         }
 
-        AppendLine(text, "Build", JoinNonEmpty(
+        AppendLine(text, Loc.Instance["Snapshot_Build"], JoinNonEmpty(
             GetString(build, "name"),
             FormatParen(GetString(build, "buildId"))));
-        AppendLine(text, Loc.Instance["Snapshot_Status"], GetString(build, "status"));
-        AppendLine(text, Loc.Instance["Snapshot_NoiseRequirement"], GetString(build, "noiseRequirement"));
+        AppendLine(text, Loc.Instance["Snapshot_Status"], LocalizeStatus(GetString(build, "status")));
+        AppendLine(
+            text,
+            Loc.Instance["Snapshot_NoiseRequirement"],
+            LocalizeNoiseRequirement(GetString(build, "noiseRequirement")));
         AppendLine(text, Loc.Instance["Snapshot_Total"], FormatMoney(GetDecimal(build, "totalCostSnapshot")));
         AppendLine(text, Loc.Instance["Snapshot_Notes"], GetString(build, "notes"));
         text.AppendLine();
@@ -59,16 +62,16 @@ internal static class BuildRequestSnapshotFormatter
     {
         if (!TryGetObject(root, "kit", out var kit))
         {
-            AppendLine(text, "Kit", Loc.Instance["Snapshot_NoKit"]);
+            AppendLine(text, Loc.Instance["Snapshot_Kit"], Loc.Instance["Snapshot_NoKit"]);
             text.AppendLine();
             return;
         }
 
-        AppendLine(text, "Kit", JoinNonEmpty(
+        AppendLine(text, Loc.Instance["Snapshot_Kit"], JoinNonEmpty(
             GetString(kit, "kitName"),
             FormatParen(GetString(kit, "kitId"))));
-        AppendLine(text, "PCB", GetString(kit, "pcbTechnology"));
-        AppendLine(text, "Switch mount", GetString(kit, "switchMount"));
+        AppendLine(text, Loc.Instance["Snapshot_Pcb"], GetString(kit, "pcbTechnology"));
+        AppendLine(text, Loc.Instance["Snapshot_SwitchMount"], GetString(kit, "switchMount"));
         AppendLine(text, Loc.Instance["Snapshot_SwitchNeeded"], GetInt(kit, "requiredSwitchQuantity")?.ToString(CultureInfo.InvariantCulture));
         AppendLine(text, Loc.Instance["Snapshot_KitPrice"], FormatMoney(GetDecimal(kit, "priceUsd")));
         AppendLine(text, Loc.Instance["Snapshot_Included"], GetString(kit, "includedParts"));
@@ -88,8 +91,10 @@ internal static class BuildRequestSnapshotFormatter
 
         foreach (var item in items.EnumerateArray())
         {
-            var type = GetString(item, "productType") ?? "Item";
-            var name = GetString(item, "productName") ?? GetString(item, "productId") ?? "Unknown";
+            var type = LocalizeItemType(GetString(item, "productType"));
+            var name = GetString(item, "productName")
+                ?? GetString(item, "productId")
+                ?? Loc.Instance["Snapshot_Unknown"];
             var productId = FormatParen(GetString(item, "productId"));
             var quantity = GetInt(item, "quantity") ?? 0;
             var unitPrice = FormatMoney(GetDecimal(item, "unitPriceSnapshot"));
@@ -151,7 +156,7 @@ internal static class BuildRequestSnapshotFormatter
             return;
         }
 
-        AppendLine(text, "Seller", JoinNonEmpty(
+        AppendLine(text, Loc.Instance["Snapshot_Seller"], JoinNonEmpty(
             GetString(seller, "shopName"),
             FormatParen(GetInt(seller, "sellerUserId")?.ToString(CultureInfo.InvariantCulture))));
         AppendLine(text, Loc.Instance["Snapshot_SellerPhone"], GetString(seller, "phone"));
@@ -205,6 +210,30 @@ internal static class BuildRequestSnapshotFormatter
         return value.ValueKind == JsonValueKind.String
             ? value.GetString()
             : value.ToString();
+    }
+
+    private static string? LocalizeStatus(string? status)
+        => string.IsNullOrWhiteSpace(status)
+            ? null
+            : Loc.Instance["Status_" + status.Trim()];
+
+    private static string? LocalizeNoiseRequirement(string? requirement)
+        => string.IsNullOrWhiteSpace(requirement)
+            ? null
+            : Loc.Instance["Snapshot_Noise_" + requirement.Trim()];
+
+    private static string LocalizeItemType(string? productType)
+    {
+        if (string.IsNullOrWhiteSpace(productType))
+        {
+            return Loc.Instance["Snapshot_Item"];
+        }
+
+        var key = "Snapshot_ItemType_" + productType.Trim();
+        var localized = Loc.Instance[key];
+        return string.Equals(localized, key, StringComparison.Ordinal)
+            ? productType.Trim()
+            : localized;
     }
 
     private static int? GetInt(JsonElement parent, string propertyName)

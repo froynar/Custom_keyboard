@@ -184,7 +184,18 @@
                                   AlternationCount="2">
                             <DataGrid.Columns>
                                 <DataGridTextColumn Header="{loc:Tr Buyer_ColBuildName}" Binding="{Binding Name}" Width="*"/>
-                                <DataGridTextColumn Header="{loc:Tr Buyer_ColKit}" Binding="{Binding KitId}" Width="120"/>
+                                <DataGridTemplateColumn Header="{loc:Tr Buyer_ColKit}"
+                                                        Width="140"
+                                                        ClipboardContentBinding="{Binding KitId}">
+                                    <DataGridTemplateColumn.CellTemplate>
+                                        <DataTemplate>
+                                            <TextBlock Text="{Binding KitId}"
+                                                       ToolTip="{Binding KitId}"
+                                                       TextTrimming="CharacterEllipsis"
+                                                       VerticalAlignment="Center"/>
+                                        </DataTemplate>
+                                    </DataGridTemplateColumn.CellTemplate>
+                                </DataGridTemplateColumn>
                                 <DataGridTemplateColumn Header="{loc:Tr Common_ColStatus}" Width="130">
                                     <DataGridTemplateColumn.CellTemplate>
                                         <DataTemplate>
@@ -534,9 +545,42 @@
                                           SelectedItem="{Binding SelectedRequest, Mode=TwoWay}"
                                           AlternationCount="2">
                                     <DataGrid.Columns>
-                                        <DataGridTextColumn Header="{loc:Tr Common_ColRequest}" Binding="{Binding RequestId}" Width="*"/>
-                                        <DataGridTextColumn Header="{loc:Tr Common_ColBuild}" Binding="{Binding BuildId}" Width="*"/>
-                                        <DataGridTextColumn Header="{loc:Tr Common_ColSeller}" Binding="{Binding SellerUserId}" Width="90"/>
+                                        <DataGridTemplateColumn Header="{loc:Tr Common_ColRequest}"
+                                                                Width="*"
+                                                                ClipboardContentBinding="{Binding RequestId}">
+                                            <DataGridTemplateColumn.CellTemplate>
+                                                <DataTemplate>
+                                                    <TextBlock Text="{Binding RequestId}"
+                                                               ToolTip="{Binding RequestId}"
+                                                               TextTrimming="CharacterEllipsis"
+                                                               VerticalAlignment="Center"/>
+                                                </DataTemplate>
+                                            </DataGridTemplateColumn.CellTemplate>
+                                        </DataGridTemplateColumn>
+                                        <DataGridTemplateColumn Header="{loc:Tr Common_ColBuild}"
+                                                                Width="*"
+                                                                ClipboardContentBinding="{Binding BuildId}">
+                                            <DataGridTemplateColumn.CellTemplate>
+                                                <DataTemplate>
+                                                    <TextBlock Text="{Binding BuildId}"
+                                                               ToolTip="{Binding BuildId}"
+                                                               TextTrimming="CharacterEllipsis"
+                                                               VerticalAlignment="Center"/>
+                                                </DataTemplate>
+                                            </DataGridTemplateColumn.CellTemplate>
+                                        </DataGridTemplateColumn>
+                                        <DataGridTemplateColumn Header="{loc:Tr Common_ColSeller}"
+                                                                Width="190"
+                                                                ClipboardContentBinding="{Binding SellerShopName}">
+                                            <DataGridTemplateColumn.CellTemplate>
+                                                <DataTemplate>
+                                                    <TextBlock Text="{Binding SellerShopName}"
+                                                               ToolTip="{Binding SellerShopName}"
+                                                               TextTrimming="CharacterEllipsis"
+                                                               VerticalAlignment="Center"/>
+                                                </DataTemplate>
+                                            </DataGridTemplateColumn.CellTemplate>
+                                        </DataGridTemplateColumn>
                                         <DataGridTemplateColumn Header="{loc:Tr Common_ColStatus}" Width="130">
                                             <DataGridTemplateColumn.CellTemplate>
                                                 <DataTemplate>

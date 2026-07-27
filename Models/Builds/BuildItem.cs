@@ -11,7 +11,21 @@ public sealed class BuildItem
     public string? StabilizerId { get; set; }
     public string? AccessoryId { get; set; }
     public int Quantity { get; set; }
+
+    // Historical price captured when the build was saved. Financial totals must use
+    // this value rather than CurrentPriceUsd, which can change with the catalog.
     public decimal UnitPriceSnapshot { get; set; }
+
+    // Read-only projection fields populated by views.Build_items after persistence.
+    public string ComponentType { get; set; } = string.Empty;
+    public string ComponentId { get; set; } = string.Empty;
+    public string ComponentName { get; set; } = string.Empty;
+    public int BrandId { get; set; }
+    public string BrandName { get; set; } = string.Empty;
+    public decimal LineTotalSnapshot { get; set; }
+    public decimal CurrentPriceUsd { get; set; }
+    public bool IsAvailable { get; set; }
+
     public string? Notes { get; set; }
 
     public bool HasExactlyOneProduct()

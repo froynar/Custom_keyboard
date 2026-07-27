@@ -21,7 +21,7 @@ public sealed class SqlRequestRepository : IRequestRepository
         await connection.OpenAsync(cancellationToken);
 
         await using var command = connection.CreateCommand();
-        command.CommandText = $"{BaseSelectSql} WHERE br.id = @request_id;";
+        command.CommandText = $"{BaseSelectSql} WHERE request_view.request_id = @request_id;";
         command.AddParameter("@request_id", SqlDbType.VarChar, requestId, 50);
 
         await using var reader = await command.ExecuteReaderAsync(cancellationToken);
@@ -30,13 +30,11 @@ public sealed class SqlRequestRepository : IRequestRepository
 
     public Task<IReadOnlyList<BuildRequest>> GetByBuyerAsync(int buyerId, CancellationToken cancellationToken = default)
     {
-        // build_requests no longer stores buyer_id; the buyer is derived from the linked build.
         return QueryAsync(
             $"""
             {BaseSelectSql}
-            INNER JOIN builds AS b ON b.id = br.build_id
-            WHERE b.buyer_id = @buyer_id
-            ORDER BY br.requested_at DESC, br.id;
+            WHERE request_view.buyer_id = @buyer_id
+            ORDER BY request_view.requested_at DESC, request_view.request_id;
             """,
             command => command.AddParameter("@buyer_id", SqlDbType.Int, buyerId),
             cancellationToken);
@@ -45,7 +43,11 @@ public sealed class SqlRequestRepository : IRequestRepository
     public Task<IReadOnlyList<BuildRequest>> GetBySellerAsync(int sellerUserId, CancellationToken cancellationToken = default)
     {
         return QueryAsync(
-            $"{BaseSelectSql} WHERE br.seller_user_id = @seller_user_id ORDER BY br.requested_at DESC, br.id;",
+            $"""
+            {BaseSelectSql}
+            WHERE request_view.seller_user_id = @seller_user_id
+            ORDER BY request_view.requested_at DESC, request_view.request_id;
+            """,
             command => command.AddParameter("@seller_user_id", SqlDbType.Int, sellerUserId),
             cancellationToken);
     }
@@ -116,7 +118,7 @@ public sealed class SqlRequestRepository : IRequestRepository
     {
         await using var command = connection.CreateCommand();
         command.Transaction = transaction;
-        command.CommandText = SqlRepositoryHelpers.IndexedDmlSetOptions + """
+        command.CommandText = SqlRepositoryHelpers.IndexedDmlSetOptions + $"""
             IF EXISTS (SELECT 1 FROM build_requests WHERE id = @request_id)
             BEGIN
                 UPDATE build_requests
@@ -157,19 +159,8 @@ public sealed class SqlRequestRepository : IRequestRepository
                 );
             END;
 
-            SELECT
-                br.id AS request_id,
-                br.build_id,
-                br.seller_user_id,
-                br.request_payload_json,
-                br.status,
-                br.note,
-                br.requested_at,
-                br.accepted_at,
-                br.completed_at,
-                br.updated_at
-            FROM build_requests AS br
-            WHERE br.id = @request_id;
+            {BaseSelectSql}
+            WHERE request_view.request_id = @request_id;
             """;
         AddRequestParameters(command, request);
 
@@ -221,27 +212,19 @@ public sealed class SqlRequestRepository : IRequestRepository
               AND request_row.status = @expected_status
               AND (
                   @require_acceptable_qc = 0
-                  OR (
-                      SELECT TOP (1) session_row.status
-                      FROM device_test_sessions AS session_row
-                      OUTER APPLY (
-                          SELECT MAX(result_row.recorded_at) AS last_recorded_at
-                          FROM device_key_test_results AS result_row
-                          WHERE result_row.session_id = session_row.id
-                      ) AS summary
-                      WHERE session_row.request_id = request_row.id
-                      ORDER BY
-                          CASE WHEN session_row.status = 'Running' THEN 0 ELSE 1 END,
-                          summary.last_recorded_at DESC,
-                          session_row.id DESC
-                  ) IN ('Passed', 'Warning')
+                  OR EXISTS (
+                      SELECT 1
+                      FROM views.Last_QC AS latest_qc
+                      WHERE latest_qc.request_id = request_row.id
+                        AND latest_qc.is_acceptable = 1
+                  )
               );
 
             IF @@ROWCOUNT = 1
                 SET @updated = 1;
 
             {BaseSelectSql}
-            WHERE br.id = @request_id
+            WHERE request_view.request_id = @request_id
               AND @updated = 1;
             """;
         command.AddParameter("@request_id", SqlDbType.VarChar, request.RequestId, 50);
@@ -258,17 +241,18 @@ public sealed class SqlRequestRepository : IRequestRepository
 
     private const string BaseSelectSql = """
         SELECT
-            br.id AS request_id,
-            br.build_id,
-            br.seller_user_id,
-            br.request_payload_json,
-            br.status,
-            br.note,
-            br.requested_at,
-            br.accepted_at,
-            br.completed_at,
-            br.updated_at
-        FROM build_requests AS br
+            request_view.request_id,
+            request_view.build_id,
+            request_view.seller_user_id,
+            request_view.seller_shop_name,
+            request_view.request_payload_json,
+            request_view.status,
+            request_view.note,
+            request_view.requested_at,
+            request_view.accepted_at,
+            request_view.completed_at,
+            request_view.updated_at
+        FROM views.Req_view AS request_view
         """;
 
     private async Task<IReadOnlyList<BuildRequest>> QueryAsync(
@@ -314,6 +298,7 @@ public sealed class SqlRequestRepository : IRequestRepository
             RequestId = reader.GetStringValue("request_id"),
             BuildId = reader.GetStringValue("build_id"),
             SellerUserId = reader.GetIntValue("seller_user_id"),
+            SellerShopName = reader.GetStringValue("seller_shop_name"),
             RequestPayloadJson = reader.GetStringValue("request_payload_json"),
             Status = reader.GetEnumValue<RequestStatus>("status"),
             Note = reader.GetNullableStringValue("note"),

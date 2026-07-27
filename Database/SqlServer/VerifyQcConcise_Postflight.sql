@@ -40,7 +40,8 @@ VALUES
     (N'switch_technology', N'varchar', 50, NULL, NULL, 0, 0),
     (N'noise_requirement', N'varchar', 20, NULL, NULL, 0, 0),
     (N'total_keys', N'int', 4, NULL, NULL, 0, 0),
-    (N'status', N'varchar', 20, NULL, NULL, 0, 0);
+    (N'status', N'varchar', 20, NULL, NULL, 0, 0),
+    (N'completed_at', N'datetime2', 8, NULL, 7, 1, 0);
 
 DECLARE @ExpectedResultColumns TABLE (
     column_name sysname PRIMARY KEY,
@@ -68,7 +69,7 @@ VALUES
     (N'result', N'varchar', 20, NULL, NULL, 0, 0),
     (N'recorded_at', N'datetime2', 8, NULL, 7, 0, 0);
 
-IF (SELECT COUNT(*) FROM sys.columns WHERE object_id = OBJECT_ID(N'dbo.device_test_sessions')) <> 7
+IF (SELECT COUNT(*) FROM sys.columns WHERE object_id = OBJECT_ID(N'dbo.device_test_sessions')) <> 8
    OR EXISTS (
        SELECT 1
        FROM @ExpectedSessionColumns AS expected
@@ -86,7 +87,7 @@ IF (SELECT COUNT(*) FROM sys.columns WHERE object_id = OBJECT_ID(N'dbo.device_te
           OR CONVERT(bit, COLUMNPROPERTY(column_info.object_id, column_info.name, 'IsIdentity')) <> expected.is_identity
    )
 BEGIN
-    THROW 51302, 'device_test_sessions does not match the exact 7-column concise contract.', 1;
+    THROW 51302, 'device_test_sessions does not match the exact 8-column concise contract.', 1;
 END;
 
 IF (SELECT COUNT(*) FROM sys.columns WHERE object_id = OBJECT_ID(N'dbo.device_key_test_results')) <> 12

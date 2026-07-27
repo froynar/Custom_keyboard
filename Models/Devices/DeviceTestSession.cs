@@ -3,8 +3,8 @@ using Custom_keyboard.Models.Enums;
 namespace Custom_keyboard.Models.Devices;
 
 // One compact QC test session for one build request.
-// Only identity/configuration/status properties are persisted. Summary properties
-// are calculated from device_key_test_results when the repository reads a session.
+// Only identity/configuration/status/completion properties are persisted. Summary
+// properties are calculated from device_key_test_results when the repository reads a session.
 public sealed class DeviceTestSession
 {
     public string SessionId { get; set; } = string.Empty;
@@ -14,6 +14,7 @@ public sealed class DeviceTestSession
     public NoiseRequirement NoiseRequirement { get; set; } = NoiseRequirement.Normal;
     public int TotalKeys { get; set; }
     public TestSessionStatus Status { get; set; } = TestSessionStatus.Running;
+    public DateTime? CompletedAt { get; set; }
 
     // Read-only projection values; not columns in device_test_sessions.
     public int TestedKeys { get; set; }

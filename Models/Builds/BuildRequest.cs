@@ -7,6 +7,7 @@ public sealed class BuildRequest
     public string RequestId { get; set; } = string.Empty;
     public string BuildId { get; set; } = string.Empty;
     public int SellerUserId { get; set; }
+    public string SellerShopName { get; set; } = string.Empty;
     public string RequestPayloadJson { get; set; } = string.Empty;
     public RequestStatus Status { get; set; } = RequestStatus.Pending;
     public string? Note { get; set; }

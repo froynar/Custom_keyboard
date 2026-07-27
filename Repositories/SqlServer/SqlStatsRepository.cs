@@ -6,7 +6,7 @@ using Microsoft.Data.SqlClient;
 
 namespace Custom_keyboard.Repositories.SqlServer;
 
-// Read-only analytics: every figure is derived from build_requests + builds (+ seller_profiles / keyboard_kits).
+// Read-only analytics: every order figure is derived from the stable views.Req_view projection.
 // No schema changes; status is stored as the raw enum name ("Completed", "In_progress", ...).
 public sealed class SqlStatsRepository : IStatsRepository
 {
@@ -54,14 +54,15 @@ public sealed class SqlStatsRepository : IStatsRepository
         await using var command = connection.CreateCommand();
         command.CommandText = """
             SELECT
-                SUM(CASE WHEN br.status = 'Completed' THEN 1 ELSE 0 END) AS products_made,
+                SUM(CASE WHEN request_view.status = 'Completed' THEN 1 ELSE 0 END) AS products_made,
                 COUNT(*) AS total_orders,
-                COUNT(DISTINCT b.buyer_id) AS customers,
-                AVG(CASE WHEN br.status = 'Completed' AND br.accepted_at IS NOT NULL AND br.completed_at IS NOT NULL
-                         THEN CAST(DATEDIFF(day, br.accepted_at, br.completed_at) AS float) END) AS avg_days
-            FROM build_requests AS br
-            INNER JOIN builds AS b ON b.id = br.build_id
-            WHERE br.seller_user_id = @seller_id;
+                COUNT(DISTINCT request_view.buyer_id) AS customers,
+                AVG(CASE WHEN request_view.status = 'Completed'
+                              AND request_view.accepted_at IS NOT NULL
+                              AND request_view.completed_at IS NOT NULL
+                         THEN CAST(DATEDIFF(day, request_view.accepted_at, request_view.completed_at) AS float) END) AS avg_days
+            FROM views.Req_view AS request_view
+            WHERE request_view.seller_user_id = @seller_id;
             """;
         command.AddParameter("@seller_id", SqlDbType.Int, sellerUserId);
 
@@ -128,15 +129,16 @@ public sealed class SqlStatsRepository : IStatsRepository
         await using var command = connection.CreateCommand();
         command.CommandText = """
             SELECT
-                COALESCE(SUM(CASE WHEN br.status = 'Completed' THEN b.total_cost_snapshot END), 0) AS revenue,
-                SUM(CASE WHEN br.status = 'Completed' THEN 1 ELSE 0 END) AS products_made,
-                COUNT(DISTINCT b.buyer_id) AS customers,
-                SUM(CASE WHEN br.status IN ('Pending', 'Accepted', 'In_progress') THEN 1 ELSE 0 END) AS in_progress,
-                AVG(CASE WHEN br.status = 'Completed' AND br.accepted_at IS NOT NULL AND br.completed_at IS NOT NULL
-                         THEN CAST(DATEDIFF(day, br.accepted_at, br.completed_at) AS float) END) AS avg_days
-            FROM build_requests AS br
-            INNER JOIN builds AS b ON b.id = br.build_id
-            WHERE br.seller_user_id = @seller_id;
+                COALESCE(SUM(CASE WHEN request_view.status = 'Completed' THEN request_view.total_cost_snapshot END), 0) AS revenue,
+                SUM(CASE WHEN request_view.status = 'Completed' THEN 1 ELSE 0 END) AS products_made,
+                COUNT(DISTINCT request_view.buyer_id) AS customers,
+                SUM(CASE WHEN request_view.status IN ('Pending', 'Accepted', 'In_progress') THEN 1 ELSE 0 END) AS in_progress,
+                AVG(CASE WHEN request_view.status = 'Completed'
+                              AND request_view.accepted_at IS NOT NULL
+                              AND request_view.completed_at IS NOT NULL
+                         THEN CAST(DATEDIFF(day, request_view.accepted_at, request_view.completed_at) AS float) END) AS avg_days
+            FROM views.Req_view AS request_view
+            WHERE request_view.seller_user_id = @seller_id;
             """;
         command.AddParameter("@seller_id", SqlDbType.Int, sellerUserId);
 
@@ -163,23 +165,23 @@ public sealed class SqlStatsRepository : IStatsRepository
     {
         var labelExpr = period switch
         {
-            StatsPeriod.Yearly => "CAST(YEAR(br.completed_at) AS varchar(4))",
-            StatsPeriod.Quarterly => "CONCAT(YEAR(br.completed_at), ' Q', DATEPART(QUARTER, br.completed_at))",
-            _ => "CONVERT(char(7), br.completed_at, 126)" // 'YYYY-MM'
+            StatsPeriod.Yearly => "CAST(YEAR(request_view.completed_at) AS varchar(4))",
+            StatsPeriod.Quarterly => "CONCAT(YEAR(request_view.completed_at), ' Q', DATEPART(QUARTER, request_view.completed_at))",
+            _ => "CONVERT(char(7), request_view.completed_at, 126)" // 'YYYY-MM'
         };
 
-        var sellerFilter = sellerUserId is null ? string.Empty : "AND br.seller_user_id = @seller_id";
+        var sellerFilter = sellerUserId is null ? string.Empty : "AND request_view.seller_user_id = @seller_id";
 
         await using var command = connection.CreateCommand();
         command.CommandText = $"""
             SELECT {labelExpr} AS label,
                    COUNT(*) AS orders,
-                   SUM(b.total_cost_snapshot) AS revenue
-            FROM build_requests AS br
-            INNER JOIN builds AS b ON b.id = br.build_id
-            WHERE br.status = 'Completed' AND br.completed_at IS NOT NULL {sellerFilter}
+                   SUM(request_view.total_cost_snapshot) AS revenue
+            FROM views.Req_view AS request_view
+            WHERE request_view.status = 'Completed'
+              AND request_view.completed_at IS NOT NULL {sellerFilter}
             GROUP BY {labelExpr}
-            ORDER BY MIN(br.completed_at);
+            ORDER BY MIN(request_view.completed_at);
             """;
         if (sellerUserId is not null)
         {
@@ -204,14 +206,16 @@ public sealed class SqlStatsRepository : IStatsRepository
         int? sellerUserId,
         CancellationToken cancellationToken)
     {
-        var sellerFilter = sellerUserId is null ? string.Empty : "WHERE br.seller_user_id = @seller_id";
+        var sellerFilter = sellerUserId is null
+            ? string.Empty
+            : "WHERE request_view.seller_user_id = @seller_id";
 
         await using var command = connection.CreateCommand();
         command.CommandText = $"""
-            SELECT br.status AS status, COUNT(*) AS cnt
-            FROM build_requests AS br
+            SELECT request_view.status AS status, COUNT(*) AS cnt
+            FROM views.Req_view AS request_view
             {sellerFilter}
-            GROUP BY br.status;
+            GROUP BY request_view.status;
             """;
         if (sellerUserId is not null)
         {
@@ -236,16 +240,15 @@ public sealed class SqlStatsRepository : IStatsRepository
         await using var command = connection.CreateCommand();
         command.CommandText = """
             SELECT TOP 5
-                b.kit_id AS kit_id,
-                k.kit_name AS kit_name,
+                request_view.kit_id,
+                request_view.kit_name,
                 COUNT(*) AS orders,
-                SUM(b.total_cost_snapshot) AS revenue
-            FROM build_requests AS br
-            INNER JOIN builds AS b ON b.id = br.build_id
-            INNER JOIN keyboard_kits AS k ON k.id = b.kit_id
-            WHERE br.seller_user_id = @seller_id AND br.status = 'Completed'
-            GROUP BY b.kit_id, k.kit_name
-            ORDER BY COUNT(*) DESC, SUM(b.total_cost_snapshot) DESC;
+                SUM(request_view.total_cost_snapshot) AS revenue
+            FROM views.Req_view AS request_view
+            WHERE request_view.seller_user_id = @seller_id
+              AND request_view.status = 'Completed'
+            GROUP BY request_view.kit_id, request_view.kit_name
+            ORDER BY COUNT(*) DESC, SUM(request_view.total_cost_snapshot) DESC;
             """;
         command.AddParameter("@seller_id", SqlDbType.Int, sellerUserId);
 
@@ -267,16 +270,14 @@ public sealed class SqlStatsRepository : IStatsRepository
         await using var command = connection.CreateCommand();
         command.CommandText = """
             SELECT TOP 5
-                br.seller_user_id AS seller_user_id,
-                COALESCE(sp.shop_name, CONCAT('Seller #', br.seller_user_id)) AS shop_name,
+                request_view.seller_user_id,
+                request_view.seller_shop_name AS shop_name,
                 COUNT(*) AS products_made,
-                SUM(b.total_cost_snapshot) AS revenue
-            FROM build_requests AS br
-            INNER JOIN builds AS b ON b.id = br.build_id
-            LEFT JOIN seller_profiles AS sp ON sp.user_id = br.seller_user_id
-            WHERE br.status = 'Completed'
-            GROUP BY br.seller_user_id, sp.shop_name
-            ORDER BY SUM(b.total_cost_snapshot) DESC;
+                SUM(request_view.total_cost_snapshot) AS revenue
+            FROM views.Req_view AS request_view
+            WHERE request_view.status = 'Completed'
+            GROUP BY request_view.seller_user_id, request_view.seller_shop_name
+            ORDER BY SUM(request_view.total_cost_snapshot) DESC;
             """;
 
         var results = new List<SellerRank>();
@@ -299,7 +300,7 @@ public sealed class SqlStatsRepository : IStatsRepository
                 (SELECT COUNT(*) FROM users) AS total_users,
                 (SELECT COUNT(*) FROM seller_profiles WHERE is_verified = 1) AS verified_sellers,
                 (SELECT COUNT(*) FROM builds) AS total_builds,
-                (SELECT COUNT(*) FROM build_requests) AS total_requests;
+                (SELECT COUNT(*) FROM views.Req_view) AS total_requests;
             """;
 
         int totalUsers = 0, verifiedSellers = 0, totalBuilds = 0, totalRequests = 0;

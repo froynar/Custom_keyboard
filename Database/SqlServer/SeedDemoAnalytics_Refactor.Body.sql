@@ -1,10 +1,25 @@
 -- Internal SQLCMD include. Run SeedDemoAnalytics_Refactor.sql, not this body directly.
+SET ANSI_NULLS ON;
+SET ANSI_PADDING ON;
+SET ANSI_WARNINGS ON;
+SET ARITHABORT ON;
+SET CONCAT_NULL_YIELDS_NULL ON;
+SET QUOTED_IDENTIFIER ON;
+SET NUMERIC_ROUNDABORT OFF;
+
 BEGIN TRY
 BEGIN TRANSACTION;
 
 PRINT 'Seeding demo analytics data (DEMO_ rows)...';
 
 -- ---- Idempotent cleanup of any previous demo rows ([_] escapes the LIKE wildcard) ----
+DELETE result_row
+FROM device_key_test_results AS result_row
+INNER JOIN device_test_sessions AS session_row
+    ON session_row.id = result_row.session_id
+WHERE session_row.request_id LIKE 'DEMO[_]REQ[_]%';
+
+DELETE FROM device_test_sessions WHERE request_id LIKE 'DEMO[_]REQ[_]%';
 DELETE FROM build_requests WHERE id LIKE 'DEMO[_]REQ[_]%';
 DELETE FROM build_items    WHERE build_id   LIKE 'DEMO[_]BUILD[_]%';
 DELETE FROM build_mods     WHERE build_id   LIKE 'DEMO[_]BUILD[_]%';
@@ -21,6 +36,7 @@ DECLARE @monthStart datetime2, @requested datetime2, @accepted datetime2, @compl
 DECLARE @useCombo1 bit, @kit varchar(50), @sw varchar(50), @kitPrice decimal(10,2), @swPrice decimal(10,2), @req int;
 DECLARE @seller int, @buyer int, @status varchar(20), @total decimal(10,2);
 DECLARE @buildId varchar(50), @reqId varchar(50);
+DECLARE @deviceId varchar(50), @sessionId varchar(50), @switchTechnology varchar(50);
 
 -- ---- Verified, active sellers ----
 SELECT TOP 1 @sellerA = sp.user_id
@@ -113,6 +129,9 @@ BEGIN
         SET @total = CAST(@kitPrice + (@swPrice * @req) AS decimal(10,2));
         SET @buildId = CONCAT('DEMO_BUILD_', @seq);
         SET @reqId   = CONCAT('DEMO_REQ_', @seq);
+        SELECT @switchTechnology = switch_technology
+        FROM switches
+        WHERE id = @sw;
 
         SET @requested = DATEADD(DAY, 1, @monthStart);
         SET @accepted  = CASE WHEN @status IN ('Completed', 'In_progress') THEN DATEADD(DAY, 2, @monthStart) ELSE NULL END;
@@ -127,8 +146,97 @@ BEGIN
         INSERT INTO build_requests
             (id, build_id, seller_user_id, request_payload_json, status, note, requested_at, accepted_at, completed_at, updated_at)
         VALUES
-            (@reqId, @buildId, @seller, CONCAT('{"demo":true,"buildId":"', @buildId, '"}'), @status,
+            (
+                @reqId,
+                @buildId,
+                @seller,
+                CONCAT(
+                    '{"demo":true,"build":{"buildId":"', @buildId,
+                    '","name":"Demo build ', @seq,
+                    '","noiseRequirement":"Normal","status":"Requested","totalCostSnapshot":',
+                    CONVERT(varchar(32), @total),
+                    '},"kit":{"kitId":"', @kit,
+                    '","pcbTechnology":"', @switchTechnology,
+                    '","requiredSwitchQuantity":', @req,
+                    '},"items":[],"mods":[]}'
+                ),
+                @status,
              'Demo analytics seed', @requested, @accepted, @completed, @completed);
+
+        -- A Completed request must carry a complete acceptable QC result. Reuse the
+        -- seller's active station or create a deterministic demo station when needed.
+        IF @status = 'Completed'
+        BEGIN
+            SET @deviceId = NULL;
+            SELECT TOP (1) @deviceId = id
+            FROM devices
+            WHERE seller_user_id = @seller
+              AND device_type = 'QC_STATION'
+              AND is_active = 1
+            ORDER BY created_at, id;
+
+            IF @deviceId IS NULL
+            BEGIN
+                SET @deviceId = CONCAT('DEMO_DEV_', @seller);
+
+                IF EXISTS (SELECT 1 FROM devices WHERE id = @deviceId)
+                BEGIN
+                    UPDATE devices
+                    SET
+                        seller_user_id = @seller,
+                        device_name = 'Demo QC Station',
+                        device_type = 'QC_STATION',
+                        is_active = 1,
+                        last_seen_at = @completed
+                    WHERE id = @deviceId;
+                END
+                ELSE
+                BEGIN
+                    INSERT INTO devices (
+                        id, seller_user_id, device_name, device_type,
+                        is_active, last_seen_at, created_at
+                    )
+                    VALUES (
+                        @deviceId, @seller, 'Demo QC Station', 'QC_STATION',
+                        1, @completed, @requested
+                    );
+                END;
+            END;
+
+            SET @sessionId = CONCAT('DEMO_QC_', @seq);
+            INSERT INTO device_test_sessions (
+                id, request_id, device_id, switch_technology,
+                noise_requirement, total_keys, status, completed_at
+            )
+            VALUES (
+                @sessionId, @reqId, @deviceId, @switchTechnology,
+                'Normal', @req, 'Passed', @completed
+            );
+
+            ;WITH key_numbers AS (
+                SELECT TOP (@req)
+                    ROW_NUMBER() OVER (ORDER BY (SELECT NULL)) AS key_number
+                FROM sys.all_objects
+            )
+            INSERT INTO device_key_test_results (
+                session_id, key_code, received_key, press_signal_detected,
+                latency, press_count, release_signal, hold_duration,
+                noise, result, recorded_at
+            )
+            SELECT
+                @sessionId,
+                CONCAT('Key', key_number),
+                CONCAT('Key', key_number),
+                1,
+                CAST(2.00 AS decimal(8,2)),
+                1,
+                1,
+                80,
+                CAST(40.00 AS decimal(8,2)),
+                'Pass',
+                DATEADD(MILLISECOND, key_number - @req, @completed)
+            FROM key_numbers;
+        END;
 
         SET @j += 1;
     END

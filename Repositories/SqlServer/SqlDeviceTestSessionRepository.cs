@@ -25,6 +25,11 @@ public sealed class SqlDeviceTestSessionRepository : IDeviceTestSessionRepositor
             session.SessionId = $"QC_{DateTime.UtcNow:yyyyMMddHHmmssfff}_{suffix}";
         }
 
+        if (session.Status == TestSessionStatus.Running)
+        {
+            session.CompletedAt = null;
+        }
+
         await using var connection = _connectionFactory.CreateConnection();
         await connection.OpenAsync(cancellationToken);
 
@@ -34,16 +39,21 @@ public sealed class SqlDeviceTestSessionRepository : IDeviceTestSessionRepositor
             BEGIN
                 UPDATE device_test_sessions
                 SET
-                    status = @status
+                    status = @status,
+                    completed_at = CASE
+                        WHEN @status = 'Running' THEN NULL
+                        ELSE COALESCE(completed_at, @completed_at, SYSUTCDATETIME())
+                    END
                 WHERE id = @session_id
                   AND request_id = @request_id
                   AND device_id = @device_id
                   AND switch_technology = @switch_technology
                   AND noise_requirement = @noise_requirement
-                  AND total_keys = @total_keys;
+                  AND total_keys = @total_keys
+                  AND (status = 'Running' OR status = @status);
 
                 IF @@ROWCOUNT <> 1
-                    THROW 51410, 'QC session identity/configuration is immutable.', 1;
+                    THROW 51410, 'QC session identity, configuration, and finalized state are immutable.', 1;
             END
             ELSE
             BEGIN
@@ -54,7 +64,8 @@ public sealed class SqlDeviceTestSessionRepository : IDeviceTestSessionRepositor
                     switch_technology,
                     noise_requirement,
                     total_keys,
-                    status
+                    status,
+                    completed_at
                 )
                 SELECT
                     @session_id,
@@ -63,7 +74,11 @@ public sealed class SqlDeviceTestSessionRepository : IDeviceTestSessionRepositor
                     @switch_technology,
                     @noise_requirement,
                     @total_keys,
-                    @status
+                    @status,
+                    CASE
+                        WHEN @status = 'Running' THEN NULL
+                        ELSE COALESCE(@completed_at, SYSUTCDATETIME())
+                    END
                 FROM build_requests AS request_row
                 INNER JOIN devices AS device_row
                     ON device_row.id = @device_id
@@ -99,14 +114,26 @@ public sealed class SqlDeviceTestSessionRepository : IDeviceTestSessionRepositor
         await connection.OpenAsync(cancellationToken);
 
         await using var command = connection.CreateCommand();
-        command.CommandText = $"""
-            {BaseSelectSql}
-            WHERE s.request_id = @request_id
-            ORDER BY
-                CASE WHEN s.status = 'Running' THEN 0 ELSE 1 END,
-                summary.last_recorded_at DESC,
-                s.id DESC
-            OFFSET 0 ROWS FETCH NEXT 1 ROWS ONLY;
+        command.CommandText = """
+            SELECT
+                session_id,
+                request_id,
+                device_id,
+                switch_technology,
+                noise_requirement,
+                total_keys,
+                status,
+                completed_at,
+                tested_keys,
+                passed_keys,
+                warning_keys,
+                failed_keys,
+                average_latency_ms,
+                max_latency_ms,
+                average_noise_db,
+                max_noise_db
+            FROM views.Last_QC
+            WHERE request_id = @request_id;
             """;
         command.AddParameter("@request_id", SqlDbType.VarChar, requestId, 50);
 
@@ -138,6 +165,7 @@ public sealed class SqlDeviceTestSessionRepository : IDeviceTestSessionRepositor
             s.noise_requirement,
             s.total_keys,
             s.status,
+            s.completed_at,
             summary.tested_keys,
             summary.passed_keys,
             summary.warning_keys,
@@ -172,6 +200,7 @@ public sealed class SqlDeviceTestSessionRepository : IDeviceTestSessionRepositor
         command.AddParameter("@noise_requirement", SqlDbType.VarChar, session.NoiseRequirement.ToString(), 20);
         command.AddParameter("@total_keys", SqlDbType.Int, session.TotalKeys);
         command.AddParameter("@status", SqlDbType.VarChar, session.Status.ToString(), 20);
+        command.AddParameter("@completed_at", SqlDbType.DateTime2, session.CompletedAt);
     }
 
     private static DeviceTestSession MapSession(SqlDataReader reader)
@@ -185,6 +214,7 @@ public sealed class SqlDeviceTestSessionRepository : IDeviceTestSessionRepositor
             NoiseRequirement = reader.GetEnumValue<NoiseRequirement>("noise_requirement"),
             TotalKeys = reader.GetIntValue("total_keys"),
             Status = reader.GetEnumValue<TestSessionStatus>("status"),
+            CompletedAt = reader.GetNullableDateTimeValue("completed_at"),
             TestedKeys = reader.GetIntValue("tested_keys"),
             PassedKeys = reader.GetIntValue("passed_keys"),
             WarningKeys = reader.GetIntValue("warning_keys"),

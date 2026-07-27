@@ -89,13 +89,9 @@ public sealed class SqlComponentRepository : IComponentRepository
         await using var command = connection.CreateCommand();
         command.CommandText = """
             SELECT CASE WHEN EXISTS (
-                SELECT 1 FROM keyboard_kits WHERE brand_id = @brand_id
-                UNION ALL
-                SELECT 1 FROM switches WHERE brand_id = @brand_id
-                UNION ALL
-                SELECT 1 FROM keycap_sets WHERE brand_id = @brand_id
-                UNION ALL
-                SELECT 1 FROM stabilizers WHERE brand_id = @brand_id
+                SELECT 1
+                FROM views.Catalog_Comps
+                WHERE brand_id = @brand_id
             ) THEN 1 ELSE 0 END;
             """;
         command.AddParameter("@brand_id", SqlDbType.Int, brandId);
@@ -187,7 +183,7 @@ public sealed class SqlComponentRepository : IComponentRepository
     public Task<IReadOnlyList<KeyboardKit>> GetAvailableKitsAsync(CancellationToken cancellationToken = default)
     {
         return QueryAsync(
-            $"{KitSelectSql} WHERE is_available = 1 ORDER BY kit_name;",
+            $"{KitSelectSql} WHERE catalog.is_available = 1 ORDER BY catalog.name;",
             MapKit,
             cancellationToken: cancellationToken);
     }
@@ -195,7 +191,7 @@ public sealed class SqlComponentRepository : IComponentRepository
     public Task<KeyboardKit?> GetKitByIdAsync(string kitId, CancellationToken cancellationToken = default)
     {
         return QuerySingleAsync(
-            $"{KitSelectSql} WHERE id = @kit_id;",
+            $"{KitSelectSql} WHERE catalog.component_id = @kit_id;",
             MapKit,
             command => command.AddParameter("@kit_id", SqlDbType.VarChar, kitId, 50),
             cancellationToken);
@@ -205,7 +201,7 @@ public sealed class SqlComponentRepository : IComponentRepository
     public Task<IReadOnlyList<KeyboardSwitch>> GetAvailableSwitchesAsync(CancellationToken cancellationToken = default)
     {
         return QueryAsync(
-            $"{SwitchSelectSql} WHERE is_available = 1 ORDER BY switch_name;",
+            $"{SwitchSelectSql} WHERE catalog.is_available = 1 ORDER BY catalog.name;",
             MapSwitch,
             cancellationToken: cancellationToken);
     }
@@ -213,7 +209,7 @@ public sealed class SqlComponentRepository : IComponentRepository
     public Task<KeyboardSwitch?> GetSwitchByIdAsync(string switchId, CancellationToken cancellationToken = default)
     {
         return QuerySingleAsync(
-            $"{SwitchSelectSql} WHERE id = @switch_id;",
+            $"{SwitchSelectSql} WHERE catalog.component_id = @switch_id;",
             MapSwitch,
             command => command.AddParameter("@switch_id", SqlDbType.VarChar, switchId, 50),
             cancellationToken);
@@ -223,7 +219,7 @@ public sealed class SqlComponentRepository : IComponentRepository
     public Task<IReadOnlyList<KeycapSet>> GetAvailableKeycapSetsAsync(CancellationToken cancellationToken = default)
     {
         return QueryAsync(
-            $"{KeycapSelectSql} WHERE is_available = 1 ORDER BY keycap_name;",
+            $"{KeycapSelectSql} WHERE catalog.is_available = 1 ORDER BY catalog.name;",
             MapKeycapSet,
             cancellationToken: cancellationToken);
     }
@@ -231,7 +227,7 @@ public sealed class SqlComponentRepository : IComponentRepository
     public Task<KeycapSet?> GetKeycapSetByIdAsync(string keycapId, CancellationToken cancellationToken = default)
     {
         return QuerySingleAsync(
-            $"{KeycapSelectSql} WHERE id = @keycap_id;",
+            $"{KeycapSelectSql} WHERE catalog.component_id = @keycap_id;",
             MapKeycapSet,
             command => command.AddParameter("@keycap_id", SqlDbType.VarChar, keycapId, 50),
             cancellationToken);
@@ -241,7 +237,7 @@ public sealed class SqlComponentRepository : IComponentRepository
     public Task<IReadOnlyList<Stabilizer>> GetAvailableStabilizersAsync(CancellationToken cancellationToken = default)
     {
         return QueryAsync(
-            $"{StabilizerSelectSql} WHERE is_available = 1 ORDER BY stab_name;",
+            $"{StabilizerSelectSql} WHERE catalog.is_available = 1 ORDER BY catalog.name;",
             MapStabilizer,
             cancellationToken: cancellationToken);
     }
@@ -249,7 +245,7 @@ public sealed class SqlComponentRepository : IComponentRepository
     public Task<Stabilizer?> GetStabilizerByIdAsync(string stabilizerId, CancellationToken cancellationToken = default)
     {
         return QuerySingleAsync(
-            $"{StabilizerSelectSql} WHERE id = @stab_id;",
+            $"{StabilizerSelectSql} WHERE catalog.component_id = @stab_id;",
             MapStabilizer,
             command => command.AddParameter("@stab_id", SqlDbType.VarChar, stabilizerId, 50),
             cancellationToken);
@@ -259,7 +255,7 @@ public sealed class SqlComponentRepository : IComponentRepository
     public Task<IReadOnlyList<Accessory>> GetAvailableAccessoriesAsync(CancellationToken cancellationToken = default)
     {
         return QueryAsync(
-            $"{AccessorySelectSql} WHERE is_available = 1 ORDER BY accessory_name;",
+            $"{AccessorySelectSql} WHERE catalog.is_available = 1 ORDER BY catalog.name;",
             MapAccessory,
             cancellationToken: cancellationToken);
     }
@@ -267,7 +263,7 @@ public sealed class SqlComponentRepository : IComponentRepository
     public Task<Accessory?> GetAccessoryByIdAsync(string accessoryId, CancellationToken cancellationToken = default)
     {
         return QuerySingleAsync(
-            $"{AccessorySelectSql} WHERE id = @accessory_id;",
+            $"{AccessorySelectSql} WHERE catalog.component_id = @accessory_id;",
             MapAccessory,
             command => command.AddParameter("@accessory_id", SqlDbType.VarChar, accessoryId, 50),
             cancellationToken);
@@ -278,10 +274,18 @@ public sealed class SqlComponentRepository : IComponentRepository
         AdminComponentType componentType,
         CancellationToken cancellationToken = default)
     {
-        var (_, idColumn) = GetAdminTableInfo(componentType);
         return QueryAsync(
-            $"{GetAdminSelectSql(componentType)} ORDER BY {idColumn};",
+            $"""
+            {AdminComponentSelectSql}
+            WHERE catalog.component_type = @component_type
+            ORDER BY catalog.component_id;
+            """,
             reader => MapAdminComponent(reader, componentType),
+            command => command.AddParameter(
+                "@component_type",
+                SqlDbType.VarChar,
+                componentType.ToString(),
+                20),
             cancellationToken: cancellationToken);
     }
 
@@ -290,11 +294,18 @@ public sealed class SqlComponentRepository : IComponentRepository
         string componentId,
         CancellationToken cancellationToken = default)
     {
-        var (tableName, idColumn) = GetAdminTableInfo(componentType);
         return QuerySingleAsync(
-            $"{GetAdminSelectSql(componentType)} WHERE {tableName}.{idColumn} = @component_id;",
+            $"""
+            {AdminComponentSelectSql}
+            WHERE catalog.component_type = @component_type
+              AND catalog.component_id = @component_id;
+            """,
             reader => MapAdminComponent(reader, componentType),
-            command => command.AddParameter("@component_id", SqlDbType.VarChar, componentId, 50),
+            command =>
+            {
+                command.AddParameter("@component_type", SqlDbType.VarChar, componentType.ToString(), 20);
+                command.AddParameter("@component_id", SqlDbType.VarChar, componentId, 50);
+            },
             cancellationToken);
     }
 
@@ -304,14 +315,7 @@ public sealed class SqlComponentRepository : IComponentRepository
         await connection.OpenAsync(cancellationToken);
 
         await using var command = connection.CreateCommand();
-        command.CommandText = """
-            SELECT
-                (SELECT COUNT(*) FROM keyboard_kits)
-              + (SELECT COUNT(*) FROM switches)
-              + (SELECT COUNT(*) FROM keycap_sets)
-              + (SELECT COUNT(*) FROM stabilizers)
-              + (SELECT COUNT(*) FROM accessories);
-            """;
+        command.CommandText = "SELECT COUNT(*) FROM views.Catalog_Comps;";
 
         return Convert.ToInt32(await command.ExecuteScalarAsync(cancellationToken));
     }
@@ -401,35 +405,121 @@ public sealed class SqlComponentRepository : IComponentRepository
     // ------------------------------------------------------------- Catalog SQL
     private const string KitSelectSql = """
         SELECT
-            id AS kit_id, brand_id, layout_id, kit_name, pcb_technology, switch_mount,
-            required_switch_quantity, included_parts, price_usd, is_available
-        FROM keyboard_kits
+            catalog.component_id AS kit_id,
+            catalog.brand_id,
+            kit.layout_id,
+            catalog.name AS kit_name,
+            kit.pcb_technology,
+            kit.switch_mount,
+            kit.required_switch_quantity,
+            kit.included_parts,
+            catalog.price_usd,
+            catalog.is_available
+        FROM views.Catalog_Comps AS catalog
+        INNER JOIN keyboard_kits AS kit
+            ON catalog.component_type = 'Kit'
+           AND kit.id = catalog.component_id
         """;
 
     private const string SwitchSelectSql = """
         SELECT
-            id AS switch_id, brand_id, switch_name, switch_technology, mount_type,
-            switch_type, actuation_force_g, price_usd, is_available
-        FROM switches
+            catalog.component_id AS switch_id,
+            catalog.brand_id,
+            catalog.name AS switch_name,
+            switch_row.switch_technology,
+            switch_row.mount_type,
+            switch_row.switch_type,
+            switch_row.actuation_force_g,
+            catalog.price_usd,
+            catalog.is_available
+        FROM views.Catalog_Comps AS catalog
+        INNER JOIN switches AS switch_row
+            ON catalog.component_type = 'Switch'
+           AND switch_row.id = catalog.component_id
         """;
 
     private const string KeycapSelectSql = """
         SELECT
-            id AS keycap_id, brand_id, keycap_name, supported_form_factor,
-            profile, material, price_usd, is_available
-        FROM keycap_sets
+            catalog.component_id AS keycap_id,
+            catalog.brand_id,
+            catalog.name AS keycap_name,
+            keycap.supported_form_factor,
+            keycap.profile,
+            keycap.material,
+            catalog.price_usd,
+            catalog.is_available
+        FROM views.Catalog_Comps AS catalog
+        INNER JOIN keycap_sets AS keycap
+            ON catalog.component_type = 'KeycapSet'
+           AND keycap.id = catalog.component_id
         """;
 
     private const string StabilizerSelectSql = """
         SELECT
-            id AS stab_id, brand_id, stab_name, supported_layouts, price_usd, is_available
-        FROM stabilizers
+            catalog.component_id AS stab_id,
+            catalog.brand_id,
+            catalog.name AS stab_name,
+            stabilizer.supported_layouts,
+            catalog.price_usd,
+            catalog.is_available
+        FROM views.Catalog_Comps AS catalog
+        INNER JOIN stabilizers AS stabilizer
+            ON catalog.component_type = 'Stabilizer'
+           AND stabilizer.id = catalog.component_id
         """;
 
     private const string AccessorySelectSql = """
         SELECT
-            id AS accessory_id, accessory_type, accessory_name, target_component, price_usd, is_available
-        FROM accessories
+            catalog.component_id AS accessory_id,
+            accessory.accessory_type,
+            catalog.name AS accessory_name,
+            accessory.target_component,
+            catalog.price_usd,
+            catalog.is_available
+        FROM views.Catalog_Comps AS catalog
+        INNER JOIN accessories AS accessory
+            ON catalog.component_type = 'Accessory'
+           AND accessory.id = catalog.component_id
+        """;
+
+    private const string AdminComponentSelectSql = """
+        SELECT
+            catalog.component_id,
+            catalog.name,
+            catalog.brand_id,
+            catalog.price_usd,
+            catalog.is_available,
+            COALESCE(kit.layout_id, '') AS layout_id,
+            COALESCE(kit.pcb_technology, '') AS pcb_technology,
+            COALESCE(kit.switch_mount, '') AS switch_mount,
+            COALESCE(kit.required_switch_quantity, 0) AS required_switch_quantity,
+            kit.included_parts,
+            COALESCE(switch_row.switch_technology, '') AS switch_technology,
+            COALESCE(switch_row.mount_type, '') AS mount_type,
+            switch_row.switch_type,
+            switch_row.actuation_force_g,
+            COALESCE(keycap.supported_form_factor, '') AS supported_form_factor,
+            keycap.profile,
+            keycap.material,
+            COALESCE(stabilizer.supported_layouts, '') AS supported_layouts,
+            COALESCE(accessory.accessory_type, '') AS accessory_type,
+            accessory.target_component
+        FROM views.Catalog_Comps AS catalog
+        LEFT JOIN keyboard_kits AS kit
+            ON catalog.component_type = 'Kit'
+           AND kit.id = catalog.component_id
+        LEFT JOIN switches AS switch_row
+            ON catalog.component_type = 'Switch'
+           AND switch_row.id = catalog.component_id
+        LEFT JOIN keycap_sets AS keycap
+            ON catalog.component_type = 'KeycapSet'
+           AND keycap.id = catalog.component_id
+        LEFT JOIN stabilizers AS stabilizer
+            ON catalog.component_type = 'Stabilizer'
+           AND stabilizer.id = catalog.component_id
+        LEFT JOIN accessories AS accessory
+            ON catalog.component_type = 'Accessory'
+           AND accessory.id = catalog.component_id
         """;
 
     private static (string TableName, string IdColumn) GetAdminTableInfo(AdminComponentType componentType)
@@ -441,135 +531,6 @@ public sealed class SqlComponentRepository : IComponentRepository
             AdminComponentType.KeycapSet => ("keycap_sets", "id"),
             AdminComponentType.Stabilizer => ("stabilizers", "id"),
             AdminComponentType.Accessory => ("accessories", "id"),
-            _ => throw new ArgumentOutOfRangeException(nameof(componentType), componentType, null)
-        };
-    }
-
-    // Projects each catalog type onto the AdminComponentRecord superset columns.
-    private static string GetAdminSelectSql(AdminComponentType componentType)
-    {
-        return componentType switch
-        {
-            AdminComponentType.Kit => """
-                SELECT
-                    keyboard_kits.id AS component_id,
-                    keyboard_kits.kit_name AS name,
-                    keyboard_kits.brand_id,
-                    keyboard_kits.price_usd,
-                    keyboard_kits.is_available,
-                    keyboard_kits.layout_id,
-                    keyboard_kits.pcb_technology,
-                    keyboard_kits.switch_mount,
-                    keyboard_kits.required_switch_quantity,
-                    keyboard_kits.included_parts,
-                    CAST('' AS varchar(50)) AS switch_technology,
-                    CAST('' AS varchar(100)) AS mount_type,
-                    CAST('' AS varchar(100)) AS switch_type,
-                    CAST(NULL AS int) AS actuation_force_g,
-                    CAST('' AS varchar(255)) AS supported_form_factor,
-                    CAST('' AS varchar(100)) AS profile,
-                    CAST('' AS varchar(100)) AS material,
-                    CAST('' AS varchar(255)) AS supported_layouts,
-                    CAST('' AS varchar(100)) AS accessory_type,
-                    CAST('' AS varchar(100)) AS target_component
-                FROM keyboard_kits
-                """,
-            AdminComponentType.Switch => """
-                SELECT
-                    switches.id AS component_id,
-                    switches.switch_name AS name,
-                    switches.brand_id,
-                    switches.price_usd,
-                    switches.is_available,
-                    CAST('' AS varchar(50)) AS layout_id,
-                    CAST('' AS varchar(50)) AS pcb_technology,
-                    CAST('' AS varchar(100)) AS switch_mount,
-                    0 AS required_switch_quantity,
-                    CAST('' AS varchar(500)) AS included_parts,
-                    switches.switch_technology,
-                    switches.mount_type,
-                    switches.switch_type,
-                    switches.actuation_force_g,
-                    CAST('' AS varchar(255)) AS supported_form_factor,
-                    CAST('' AS varchar(100)) AS profile,
-                    CAST('' AS varchar(100)) AS material,
-                    CAST('' AS varchar(255)) AS supported_layouts,
-                    CAST('' AS varchar(100)) AS accessory_type,
-                    CAST('' AS varchar(100)) AS target_component
-                FROM switches
-                """,
-            AdminComponentType.KeycapSet => """
-                SELECT
-                    keycap_sets.id AS component_id,
-                    keycap_sets.keycap_name AS name,
-                    keycap_sets.brand_id,
-                    keycap_sets.price_usd,
-                    keycap_sets.is_available,
-                    CAST('' AS varchar(50)) AS layout_id,
-                    CAST('' AS varchar(50)) AS pcb_technology,
-                    CAST('' AS varchar(100)) AS switch_mount,
-                    0 AS required_switch_quantity,
-                    CAST('' AS varchar(500)) AS included_parts,
-                    CAST('' AS varchar(50)) AS switch_technology,
-                    CAST('' AS varchar(100)) AS mount_type,
-                    CAST('' AS varchar(100)) AS switch_type,
-                    CAST(NULL AS int) AS actuation_force_g,
-                    keycap_sets.supported_form_factor,
-                    keycap_sets.profile,
-                    keycap_sets.material,
-                    CAST('' AS varchar(255)) AS supported_layouts,
-                    CAST('' AS varchar(100)) AS accessory_type,
-                    CAST('' AS varchar(100)) AS target_component
-                FROM keycap_sets
-                """,
-            AdminComponentType.Stabilizer => """
-                SELECT
-                    stabilizers.id AS component_id,
-                    stabilizers.stab_name AS name,
-                    stabilizers.brand_id,
-                    stabilizers.price_usd,
-                    stabilizers.is_available,
-                    CAST('' AS varchar(50)) AS layout_id,
-                    CAST('' AS varchar(50)) AS pcb_technology,
-                    CAST('' AS varchar(100)) AS switch_mount,
-                    0 AS required_switch_quantity,
-                    CAST('' AS varchar(500)) AS included_parts,
-                    CAST('' AS varchar(50)) AS switch_technology,
-                    CAST('' AS varchar(100)) AS mount_type,
-                    CAST('' AS varchar(100)) AS switch_type,
-                    CAST(NULL AS int) AS actuation_force_g,
-                    CAST('' AS varchar(255)) AS supported_form_factor,
-                    CAST('' AS varchar(100)) AS profile,
-                    CAST('' AS varchar(100)) AS material,
-                    stabilizers.supported_layouts,
-                    CAST('' AS varchar(100)) AS accessory_type,
-                    CAST('' AS varchar(100)) AS target_component
-                FROM stabilizers
-                """,
-            AdminComponentType.Accessory => """
-                SELECT
-                    accessories.id AS component_id,
-                    accessories.accessory_name AS name,
-                    CAST(0 AS int) AS brand_id,
-                    accessories.price_usd,
-                    accessories.is_available,
-                    CAST('' AS varchar(50)) AS layout_id,
-                    CAST('' AS varchar(50)) AS pcb_technology,
-                    CAST('' AS varchar(100)) AS switch_mount,
-                    0 AS required_switch_quantity,
-                    CAST('' AS varchar(500)) AS included_parts,
-                    CAST('' AS varchar(50)) AS switch_technology,
-                    CAST('' AS varchar(100)) AS mount_type,
-                    CAST('' AS varchar(100)) AS switch_type,
-                    CAST(NULL AS int) AS actuation_force_g,
-                    CAST('' AS varchar(255)) AS supported_form_factor,
-                    CAST('' AS varchar(100)) AS profile,
-                    CAST('' AS varchar(100)) AS material,
-                    CAST('' AS varchar(255)) AS supported_layouts,
-                    accessories.accessory_type,
-                    accessories.target_component
-                FROM accessories
-                """,
             _ => throw new ArgumentOutOfRangeException(nameof(componentType), componentType, null)
         };
     }

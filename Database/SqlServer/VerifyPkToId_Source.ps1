@@ -55,7 +55,12 @@ function Get-DbmlTableBody {
     return $match.Groups['body'].Value
 }
 
-$expectedSchemaVersion = '2026.07.27-qc-concise'
+$qcSchemaVersion = '2026.07.27-qc-concise'
+$buildDeviceSchemaVersion = '2026.07.27-build-device-hardening'
+$completedQcSchemaVersion = '2026.07.27-completed-qc-reconciliation'
+$readViewSchemaVersion = '2026.07.27-read-views'
+$qcViewSchemaVersion = '2026.07.27-qc-view-hardening'
+$expectedSchemaVersion = '2026.07.27-simplified-read-views'
 $legacyPkSchemaVersion = '2026.07.15-pk-id'
 $expectedPrimaryKeys = [ordered]@{
     roles = 'role_id'
@@ -150,6 +155,25 @@ $postflight = Read-Text 'Database\SqlServer\VerifyPkToId_Postflight.sql'
 $qcMigration = Read-Text 'Database\SqlServer\MigrateQcConcise_20260727.sql'
 $qcPreflight = Read-Text 'Database\SqlServer\VerifyQcConcise_Preflight.sql'
 $qcPostflight = Read-Text 'Database\SqlServer\VerifyQcConcise_Postflight.sql'
+$buildDeviceMigration = Read-Text 'Database\SqlServer\MigrateBuildDeviceHardening_20260727.sql'
+$buildDevicePreflight = Read-Text 'Database\SqlServer\VerifyBuildDeviceHardening_Preflight.sql'
+$buildDevicePostflight = Read-Text 'Database\SqlServer\VerifyBuildDeviceHardening_Postflight.sql'
+$completedQcMigration = Read-Text 'Database\SqlServer\MigrateCompletedQcReconciliation_20260727.sql'
+$completedQcPreflight = Read-Text 'Database\SqlServer\VerifyCompletedQcReconciliation_Preflight.sql'
+$completedQcPostflight = Read-Text 'Database\SqlServer\VerifyCompletedQcReconciliation_Postflight.sql'
+$readViews = Read-Text 'Database\SqlServer\ReadViews.sql'
+$baselineReadViews = Read-Text 'Database\SqlServer\ReadViews_20260727.sql'
+$finalReadViews = Read-Text 'Database\SqlServer\ReadViews_QcViewHardening_20260727.sql'
+$simplifiedReadViews = Read-Text 'Database\SqlServer\ReadViews_Simplified_20260727.sql'
+$readViewsMigration = Read-Text 'Database\SqlServer\MigrateReadViews_20260727.sql'
+$readViewsPreflight = Read-Text 'Database\SqlServer\VerifyReadViews_Preflight.sql'
+$readViewsPostflight = Read-Text 'Database\SqlServer\VerifyReadViews_Postflight.sql'
+$qcViewMigration = Read-Text 'Database\SqlServer\MigrateQcViewHardening_20260727.sql'
+$qcViewPreflight = Read-Text 'Database\SqlServer\VerifyQcViewHardening_Preflight.sql'
+$qcViewPostflight = Read-Text 'Database\SqlServer\VerifyQcViewHardening_Postflight.sql'
+$simplifiedViewMigration = Read-Text 'Database\SqlServer\MigrateSimplifiedReadViews_20260727.sql'
+$simplifiedViewPreflight = Read-Text 'Database\SqlServer\VerifySimplifiedReadViews_Preflight.sql'
+$simplifiedViewPostflight = Read-Text 'Database\SqlServer\VerifySimplifiedReadViews_Postflight.sql'
 $cleanVerifier = Read-Text 'Database\SqlServer\VerifyRefactor.sql'
 $sellerApplicationsApply = Read-Text 'Database\SqlServer\ApplySellerApplications.sql'
 $mainSeed = Read-Text 'Documents_Refactor\SeedData_Refactor.sql'
@@ -215,7 +239,7 @@ foreach ($entry in $expectedPrimaryKeys.GetEnumerator()) {
 $expectedQcColumns = [ordered]@{
     device_test_sessions = @(
         'id', 'request_id', 'device_id', 'switch_technology',
-        'noise_requirement', 'total_keys', 'status'
+        'noise_requirement', 'total_keys', 'status', 'completed_at'
     )
     device_key_test_results = @(
         'id', 'session_id', 'key_code', 'received_key',
@@ -273,8 +297,8 @@ foreach ($actualSet in @(
 
 foreach ($versionedText in @(
     [pscustomobject]@{ Name = 'CreateSchema_Refactor.sql'; Text = $schema },
-    [pscustomobject]@{ Name = 'MigrateQcConcise_20260727.sql'; Text = $qcMigration },
-    [pscustomobject]@{ Name = 'VerifyQcConcise_Postflight.sql'; Text = $qcPostflight },
+    [pscustomobject]@{ Name = 'MigrateSimplifiedReadViews_20260727.sql'; Text = $simplifiedViewMigration },
+    [pscustomobject]@{ Name = 'VerifySimplifiedReadViews_Postflight.sql'; Text = $simplifiedViewPostflight },
     [pscustomobject]@{ Name = 'VerifyRefactor.sql'; Text = $cleanVerifier },
     [pscustomobject]@{ Name = 'SeedData_Refactor.sql'; Text = $mainSeed },
     [pscustomobject]@{ Name = 'SeedDemoAnalytics_Refactor.sql'; Text = $analyticsSeed },
@@ -282,6 +306,60 @@ foreach ($versionedText in @(
 )) {
     Assert-True ($versionedText.Text.Contains($expectedSchemaVersion)) `
         "$($versionedText.Name) does not contain schema version $expectedSchemaVersion."
+}
+
+foreach ($qcViewVersionedText in @(
+    [pscustomobject]@{ Name = 'CreateSchema_Refactor.sql'; Text = $schema },
+    [pscustomobject]@{ Name = 'MigrateQcViewHardening_20260727.sql'; Text = $qcViewMigration },
+    [pscustomobject]@{ Name = 'VerifyQcViewHardening_Postflight.sql'; Text = $qcViewPostflight },
+    [pscustomobject]@{ Name = 'VerifySimplifiedReadViews_Preflight.sql'; Text = $simplifiedViewPreflight },
+    [pscustomobject]@{ Name = 'MigrateSimplifiedReadViews_20260727.sql'; Text = $simplifiedViewMigration }
+)) {
+    Assert-True ($qcViewVersionedText.Text.Contains($qcViewSchemaVersion)) `
+        "$($qcViewVersionedText.Name) does not contain prerequisite schema version $qcViewSchemaVersion."
+}
+
+foreach ($readViewVersionedText in @(
+    [pscustomobject]@{ Name = 'CreateSchema_Refactor.sql'; Text = $schema },
+    [pscustomobject]@{ Name = 'ReadViews_20260727.sql'; Text = $baselineReadViews },
+    [pscustomobject]@{ Name = 'MigrateReadViews_20260727.sql'; Text = $readViewsMigration },
+    [pscustomobject]@{ Name = 'VerifyReadViews_Postflight.sql'; Text = $readViewsPostflight },
+    [pscustomobject]@{ Name = 'VerifyQcViewHardening_Preflight.sql'; Text = $qcViewPreflight },
+    [pscustomobject]@{ Name = 'MigrateQcViewHardening_20260727.sql'; Text = $qcViewMigration }
+)) {
+    Assert-True ($readViewVersionedText.Text.Contains($readViewSchemaVersion)) `
+        "$($readViewVersionedText.Name) does not contain prerequisite schema version $readViewSchemaVersion."
+}
+
+foreach ($completedQcVersionedText in @(
+    [pscustomobject]@{ Name = 'CreateSchema_Refactor.sql'; Text = $schema },
+    [pscustomobject]@{ Name = 'MigrateCompletedQcReconciliation_20260727.sql'; Text = $completedQcMigration },
+    [pscustomobject]@{ Name = 'VerifyCompletedQcReconciliation_Postflight.sql'; Text = $completedQcPostflight },
+    [pscustomobject]@{ Name = 'VerifyReadViews_Preflight.sql'; Text = $readViewsPreflight },
+    [pscustomobject]@{ Name = 'MigrateReadViews_20260727.sql'; Text = $readViewsMigration }
+)) {
+    Assert-True ($completedQcVersionedText.Text.Contains($completedQcSchemaVersion)) `
+        "$($completedQcVersionedText.Name) does not contain prerequisite schema version $completedQcSchemaVersion."
+}
+
+foreach ($qcVersionedText in @(
+    [pscustomobject]@{ Name = 'CreateSchema_Refactor.sql'; Text = $schema },
+    [pscustomobject]@{ Name = 'MigrateQcConcise_20260727.sql'; Text = $qcMigration },
+    [pscustomobject]@{ Name = 'VerifyQcConcise_Postflight.sql'; Text = $qcPostflight },
+    [pscustomobject]@{ Name = 'VerifyBuildDeviceHardening_Preflight.sql'; Text = $buildDevicePreflight }
+)) {
+    Assert-True ($qcVersionedText.Text.Contains($qcSchemaVersion)) `
+        "$($qcVersionedText.Name) does not contain schema version $qcSchemaVersion."
+}
+
+foreach ($buildDeviceVersionedText in @(
+    [pscustomobject]@{ Name = 'CreateSchema_Refactor.sql'; Text = $schema },
+    [pscustomobject]@{ Name = 'MigrateBuildDeviceHardening_20260727.sql'; Text = $buildDeviceMigration },
+    [pscustomobject]@{ Name = 'VerifyBuildDeviceHardening_Postflight.sql'; Text = $buildDevicePostflight },
+    [pscustomobject]@{ Name = 'VerifyCompletedQcReconciliation_Preflight.sql'; Text = $completedQcPreflight }
+)) {
+    Assert-True ($buildDeviceVersionedText.Text.Contains($buildDeviceSchemaVersion)) `
+        "$($buildDeviceVersionedText.Name) does not contain schema version $buildDeviceSchemaVersion."
 }
 
 foreach ($legacyVersionedText in @(
@@ -297,7 +375,7 @@ foreach ($legacyVersionedText in @(
 
 Assert-True ($healthCheck.Contains('ExpectedPrimaryKeyCount = 21')) 'Startup schema guard does not require 21 PKs.'
 Assert-True ($healthCheck.Contains('ExpectedForeignKeyCount = 30')) 'Startup schema guard does not require 30 FKs.'
-Assert-True ($healthCheck.Contains('ExpectedQcColumnCount = 19')) 'Startup schema guard does not require the exact 7/12 QC column count.'
+Assert-True ($healthCheck.Contains('ExpectedQcColumnCount = 20')) 'Startup schema guard does not require the final 8/12 QC column count.'
 Assert-True ($mainWindow.Contains('EnsureCompatibleSchemaAsync')) 'Application startup does not invoke the schema compatibility guard.'
 Assert-True (-not [regex]::IsMatch($migration, '(?mi)^\s*USE\s+')) 'Migration must require an explicitly selected target database.'
 Assert-True (-not [regex]::IsMatch($preflight, '(?mi)^\s*USE\s+')) 'Preflight must require an explicitly selected target database.'
@@ -305,13 +383,28 @@ Assert-True (-not [regex]::IsMatch($postflight, '(?mi)^\s*USE\s+')) 'Postflight 
 Assert-True (-not [regex]::IsMatch($qcMigration, '(?mi)^\s*USE\s+')) 'QC migration must require an explicitly selected target database.'
 Assert-True (-not [regex]::IsMatch($qcPreflight, '(?mi)^\s*USE\s+')) 'QC preflight must require an explicitly selected target database.'
 Assert-True (-not [regex]::IsMatch($qcPostflight, '(?mi)^\s*USE\s+')) 'QC postflight must require an explicitly selected target database.'
+Assert-True (-not [regex]::IsMatch($buildDeviceMigration, '(?mi)^\s*USE\s+')) 'Build/device migration must require an explicitly selected target database.'
+Assert-True (-not [regex]::IsMatch($buildDevicePreflight, '(?mi)^\s*USE\s+')) 'Build/device preflight must require an explicitly selected target database.'
+Assert-True (-not [regex]::IsMatch($buildDevicePostflight, '(?mi)^\s*USE\s+')) 'Build/device postflight must require an explicitly selected target database.'
+Assert-True (-not [regex]::IsMatch($completedQcMigration, '(?mi)^\s*USE\s+')) 'Completed/QC migration must require an explicitly selected target database.'
+Assert-True (-not [regex]::IsMatch($completedQcPreflight, '(?mi)^\s*USE\s+')) 'Completed/QC preflight must require an explicitly selected target database.'
+Assert-True (-not [regex]::IsMatch($completedQcPostflight, '(?mi)^\s*USE\s+')) 'Completed/QC postflight must require an explicitly selected target database.'
+Assert-True (-not [regex]::IsMatch($readViewsMigration, '(?mi)^\s*USE\s+')) 'Read-view migration must require an explicitly selected target database.'
+Assert-True (-not [regex]::IsMatch($readViewsPreflight, '(?mi)^\s*USE\s+')) 'Read-view preflight must require an explicitly selected target database.'
+Assert-True (-not [regex]::IsMatch($readViewsPostflight, '(?mi)^\s*USE\s+')) 'Read-view postflight must require an explicitly selected target database.'
+Assert-True (-not [regex]::IsMatch($qcViewMigration, '(?mi)^\s*USE\s+')) 'QC/view migration must require an explicitly selected target database.'
+Assert-True (-not [regex]::IsMatch($qcViewPreflight, '(?mi)^\s*USE\s+')) 'QC/view preflight must require an explicitly selected target database.'
+Assert-True (-not [regex]::IsMatch($qcViewPostflight, '(?mi)^\s*USE\s+')) 'QC/view postflight must require an explicitly selected target database.'
+Assert-True (-not [regex]::IsMatch($simplifiedViewMigration, '(?mi)^\s*USE\s+')) 'Simplified-view migration must require an explicitly selected target database.'
+Assert-True (-not [regex]::IsMatch($simplifiedViewPreflight, '(?mi)^\s*USE\s+')) 'Simplified-view preflight must require an explicitly selected target database.'
+Assert-True (-not [regex]::IsMatch($simplifiedViewPostflight, '(?mi)^\s*USE\s+')) 'Simplified-view postflight must require an explicitly selected target database.'
 Assert-True ($migration.Contains('(version, description, applied_at, succeeded)')) `
     'Migration history insert must set applied_at explicitly.'
 Assert-True ($migration.Contains('SellerProfileAuditResolution')) `
     'Migration does not normalize legacy seller_profiles audit record IDs.'
 Assert-True ($postflight.Contains('seller_profiles audit record_id must use the integer profile PK')) `
     'Postflight does not enforce the seller_profiles audit record-id contract.'
-Assert-True ($qcPostflight.Contains('device_test_sessions does not match the exact 7-column concise contract')) `
+Assert-True ($qcPostflight.Contains('device_test_sessions does not match the exact 8-column concise contract')) `
     'QC postflight does not enforce the concise session column contract.'
 Assert-True ($qcPostflight.Contains('device_key_test_results does not match the exact 12-column concise contract')) `
     'QC postflight does not enforce the concise key-result column contract.'
@@ -332,14 +425,18 @@ foreach ($guardedText in @(
 }
 
 Assert-True ($mainSeed.Contains(':ON ERROR EXIT')) 'Main seed launcher must stop before including DML after a guard failure.'
-Assert-True ($mainSeed.Contains(':r Database\SqlServer\VerifyQcConcise_Postflight.sql')) `
-    'Main seed launcher must run postflight before its DML body.'
+Assert-True ($mainSeed.Contains(':r Database\SqlServer\VerifySimplifiedReadViews_Postflight.sql')) `
+    'Main seed launcher must enforce the final simplified read-view contract.'
+Assert-True (-not $mainSeed.Contains(':r Database\SqlServer\VerifyQcConcise_Postflight.sql')) `
+    'Final main seed must not run the intermediate exact-8-column QC postflight.'
 Assert-True ($mainSeed.Contains(':r Documents_Refactor\SeedData_Refactor.Body.sql')) `
     'Main seed launcher does not include its guarded DML body.'
 Assert-True ($mainSeedBody.Contains('BEGIN TRANSACTION;')) 'Main seed DML body is missing its transaction.'
 Assert-True ($analyticsSeed.Contains(':ON ERROR EXIT')) 'Analytics seed launcher must stop before including DML after a guard failure.'
-Assert-True ($analyticsSeed.Contains(':r Database\SqlServer\VerifyQcConcise_Postflight.sql')) `
-    'Analytics seed launcher must run postflight before its DML body.'
+Assert-True ($analyticsSeed.Contains(':r Database\SqlServer\VerifySimplifiedReadViews_Postflight.sql')) `
+    'Analytics seed launcher must enforce the final simplified read-view contract.'
+Assert-True (-not $analyticsSeed.Contains(':r Database\SqlServer\VerifyQcConcise_Postflight.sql')) `
+    'Final analytics seed must not run the intermediate exact-8-column QC postflight.'
 Assert-True ($analyticsSeed.Contains(':r Database\SqlServer\SeedDemoAnalytics_Refactor.Body.sql')) `
     'Analytics seed launcher does not include its guarded DML body.'
 Assert-True ($analyticsSeedBody.Contains('BEGIN TRANSACTION;')) 'Analytics seed DML body is missing its transaction.'
@@ -394,4 +491,59 @@ $sellerRepository = Read-Text 'Repositories\SqlServer\SqlSellerRepository.cs'
 Assert-True ([regex]::IsMatch($sellerRepository, '(?is)private\s+const\s+string\s+BaseSelectSql\s*=.*?\bid\s+AS\s+seller_profile_id\b')) `
     'SqlSellerRepository.BaseSelectSql must alias id as seller_profile_id.'
 
-Write-Host 'Schema source verification passed: 21 PKs, 30 FKs, 21 PK renames, concise QC guards, and repository owner-PK scan.'
+foreach ($viewName in @('Last_QC', 'Catalog_Comps', 'Build_items', 'Req_view')) {
+    Assert-True ($simplifiedReadViews.Contains("CREATE VIEW views.$viewName")) `
+        "Final read-view snapshot is missing views.$viewName."
+}
+
+Assert-True (-not $simplifiedReadViews.Contains('CREATE OR ALTER VIEW')) `
+    'Final simplified view definitions must use CREATE VIEW without ALTER.'
+foreach ($viewComment in @(
+    '-- Last_QC:',
+    '-- Catalog_Comps:',
+    '-- Build_items:',
+    '-- Req_view:'
+)) {
+    Assert-True ($simplifiedReadViews.Contains($viewComment)) `
+        "Final simplified view definitions are missing purpose comment $viewComment."
+}
+
+Assert-True ($readViews.Contains(':r Database\SqlServer\ReadViews_Simplified_20260727.sql')) `
+    'Canonical ReadViews.sql does not include the immutable final snapshot.'
+Assert-True ($baselineReadViews.Contains('CREATE OR ALTER VIEW views.Last_QC')) `
+    'Immutable baseline read-view file is missing Last_QC.'
+Assert-True (-not $baselineReadViews.Contains('session_row.completed_at')) `
+    'Immutable baseline read-view file must remain on the pre-completion-time contract.'
+Assert-True ($readViewsMigration.Contains(':r Database\SqlServer\ReadViews_20260727.sql')) `
+    'Baseline read-view migration must include its immutable view definitions.'
+Assert-True (
+    $readViewsMigration.Contains($qcViewSchemaVersion) -and
+    $readViewsMigration.Contains('Read-view baseline cannot be reapplied after QC/view hardening.')
+) 'Baseline read-view migration does not guard against downgrading the final view contract.'
+Assert-True ($qcViewMigration.Contains(':r Database\SqlServer\ReadViews_QcViewHardening_20260727.sql')) `
+    'QC/view hardening migration must include its immutable final view definitions.'
+Assert-True (
+    $qcViewMigration.Contains($expectedSchemaVersion) -and
+    $qcViewMigration.Contains('QC/view hardening cannot be reapplied after simplified read views.')
+) 'QC/view hardening migration does not guard against downgrading the simplified view contract.'
+Assert-True ($simplifiedViewMigration.Contains(':r Database\SqlServer\ReadViews_Simplified_20260727.sql')) `
+    'Simplified-view migration must include its immutable final view definitions.'
+Assert-True ($simplifiedReadViews.Contains('session_row.completed_at')) `
+    'Final Last_QC does not use the authoritative QC completion timestamp.'
+Assert-True ($simplifiedReadViews.Contains('AS decimal(28,2)')) `
+    'Final Build_items view does not widen line_total_snapshot to decimal(28,2).'
+Assert-True ($simplifiedViewMigration.Contains("OBJECT_ID(N'views.Catalog_Comps')) <> 7")) `
+    'Simplified-view migration does not enforce the 7-column Catalog_Comps contract.'
+Assert-True ($simplifiedViewMigration.Contains("OBJECT_ID(N'views.Req_view')) <> 15")) `
+    'Simplified-view migration does not enforce the 15-column Req_view contract.'
+
+Assert-True ($repositoryText.Contains('views.Last_QC')) 'Repositories do not read from views.Last_QC.'
+Assert-True ($repositoryText.Contains('views.Catalog_Comps')) 'Repositories do not read from views.Catalog_Comps.'
+Assert-True ($repositoryText.Contains('views.Build_items')) 'Repositories do not read from views.Build_items.'
+Assert-True ($repositoryText.Contains('views.Req_view')) 'Repositories do not read from views.Req_view.'
+Assert-True (-not [regex]::IsMatch(
+    $repositoryText,
+    '(?is)\b(?:INSERT\s+INTO|UPDATE|DELETE\s+FROM|MERGE)\s+views\.'
+)) 'Repository DML must never target read views.'
+
+Write-Host 'Schema source verification passed: 21 PKs, 30 FKs, final 8/12 QC contract, four simplified read views, and ordered migration guards.'
