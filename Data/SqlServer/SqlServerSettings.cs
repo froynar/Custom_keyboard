@@ -3,7 +3,7 @@ namespace Custom_keyboard.Data.SqlServer;
 public sealed class SqlServerSettings
 {
     public string Server { get; set; } = @"KHOADZS1VN\SQLEXPRESS";
-    public string Database { get; set; } = "CustomKeyboard_Refactor";
+    public string Database { get; set; } = "CustomKeyboard_Refactor_CodexFork_019fa2c2_20260727";
     public string ApplicationName { get; set; } = "Custom Keyboard Builder";
     public bool Encrypt { get; set; } = true;
     public bool TrustServerCertificate { get; set; } = true;
